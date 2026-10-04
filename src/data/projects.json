@@ -1,0 +1,106 @@
+[
+  {
+    "slug": "signal-studies",
+    "title": "Signal studies",
+    "category": "Experiment",
+    "year": "2026",
+    "caption": "Looking for a pattern in the noise.",
+    "description": "Somewhere between a good idea and a questionable sketch, a signal starts to take shape. This fictional project is a stand-in for something worth building.",
+    "note": "Replace this with the problem, your contribution, and what you learned. For now: a few lines, a lot of noise, and an unusually confident circle.",
+    "image": "art/signal-studies.webp",
+    "thumbnail": "thumbnails/signal-studies.webp",
+    "imageAlt": "A luminous blue orb crossed by fine elliptical lines on a deep indigo field.",
+    "position": "63% 50%",
+    "palette": {
+      "accent": "#dcff67",
+      "ink": "#17220b"
+    }
+  },
+  {
+    "slug": "soft-machines",
+    "title": "Soft machines",
+    "category": "Prototype",
+    "year": "2026",
+    "caption": "A very serious investigation of unlikely shapes.",
+    "description": "A prototype made of imaginary parts, carefully arranged to do absolutely nothing. At least it looks like it might be onto something.",
+    "note": "This is fictional copy. A real project might include your design constraints, iterations, and a photograph of the final build.",
+    "image": "art/soft-machines.webp",
+    "thumbnail": "thumbnails/soft-machines.webp",
+    "imageAlt": "Sculptural orange and coral folds against a warm peach background.",
+    "position": "62% 50%",
+    "palette": {
+      "accent": "#ffe0ba",
+      "ink": "#482018",
+      "caption": "#120a06"
+    }
+  },
+  {
+    "slug": "afterimage",
+    "title": "Afterimage",
+    "category": "Exploration",
+    "year": "2026",
+    "caption": "Something to look at, then look at again.",
+    "description": "An experiment in holding onto a shape just long enough to notice it changing. No breakthrough claims here; this paragraph is wearing a placeholder badge.",
+    "note": "Later, this space can show what worked, what failed, and the evidence behind both. Today it is mostly pink.",
+    "image": "art/afterimage.webp",
+    "thumbnail": "thumbnails/afterimage.webp",
+    "imageAlt": "A vivid fuchsia field with a violet disk and soft radiating light.",
+    "position": "66% 50%",
+    "palette": {
+      "accent": "#ffc6f0",
+      "ink": "#34103e"
+    }
+  },
+  {
+    "slug": "field-notes",
+    "title": "Field notes",
+    "category": "Research",
+    "year": "2026",
+    "caption": "Small observations. Slightly bigger questions.",
+    "description": "A collection of things noticed on the way to doing something else. These invented notes will eventually make room for a real question and a more useful answer.",
+    "note": "Drop in diagrams, observations, and the reasoning behind your decisions. The concentric shapes are only abstract artwork, not research data.",
+    "image": "art/field-notes.webp",
+    "thumbnail": "thumbnails/field-notes.webp",
+    "imageAlt": "Layered lime green contours forming a rippled basin on a dark forest green field.",
+    "position": "62% 50%",
+    "palette": {
+      "accent": "#d6ee99",
+      "ink": "#1b3317"
+    }
+  },
+  {
+    "slug": "night-shift",
+    "title": "Night shift",
+    "category": "Build",
+    "year": "2026",
+    "caption": "One more iteration before calling it a night.",
+    "description": "The fictional build that finally worked just after everyone stopped watching. A small reminder that the best part of a project is often buried in the process.",
+    "note": "Replace this with a build log, measurements, and what changed between versions. These glowing lines are a texture, not a circuit diagram.",
+    "image": "art/night-shift.webp",
+    "thumbnail": "thumbnails/night-shift.webp",
+    "imageAlt": "An electric blue gridded surface with a glowing amber line and a bright point of light.",
+    "position": "62% 50%",
+    "palette": {
+      "accent": "#ffc46b",
+      "ink": "#352110"
+    }
+  },
+  {
+    "slug": "parallel-lines",
+    "title": "Parallel lines",
+    "category": "Study",
+    "year": "2026",
+    "caption": "A little order. A little room for something else.",
+    "description": "Six shapes, no particular destination. An imaginary study in getting the pieces to sit together without asking them to be the same.",
+    "note": "A real case study can be as simple as a clear problem, a few decisions, and an honest result. This one is a geometric placeholder.",
+    "image": "art/parallel-lines.webp",
+    "thumbnail": "thumbnails/parallel-lines.webp",
+    "imageAlt": "A dark ribbed disk with offset cream geometric forms on a warm sand background.",
+    "position": "65% 50%",
+    "palette": {
+      "accent": "#f3ecd8",
+      "ink": "#29291e",
+      "caption": "#1c241e"
+    }
+  }
+]

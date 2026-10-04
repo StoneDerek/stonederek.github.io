@@ -1,0 +1,95 @@
+---
+import Layout from '../layouts/Layout.astro';
+import projects from '../data/projects.json';
+import site from '../data/site.json';
+const base = import.meta.env.BASE_URL;
+const url = (path) => `${base}${path}`;
+const first = projects[0];
+const serialized = JSON.stringify(projects).replace(/</g, '\\u003c');
+---
+<Layout>
+  <main id="portfolio" class="portfolio" style={`--accent:${first.palette.accent};--ink:${first.palette.ink};--caption-color:${first.palette.caption || first.palette.accent}`}>
+    <a class="skip-link" href="#project-caption">Skip to selected project</a>
+
+    <header class="site-header">
+      <details class="site-menu" data-menu>
+        <summary aria-label="Portfolio navigation" aria-controls="project-navigation" aria-expanded="false">
+          <span class="menu-name">{site.name}</span>
+          <span class="menu-location">Work: <span data-menu-title>{first.title}</span></span>
+          <svg class="menu-icon" viewBox="0 0 16 16" aria-hidden="true"><path class="menu-bars" d="M3 4h10M3 8h10M3 12h10" /><path class="menu-cross" d="m4 4 8 8m0-8-8 8" /></svg>
+        </summary>
+        <div class="menu-body">
+        <nav id="project-navigation" aria-label="Projects and About">
+          <span class="menu-heading">Selected work</span>
+          {projects.map((project, index) => (
+            <button type="button" class="menu-project" data-menu-project={index} aria-current={index === 0 ? 'true' : undefined}><span>{project.title}</span><span class="menu-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span></button>
+          ))}
+        </nav>
+        <div class="menu-footer"><button type="button" class="menu-about" data-action="about" aria-haspopup="dialog">About Derek <span aria-hidden="true">↗</span></button><p>Portfolio in progress</p></div>
+        </div>
+      </details>
+    </header>
+
+    <section class="carousel" aria-roledescription="carousel" aria-label="Selected placeholder projects" tabindex="0">
+      <div class="artwork-stage" data-stage>
+        <div class="artwork-track" data-gallery-track>
+        {projects.map((project, index) => (
+          <div class:list={['artwork-slide', { 'is-active': index === 0 }]} data-slide={index} aria-hidden={index !== 0}>
+            <div class="artwork-card">
+            <img src={url(project.image)} alt={project.imageAlt} width="1920" height="1200" style={`object-position:${project.position}`} fetchpriority={index === 0 ? 'high' : 'auto'} decoding="async" draggable="false" />
+            </div>
+          </div>
+        ))}
+        </div>
+        <div id="project-caption" class="project-caption" tabindex="-1">
+          <h1 aria-label={first.title}><button type="button" class="caption-link" data-action="project" data-project="0" aria-haspopup="dialog" aria-label={`View ${first.title}`}><span class="caption-word"><span class="caption-metrics" data-title-metrics aria-hidden="true">{first.title}</span><span class="caption-letters" data-title aria-hidden="true">{first.title}</span></span><svg class="caption-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button></h1>
+        </div>
+      </div>
+      <p class="sr-only" data-announcement aria-live="polite" aria-atomic="true"></p>
+    </section>
+
+    <footer class="filmstrip" aria-label="Project previews">
+      <div class="thumbnail-rail" role="group" aria-label="Choose a project">
+        <div class="thumbnail-track">
+          <div class="thumbnail-group">
+            {projects.map((project, index) => (
+              <button type="button" class:list={['thumbnail', { 'is-active': index === 0 }]} data-thumbnail={index} tabindex={index === 0 ? 0 : -1} aria-pressed={index === 0} aria-label={`Show ${project.title}, project ${index + 1} of ${projects.length}`} title={project.title}>
+                <img src={url(project.thumbnail)} alt="" width="320" height="200" draggable="false" />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <span class="selection-frame" aria-hidden="true"></span>
+    </footer>
+
+    <nav class="mobile-controls" aria-label="Gallery controls">
+      <button type="button" class="mobile-arrow" data-step="-1" aria-label="Previous project" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" /></svg></button>
+      <button type="button" class="mobile-inspect" data-action="project" aria-haspopup="dialog"><span>View project <span aria-hidden="true">↗</span></span><span class="mobile-count" data-mobile-count>01 / {String(projects.length).padStart(2, '0')}</span></button>
+      <button type="button" class="mobile-arrow" data-step="1" aria-label="Next project"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7" /></svg></button>
+    </nav>
+
+    <dialog class="project-view" data-dialog="project" aria-labelledby="detail-title">
+      <article class="project-page">
+        <header class="project-toolbar"><button type="button" class="back-button" data-close aria-label="Back to gallery"><span aria-hidden="true">←</span> Selected work</button><span class="project-view-meta"><span data-detail-category>{first.category}</span> / <span data-detail-year>{first.year}</span></span><span class="project-view-number" data-detail-number>01 / {String(projects.length).padStart(2, '0')}</span></header>
+        <div class="project-image-wrap"><img class="project-image" data-detail-image src={url(first.image)} alt={first.imageAlt} width="1920" height="1200" /></div>
+        <section class="project-story">
+          <div><p class="dialog-eyebrow">Placeholder project</p><h2 id="detail-title" data-detail-title>{first.title}</h2></div>
+          <div class="project-prose"><p class="detail-description" data-detail-description>{first.description}</p><p class="detail-note" data-detail-note>{first.note}</p></div>
+        </section>
+      </article>
+    </dialog>
+
+    <dialog class="about-dialog" data-dialog="about" aria-labelledby="about-title">
+      <div class="dialog-top"><span>{site.name}</span><button type="button" class="close-button" data-close aria-label="Close About">×</button></div>
+      <div class="dialog-copy"><p class="dialog-eyebrow">About / a first draft</p><h2 id="about-title">{site.aboutTitle}</h2><p class="detail-description">{site.aboutText}</p><p class="detail-note">{site.aboutNote}</p><span class="about-signature" aria-hidden="true">ds.</span></div>
+    </dialog>
+
+    <script type="application/json" id="portfolio-data" set:html={serialized}></script>
+    <script>
+      import { mountPortfolio } from '../scripts/carousel.js';
+      mountPortfolio();
+    </script>
+    <noscript><div class="noscript-message">The first project is shown. Enable JavaScript to browse the other frames.</div></noscript>
+  </main>
+</Layout>

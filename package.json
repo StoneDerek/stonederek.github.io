@@ -1,0 +1,14 @@
+{
+  "name": "derek-stone-portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 0.0.0.0",
+    "build": "astro build",
+    "preview": "astro preview --host 0.0.0.0",
+    "export:preview": "node scripts/export-preview.mjs"
+  },
+  "dependencies": { "astro": "7.3.5" },
+  "engines": { "node": ">=24" }
+}
