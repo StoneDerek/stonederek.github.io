@@ -82,10 +82,43 @@ export function createTileMask(cells, { opening, travel, duration }) {
   };
 }
 
+export function canAnimateTiles({ signal, reducedMotion = false } = {}) {
+  return !reducedMotion && !signal?.aborted && !globalThis.document?.hidden
+    && Boolean(globalThis.CSS?.supports('clip-path', 'path("M0 0H1V1H0Z")'));
+}
+
+function createPageLayer(page, className, scrollTop) {
+  const bounds = page.getBoundingClientRect();
+  const pageHeight = page.scrollHeight;
+  const element = document.createElement('div');
+  element.className = className;
+  element.setAttribute('aria-hidden', 'true');
+  element.inert = true;
+  const copy = page.cloneNode(true);
+  copy.style.visibility = 'visible';
+  copy.removeAttribute('id');
+  copy.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
+  copy.style.top = `${-scrollTop}px`;
+  copy.style.left = `${bounds.left}px`;
+  copy.style.width = `${bounds.width}px`;
+  copy.style.minHeight = `${pageHeight}px`;
+  element.append(copy);
+  return element;
+}
+
+// A single stationary copy holds the outgoing article while the incoming one
+// assembles. It preserves the scroll position and color before content changes.
+export function captureProjectBackdrop(root, page, { scrollTop = 0 } = {}) {
+  const element = createPageLayer(page, 'project-swap-backdrop', scrollTop);
+  const style = getComputedStyle(page);
+  for (const name of ['--accent', '--ink']) element.style.setProperty(name, style.getPropertyValue(name));
+  element.children[0].style.opacity = page.style.opacity;
+  root.append(element);
+  return element;
+}
+
 export function settleTiles(root, page, { opening, origin, scrollTop = 0, signal, reducedMotion = false } = {}) {
-  if (reducedMotion || signal?.aborted || globalThis.document?.hidden || !globalThis.CSS?.supports('clip-path', 'path("M0 0H1V1H0Z")')) {
-    return Promise.resolve();
-  }
+  if (!canAnimateTiles({ signal, reducedMotion })) return Promise.resolve();
   const travel = opening ? 420 : 240;
   const duration = opening ? 250 : 180;
   const total = travel + duration;
@@ -117,22 +150,8 @@ export function settleTiles(root, page, { opening, origin, scrollTop = 0, signal
       const cells = createTileCells(width, height, origin);
       if (!cells.length) { cleanup(); return; }
       const tileMask = createTileMask(cells, { opening, travel, duration });
-      const bounds = page.getBoundingClientRect();
-      const pageHeight = page.scrollHeight;
-      const element = document.createElement('div');
-      element.className = 'project-tile-layer';
-      element.setAttribute('aria-hidden', 'true');
-      element.inert = true;
-      const copy = page.cloneNode(true);
-      copy.style.visibility = 'visible';
-      copy.style.opacity = originalOpacity;
-      copy.removeAttribute('id');
-      copy.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
-      copy.style.top = `${-scrollTop}px`;
-      copy.style.left = `${bounds.left}px`;
-      copy.style.width = `${bounds.width}px`;
-      copy.style.minHeight = `${pageHeight}px`;
-      element.append(copy);
+      const element = createPageLayer(page, 'project-tile-layer', scrollTop);
+      element.children[0].style.opacity = originalOpacity;
       layers.push({ element });
       let wasVisible;
       const draw = elapsed => {

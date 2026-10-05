@@ -1,16 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { settleTiles } from '../src/scripts/project-transition.js';
+import { settleTiles, captureProjectBackdrop } from '../src/scripts/project-transition.js';
 
 // A controlled frame clock exercises the real animation without a browser binary.
 // It checks render positions and cleanup, not browser-specific path rasterization.
 function scene() {
-  const names = ['CSS', 'document', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'];
+  const names = ['CSS', 'document', 'getComputedStyle', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'];
   const previous = new Map(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   const frames = new Map();
   let nextFrame = 0;
   class Node {
-    constructor() { this.style = { opacity: '', visibility: '' }; this.hidden = false; this.children = []; this.attributes = new Map(); }
+    constructor() { this.style = { opacity: '', visibility: '', setProperty(name, value) { this[name] = value; } }; this.hidden = false; this.children = []; this.attributes = new Map(); }
     append(child) { this.children.push(child); child.parent = this; }
     remove() { this.parent.children = this.parent.children.filter(child => child !== this); }
     setAttribute(name, value) { this.attributes.set(name, value); }
@@ -31,6 +31,7 @@ function scene() {
   const documentEvents = new EventTarget();
   Object.assign(globalThis, {
     CSS: { supports: () => true },
+    getComputedStyle: node => ({ getPropertyValue: name => node.style[name] || '' }),
     document: {
       documentElement: { clientWidth: 320 }, createElement: () => new Node(), hidden: false,
       addEventListener: (...args) => documentEvents.addEventListener(...args),
@@ -77,6 +78,58 @@ test('opening reveals tiles without displacing article text, then hands off at t
     s.advance(700);
     await finished;
     assert.equal(s.page.style.opacity, '');
+    assert.equal(s.root.children.length, 0);
+    assert.equal(s.frames.size, 0);
+  } finally { controller.abort(); s.restore(); }
+});
+
+test('a direct article switch preserves the outgoing scroll, geometry, and palette beneath one opening mask', async () => {
+  const s = scene();
+  const controller = new AbortController();
+  try {
+    s.page.style.setProperty('--accent', '#d9ff61');
+    s.page.style.setProperty('--ink', '#1b2612');
+    const backdrop = captureProjectBackdrop(s.root, s.page, { scrollTop: 320 });
+    assert.equal(backdrop.className, 'project-swap-backdrop');
+    assert.equal(backdrop.attributes.get('aria-hidden'), 'true');
+    assert.equal(backdrop.inert, true);
+    assert.equal(backdrop.children[0].style.top, '-320px');
+    assert.equal(backdrop.children[0].style.left, '2.5px');
+    assert.equal(backdrop.children[0].style.width, '304.5px');
+    assert.equal(backdrop.children[0].style.minHeight, '1100px');
+    s.page.style.setProperty('--accent', '#704c91');
+    s.page.style.setProperty('--ink', '#efeaf3');
+    assert.equal(backdrop.style['--accent'], '#d9ff61');
+    assert.equal(backdrop.style['--ink'], '#1b2612');
+    const finished = settleTiles(s.root, s.page, { opening: true, signal: controller.signal });
+    assert.equal(s.root.children.length, 2);
+    assert.equal(s.root.children[1].hidden, true, 'incoming article must not flash its completed state');
+    assert.equal(backdrop.hidden, false);
+    s.advance(150);
+    assert.equal(s.root.children[1].hidden, false);
+    assert.equal(backdrop.children[0].style.top, '-320px');
+    s.advance(700);
+    await finished;
+    assert.deepEqual(s.root.children, [backdrop]);
+    backdrop.remove();
+    assert.equal(s.root.children.length, 0);
+    assert.equal(s.frames.size, 0);
+  } finally { controller.abort(); s.restore(); }
+});
+
+test('interrupting a direct article switch releases its mask while the outgoing backdrop survives until handoff', async () => {
+  const s = scene();
+  const controller = new AbortController();
+  try {
+    const backdrop = captureProjectBackdrop(s.root, s.page, { scrollTop: 180 });
+    const finished = settleTiles(s.root, s.page, { opening: true, signal: controller.signal });
+    s.advance(100);
+    controller.abort();
+    await finished;
+    assert.deepEqual(s.root.children, [backdrop]);
+    assert.equal(backdrop.children[0].style.top, '-180px');
+    assert.equal(s.page.style.visibility, '');
+    backdrop.remove();
     assert.equal(s.root.children.length, 0);
     assert.equal(s.frames.size, 0);
   } finally { controller.abort(); s.restore(); }

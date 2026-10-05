@@ -46,5 +46,24 @@ html = html.replace('</head>', `<style>
 </style></head>`);
 html = html.replace(/(<main\b[^>]*\bid="portfolio"[^>]*>)/, '$1<aside class="preview-help" role="status">Gallery controls have not started in this viewer. Try opening the preview in a browser.</aside>');
 html = html.replace(/(<a class="wordmark" href=")[^"]*(")/, '$1#$2');
+// Keep the résumé route usable in the single-file preview. A small document
+// blob opens the actual generated page; the production link remains /resume/.
+if (html.includes('data-resume-link')) {
+  let resume = await readFile('dist/resume/index.html', 'utf8');
+  resume = resume.replace(/(<a\b[^>]*\bdata-resume-home\b[^>]*\bhref=")[^"]*(")/, '$1__PORTFOLIO_PREVIEW_HOME__$2');
+  for (const [path, uri] of embedded) resume = resume.replaceAll(`="${path}"`, `="${uri}"`);
+  const markup = JSON.stringify(resume).replaceAll('<', '\\u003c');
+  const previewRoute = `(function () {
+    const link = document.querySelector('[data-resume-link]');
+    if (!link) return;
+    const home = location.href.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
+    const page = ${markup}.replace('__PORTFOLIO_PREVIEW_HOME__', home);
+    const address = URL.createObjectURL(new Blob([page], { type: 'text/html' }));
+    link.href = address;
+    window.addEventListener('pagehide', event => { if (!event.persisted) URL.revokeObjectURL(address); });
+  })();`;
+  new Script(previewRoute, { filename: 'resume-preview-route.js' });
+  html = html.replace('</body>', `<script>${previewRoute}</script></body>`);
+}
 await writeFile('portfolio-preview.html', html);
 console.log(`Exported portfolio-preview.html (${Math.round(Buffer.byteLength(html) / 1024)} KB).`);

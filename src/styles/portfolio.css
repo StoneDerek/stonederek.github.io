@@ -10,30 +10,51 @@ button { font: inherit; cursor: pointer; border: 0; }
 .skip-link { position: absolute; top: 12px; left: 12px; z-index: 70; padding: 12px; border-radius: 6px; background: var(--accent); color: var(--ink); transform: translateY(-200%); font-size: 12px; }
 .skip-link:focus { transform: translateY(0); }
 .site-header { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 60; width: min(300px, calc(100% - 32px)); color: var(--ink); }
-.site-menu { --menu-height: calc(100svh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom))); position: relative; background: var(--accent); border-radius: 8px; overflow: hidden; transition: background-color 320ms ease, color 320ms ease; }
+.site-menu { --menu-type-size: 13px; --menu-rule: 1px solid color-mix(in srgb, var(--ink) 70%, transparent); --menu-row-rule: .5px solid color-mix(in srgb, var(--ink) 38%, transparent); --menu-height: calc(100svh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom))); position: relative; background: var(--accent); border-radius: 8px; overflow: hidden; contain: paint; font-size: var(--menu-type-size); font-weight: 400; line-height: 1.35; transition: background-color 320ms ease, color 320ms ease; }
 .site-menu[open] { height: var(--menu-height); }
-.menu-body { display: flex; flex-direction: column; height: calc(var(--menu-height) - var(--menu-summary-height, 50px)); }
-.site-menu summary { position: relative; display: flex; flex-direction: column; justify-content: center; flex: 0 0 auto; min-height: 50px; padding: 9px 36px 9px 12px; list-style: none; cursor: pointer; font-size: 11px; line-height: 1.25; }
+.site-menu:not([open]) > .menu-body { display: none; }
+.menu-body { display: flex; flex-direction: column; height: calc(var(--menu-height) - var(--menu-summary-height, 64px)); overflow-y: auto; overscroll-behavior: contain; }
+.site-menu > summary { position: relative; display: flex; flex-direction: column; justify-content: center; flex: 0 0 auto; min-height: 64px; padding: 11px 14px; list-style: none; cursor: pointer; font: inherit; }
 .site-menu summary::-webkit-details-marker { display: none; }
-.menu-name { font-size: 14px; font-weight: 700; letter-spacing: -.025em; }
-.menu-location { display: flex; align-items: center; gap: 4px; min-width: 0; min-height: 16px; margin-top: 1px; line-height: 16px; white-space: nowrap; }
-.menu-context { position: relative; flex: 0 0 45px; width: 45px; height: 16px; overflow: hidden; }
+.menu-name { font: inherit; font-weight: 700; }
+.menu-status-row { display: flex; align-items: center; gap: 12px; min-width: 0; margin-top: 2px; }
+.menu-status { position: relative; flex: 1; min-width: 0; height: 18px; }
+.menu-location { display: flex; align-items: center; gap: 4px; min-width: 0; height: 18px; line-height: 18px; white-space: nowrap; transition: opacity 160ms ease; }
+.menu-open-label { position: absolute; inset: 0; opacity: 0; line-height: 18px; transition: opacity 160ms ease; }
+.site-menu[data-expanded="true"] .menu-location, .site-menu:not([data-expanded])[open] .menu-location { opacity: 0; }
+.site-menu[data-expanded="true"] .menu-open-label, .site-menu:not([data-expanded])[open] .menu-open-label { opacity: 1; }
+.menu-context { position: relative; flex: 0 0 47px; width: 47px; height: 18px; overflow: hidden; }
 .menu-context-row { position: absolute; inset: 0; display: block; }
-.menu-context-project { opacity: 0; transform: translateY(100%); }
-.menu-title-window { display: block; flex: 1; min-width: 0; height: 16px; overflow: hidden; }
+.menu-context-project, .menu-context-about { opacity: 0; transform: translateY(100%); }
+.menu-title-window { display: block; flex: 1; min-width: 0; height: 18px; overflow: hidden; }
 [data-menu-title] { display: block; overflow: hidden; text-overflow: ellipsis; }
-.menu-icon { position: absolute; right: 12px; top: 18px; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; }
-.menu-cross, .site-menu[open] .menu-bars { display: none; }
-.site-menu[open] .menu-cross { display: block; }
-.site-menu nav { padding: 12px 8px; overflow-y: auto; flex: 1; min-height: 0; }
-.menu-heading { display: block; padding: 0 9px 12px; font-size: 10px; text-transform: uppercase; font-weight: 700; letter-spacing: .05em; }
-.site-menu button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 48px; padding: 11px 9px; margin: 2px 0; border-radius: 5px; background: transparent; color: inherit; text-align: left; font-size: 16px; font-weight: 600; letter-spacing: -.02em; }
-.site-menu .menu-heading { min-height: 44px; padding: 8px 9px; font-size: 10px; letter-spacing: .05em; }
-.site-menu button:hover, .site-menu button[aria-current="true"] { background: color-mix(in srgb, var(--ink) 12%, transparent); }
-.site-menu button:focus-visible, .site-menu summary:focus-visible { background: var(--ink); color: var(--accent); }
-.menu-number { font-size: 10px; font-weight: 400; opacity: .7; }
-.menu-footer { flex: 0 0 auto; padding: 8px 8px 12px; background: var(--accent); }
-.menu-footer p { margin: 14px 9px 0; font-size: 10px; }
+.menu-icon { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+.menu-cross, .site-menu[data-expanded="true"] .menu-bars, .site-menu:not([data-expanded])[open] .menu-bars { display: none; }
+.site-menu[data-expanded="true"] .menu-cross, .site-menu:not([data-expanded])[open] .menu-cross { display: block; }
+.menu-navigation { margin-inline: 14px; border-top: var(--menu-rule); flex: 1 0 auto; }
+.site-menu .menu-section { display: flex; align-items: center; justify-content: flex-start; gap: 4px; width: 100%; min-height: 60px; padding: 14px 0; margin: 0; border-radius: 0; border-bottom: var(--menu-row-rule); background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; list-style: none; }
+.menu-projects:not([open]) > .menu-projects-panel { display: none; }
+.menu-projects-panel { overflow: hidden; }
+.menu-project-list { padding: 4px 0 8px 12px; border-bottom: var(--menu-row-rule); }
+.site-menu .menu-project { display: flex; align-items: center; justify-content: flex-start; gap: 4px; width: 100%; min-height: 44px; padding: 8px 0; margin: 0; border-radius: 0; background: transparent; color: inherit; text-align: left; font: inherit; }
+.site-menu :is(button, a, summary):focus-visible { background: var(--ink); color: var(--accent); }
+.projects-toggle-mark { width: 1em; text-align: center; }
+.projects-toggle-mark::before { content: '+'; }
+.menu-projects[data-expanded="true"] .projects-toggle-mark::before, .menu-projects:not([data-expanded])[open] .projects-toggle-mark::before { content: '−'; }
+.menu-link-arrow { flex: none; width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity 120ms ease; }
+.site-menu :is(button, a):focus-visible .menu-link-arrow { opacity: 1; }
+@media (hover: hover) and (pointer: fine) { .site-menu :is(button, a):hover:not(:focus-visible) { color: color-mix(in srgb, var(--ink) 65%, transparent); } .site-menu :is(button, a):hover .menu-link-arrow { opacity: 1; } }
+.menu-footer { flex: 0 0 auto; padding: 14px 14px 16px; color: inherit; }
+.menu-cat { width: fit-content; margin: 0 0 22px; font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace; font-size: inherit; font-weight: inherit; font-variant-ligatures: none; letter-spacing: 0; line-height: 1.1; text-align: center; white-space: pre; }
+.menu-contact, .menu-links, .menu-colophon { border-top: var(--menu-rule); }
+.menu-contact { padding-block: 6px; }
+.menu-contact a { display: flex; align-items: center; gap: 4px; width: fit-content; max-width: 100%; min-height: 44px; padding-block: 8px; overflow-wrap: anywhere; }
+.menu-links { display: flex; flex-direction: column; padding-block: 6px; }
+.menu-footer a { border-radius: 0; color: inherit; text-decoration: none; }
+.menu-links a { display: flex; align-items: center; justify-content: flex-start; gap: 4px; min-height: 44px; padding: 8px 0; }
+.menu-colophon { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding-top: 14px; }
+.menu-signature { margin: 0; }
+.menu-published { white-space: nowrap; }
 .carousel { position: absolute; inset: 0; outline: none; }
 .artwork-stage { position: absolute; inset: 0; touch-action: pan-y pinch-zoom; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .artwork-track { display: flex; width: 100%; height: 100%; }
@@ -75,12 +96,15 @@ dialog::backdrop { background: #050b1bc9; }
 .project-page { min-height: 100%; padding-top: calc(84px + env(safe-area-inset-top)); background: #fff; }
 .project-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 70px; max-width: 1400px; width: calc(100% - 80px); margin: 0 auto; padding: 12px 0; background: #fff; }
 .has-project:not(.is-project-transitioning) :is(.carousel, .filmstrip, .mobile-controls) { visibility: hidden; }
+.is-project-replacing :is(.carousel, .filmstrip, .mobile-controls) { visibility: hidden; }
 .is-project-transitioning .project-view { background: transparent; scrollbar-color: transparent transparent; }
 .is-project-transitioning .project-view > .project-page { visibility: hidden; }
-.is-project-transitioning.is-project-opening :is(.carousel, .filmstrip, .mobile-controls) { animation: gallery-away 360ms 260ms ease both; }
+.is-project-transitioning.is-project-opening:not(.is-project-replacing) :is(.carousel, .filmstrip, .mobile-controls) { animation: gallery-away 360ms 260ms ease both; }
 @keyframes gallery-away { from { opacity: 1; } to { opacity: 0; } }
 .project-tile-layer { position: fixed; inset: 0; z-index: 20; overflow: hidden; contain: layout paint; visibility: hidden; clip-path: inset(50%); background: #fff; color: var(--ink); pointer-events: none; }
 .project-tile-layer > .project-page { position: absolute; left: 0; right: 0; }
+.project-swap-backdrop { position: fixed; inset: 0; z-index: 15; overflow: hidden; contain: layout paint; background: #fff; color: var(--ink); pointer-events: none; }
+.project-swap-backdrop > .project-page { position: absolute; left: 0; right: 0; }
 .back-button { display: inline-flex; align-items: center; gap: 18px; min-height: 44px; padding: 10px 14px; border-radius: 6px; background: var(--accent); color: var(--ink); font-size: 12px; font-weight: 600; }
 .back-button .control-arrow { width: 18px; height: 18px; }
 .back-button:hover { filter: brightness(.93); }
@@ -108,10 +132,10 @@ dialog::backdrop { background: #050b1bc9; }
 @media (max-width: 600px), (pointer: coarse) and (max-height: 500px) {
   .portfolio { --thumb-width: 88px; --strip-inset: 12px; }
   .site-header { top: max(10px, env(safe-area-inset-top)); width: min(320px, calc(100% - 24px)); }
-  .site-menu summary { min-height: 56px; padding-inline: 16px 44px; }
-  .menu-name { font-size: 16px; }
-  .menu-location { font-size: 12px; }
-  .menu-icon { width: 18px; height: 18px; top: 19px; right: 16px; }
+  .site-menu > summary { min-height: 64px; padding-inline: 16px; }
+  .menu-icon { width: 16px; height: 16px; }
+  .menu-navigation { margin-inline: 16px; }
+  .menu-footer { padding-inline: 16px; }
   .site-menu { --menu-height: calc(100svh - max(10px, env(safe-area-inset-top)) - max(10px, env(safe-area-inset-bottom))); }
   .filmstrip { bottom: calc(78px + env(safe-area-inset-bottom)); height: 70px; }
   .thumbnail-group { gap: 8px; }
@@ -133,6 +157,6 @@ dialog::backdrop { background: #050b1bc9; }
   .detail-description { font-size: 19px; }
   .dialog-copy { padding: 26px; }
 }
-@media (max-height: 480px) { .filmstrip { bottom: max(12px, env(safe-area-inset-bottom)); } .site-menu summary { min-height: 46px; } .site-menu nav { padding-top: 8px; } .site-menu button { min-height: 40px; padding-block: 8px; } .menu-footer p { display: none; } }
+@media (max-height: 480px) { .filmstrip { bottom: max(12px, env(safe-area-inset-bottom)); } .site-menu > summary { min-height: 60px; padding-block: 9px; } .site-menu .menu-section { min-height: 48px; padding-block: 10px; } .menu-footer { padding-block: 10px; } }
 @media (max-width: 600px) and (max-height: 480px), (pointer: coarse) and (max-height: 480px) { .filmstrip { bottom: calc(72px + env(safe-area-inset-bottom)); height: 62px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }

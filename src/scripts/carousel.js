@@ -1,4 +1,7 @@
-import { settleTiles } from './project-transition.js';
+import { settleTiles, canAnimateTiles, captureProjectBackdrop } from './project-transition.js';
+import { mountProjectMenu } from './project-menu.js';
+import { mountSiteMenu } from './site-menu.js';
+import { createProjectRequests } from './project-navigation.js';
 
 export function mountPortfolio() {
   const root = document.getElementById('portfolio');
@@ -17,9 +20,12 @@ export function mountPortfolio() {
   const stage = root.querySelector('[data-stage]');
   const menu = root.querySelector('[data-menu]');
   const menuToggle = menu.querySelector('summary');
-  const menuBody = menu.querySelector('.menu-body');
-  const menuChoices = [...menu.querySelectorAll('button')];
+  const menuChoices = [...menu.querySelectorAll('button, a[href], [data-projects-toggle]')];
   const menuProjects = [...menu.querySelectorAll('[data-menu-project]')];
+  const projectsMenu = menu.querySelector('[data-projects-menu]');
+  const projectsToggle = projectsMenu.querySelector('[data-projects-toggle]');
+  const homeMenuButton = menu.querySelector('[data-menu-home]');
+  const aboutMenuButton = menu.querySelector('[data-menu-about]');
   const dialogs = [...root.querySelectorAll('dialog')];
   const siteHeader = root.querySelector('.site-header');
   const aboutDialog = root.querySelector('[data-dialog="about"]');
@@ -28,8 +34,11 @@ export function mountPortfolio() {
   const gallerySurfaces = [...root.querySelectorAll('.carousel, .filmstrip, .mobile-controls')];
   const workLabel = menu.querySelector('[data-menu-context="work"]');
   const projectLabel = menu.querySelector('[data-menu-context="project"]');
+  const aboutLabel = menu.querySelector('[data-menu-context="about"]');
   const menuTitle = menu.querySelector('[data-menu-title]');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const projectNavigation = mountProjectMenu(projectsMenu, reducedMotion);
+  const visibleMenuChoices = () => menuChoices.filter(choice => choice === projectsToggle || !projectsMenu.contains(choice) || projectNavigation.expanded);
   const previousButton = root.querySelector('[data-step="-1"]');
   const nextButton = root.querySelector('[data-step="1"]');
   const captionHeading = root.querySelector('.project-caption h1');
@@ -44,7 +53,7 @@ export function mountPortfolio() {
     const node = textNodes.get(selector);
     if (node.textContent !== String(value)) node.textContent = value;
   };
-  const hasDialog = () => projectOpen || projectBusy || dialogs.some(dialog => dialog.open);
+  const hasDialog = () => projectOpen || projectRequests.busy || dialogs.some(dialog => dialog.open);
   let active = -1;
   let position = 0;
   let destination = 0;
@@ -60,19 +69,14 @@ export function mountPortfolio() {
   let drag = null;
   let suppressClickUntil = 0;
   let dialogReturnFocus = null;
-  let menuDesiredOpen = menu.open;
-  let menuAnimation = null;
-  let menuContentAnimation = null;
   let titleFrame = 0;
   let titleSlots = [];
   let slideEndsAt = 0;
   let projectOpen = false;
-  let projectBusy = false;
   let projectAbort = null;
-  let pendingProject = null;
   let projectOrigin = { x: .5, y: .5 };
   let projectReturnFocus = captionButton;
-  let contextIsProject = false;
+  let menuContext = 'home';
   let contextAnimations = [];
   let contextGeneration = 0;
   let menuTitleAnimation = null;
@@ -89,38 +93,53 @@ export function mountPortfolio() {
   let renderedInset = NaN;
   let renderedScale = NaN;
   let renderedRadius = NaN;
+  const menuNavigation = mountSiteMenu(menu, reducedMotion, { onChange: updateMenuName });
+  const projectRequests = createProjectRequests({
+    getCurrent: () => ({ open: projectOpen, index: active }),
+    open: openProject,
+    close: () => transitionProject(false),
+    cancel: () => projectAbort?.abort(),
+    settled: restoreProjectFocus
+  });
 
   function updateMenuName() {
-    menuToggle.setAttribute('aria-label', `Portfolio navigation. ${contextIsProject ? 'Project' : 'Work'}: ${projects[Math.max(0, active)].title}`);
+    const location = menuContext === 'about' ? `About: ${siteHeader.dataset.owner}`
+      : `${menuContext === 'project' ? 'Project' : 'Home'}: ${projects[Math.max(0, active)].title}`;
+    menuToggle.setAttribute('aria-label', `${menuNavigation.expanded ? 'Close' : 'Open'} navigation. ${location}`);
+    if (menuContext === 'home') homeMenuButton.setAttribute('aria-current', 'page');
+    else homeMenuButton.removeAttribute('aria-current');
+    if (menuContext === 'about') aboutMenuButton.setAttribute('aria-current', 'page');
+    else aboutMenuButton.removeAttribute('aria-current');
+    projectsMenu.dataset.current = String(menuContext === 'project');
   }
 
   function setMenuContext(next, { immediate = false } = {}) {
-    if (contextIsProject === next && !immediate) return;
+    const context = typeof next === 'boolean' ? next ? 'project' : 'home' : next;
+    if (menuContext === context && !immediate) return;
+    const labels = [workLabel, projectLabel, aboutLabel];
+    const selected = ['home', 'project', 'about'].indexOf(context);
     const generation = ++contextGeneration;
-    const starts = [workLabel, projectLabel].map(label => {
+    const starts = labels.map(label => {
       const style = getComputedStyle(label);
       return { opacity: style.opacity, transform: style.transform };
     });
     contextAnimations.forEach(animation => animation.cancel());
     contextAnimations = [];
-    contextIsProject = next;
-    workLabel.setAttribute('aria-hidden', String(next));
-    projectLabel.setAttribute('aria-hidden', String(!next));
+    menuContext = context;
+    labels.forEach((label, i) => label.setAttribute('aria-hidden', String(i !== selected)));
     updateMenuName();
-    const ends = [
-      { opacity: next ? '0' : '1', transform: next ? 'translateY(-100%)' : 'translateY(0)' },
-      { opacity: next ? '1' : '0', transform: next ? 'translateY(0)' : 'translateY(100%)' }
-    ];
+    const ends = labels.map((_, i) => ({ opacity: i === selected ? '1' : '0',
+      transform: i === selected ? 'translateY(0)' : `translateY(${i < selected ? '-100%' : '100%'})` }));
     const finish = () => {
       if (generation !== contextGeneration) return;
-      [workLabel, projectLabel].forEach((label, i) => Object.assign(label.style, ends[i]));
+      labels.forEach((label, i) => Object.assign(label.style, ends[i]));
       contextAnimations.forEach(animation => animation.cancel());
       contextAnimations = [];
     };
     if (immediate || reducedMotion.matches || typeof menuTitle.animate !== 'function') { finish(); return; }
-    contextAnimations = [workLabel, projectLabel].map((label, i) => label.animate([starts[i], ends[i]], {
-      duration: i === Number(next) ? 260 : 220,
-      delay: (next ? 100 : 50) + (i === Number(next) ? 30 : 0),
+    contextAnimations = labels.map((label, i) => label.animate([starts[i], ends[i]], {
+      duration: i === selected ? 260 : 220,
+      delay: (context === 'project' ? 100 : 50) + (i === selected ? 30 : 0),
       easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'both'
     }));
     Promise.all(contextAnimations.map(animation => animation.finished.catch(() => {}))).then(finish);
@@ -439,77 +458,30 @@ export function mountPortfolio() {
     menu.style.setProperty('--menu-summary-height', `${summaryHeight}px`);
     // Changing padding can move the scroll position even if the target is equal.
     renderedScroll = NaN;
-    if (menuAnimation) animateMenu(menuDesiredOpen);
+    if (menuNavigation.animating) animateMenu(menuNavigation.expanded);
     presentCards(lift);
   }
 
   function animateMenu(open, { focus = false, focusChoice = null } = {}) {
-    const fromHeight = menu.getBoundingClientRect().height;
-    const fromOpacity = menu.open ? getComputedStyle(menuBody).opacity : '0';
-    const fromTransform = menu.open ? getComputedStyle(menuBody).transform : 'translateY(-6px)';
-    if (menuAnimation) {
-      menuAnimation.onfinish = null;
-      menuAnimation.cancel();
-    }
-    menuContentAnimation?.cancel();
-    menuAnimation = null;
-    menuContentAnimation = null;
-    menuDesiredOpen = open;
-    menuToggle.setAttribute('aria-expanded', String(open));
-    if (focus) menuToggle.focus({ preventScroll: true });
-    menuBody.inert = !open;
-    if (!open && !menu.open) return;
-    // Keep native details open during collapse, so its contents remain visible until the animation ends.
-    menu.open = true;
-    menu.style.height = '';
-    const summaryHeight = menuToggle.getBoundingClientRect().height;
-    menu.style.setProperty('--menu-summary-height', `${summaryHeight}px`);
-    const toHeight = open ? menu.getBoundingClientRect().height : summaryHeight;
-    if (reducedMotion.matches || Math.abs(fromHeight - toHeight) < .5) {
-      menu.open = open;
-    } else {
-      menu.style.height = `${fromHeight}px`;
-      const animation = menu.animate([{ height: `${fromHeight}px` }, { height: `${toHeight}px` }], {
-        duration: open ? 340 : 240, easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'forwards'
-      });
-      menuAnimation = animation;
-      menuContentAnimation = menuBody.animate([
-        { opacity: fromOpacity, transform: fromTransform },
-        { opacity: open ? '1' : '0', transform: open ? 'translateY(0)' : 'translateY(-4px)' }
-      ], { duration: open ? 240 : 170, delay: open ? 50 : 0, easing: 'ease-out', fill: 'both' });
-      animation.onfinish = () => {
-        menu.open = open;
-        menu.style.height = '';
-        menuAnimation = null;
-        animation.cancel();
-        menuContentAnimation?.cancel();
-        menuContentAnimation = null;
-      };
-    }
-    if (focusChoice !== null) menuChoices[focusChoice].focus({ preventScroll: true });
+    menuNavigation.set(open, { focus });
+    if (focusChoice !== null) visibleMenuChoices()[focusChoice]?.focus({ preventScroll: true });
   }
   function closeMenu(options) { animateMenu(false, options); }
   menuToggle.addEventListener('click', event => {
     event.preventDefault();
-    animateMenu(!menuDesiredOpen);
-  });
-  menu.addEventListener('toggle', () => {
-    if (menuAnimation) return;
-    menuDesiredOpen = menu.open;
-    menuToggle.setAttribute('aria-expanded', String(menu.open));
-    menuBody.inert = !menu.open;
+    animateMenu(!menuNavigation.expanded);
   });
   menuToggle.addEventListener('keydown', event => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     event.preventDefault();
     event.stopPropagation();
-    animateMenu(true, { focusChoice: event.key === 'ArrowDown' ? 0 : menuChoices.length - 1 });
+    animateMenu(true, { focusChoice: event.key === 'ArrowDown' ? 0 : visibleMenuChoices().length - 1 });
   });
   document.addEventListener('pointerdown', event => {
-    if (menuDesiredOpen && !menu.contains(event.target)) closeMenu();
+    if (menuNavigation.expanded && !menu.contains(event.target)) closeMenu();
   });
   menu.addEventListener('focusout', event => {
-    if (menuDesiredOpen && event.relatedTarget && !menu.contains(event.relatedTarget)) closeMenu();
+    if (menuNavigation.expanded && event.relatedTarget && !menu.contains(event.relatedTarget)) closeMenu();
   });
 
   function fillProject(index) {
@@ -551,15 +523,15 @@ export function mountPortfolio() {
   }
 
   function restoreProjectFocus() {
-    if (aboutDialog.open || pendingProject) return;
-    const target = menuDesiredOpen
+    if (aboutDialog.open || projectRequests.pending) return;
+    const target = menuNavigation.expanded
       ? menu.querySelector(projectOpen ? `[data-menu-project="${active}"]` : '[data-action="gallery"]')
       : projectOpen ? projectView.querySelector('[data-detail-title]')
       : siteHeader.contains(projectReturnFocus) ? menuToggle : projectReturnFocus;
     (target?.isConnected ? target : captionButton).focus({ preventScroll: true });
   }
 
-  async function transitionProject(opening) {
+  async function transitionProject(opening, { replacing = false } = {}) {
     const scrollTop = projectView.scrollTop;
     const originalVisibility = projectPage.style.visibility;
     projectPage.style.visibility = 'hidden';
@@ -572,6 +544,7 @@ export function mountPortfolio() {
     projectView.inert = true;
     root.classList.add('has-project', 'is-project-transitioning');
     root.classList.toggle('is-project-opening', opening);
+    root.classList.toggle('is-project-replacing', replacing);
     projectView.hidden = false;
     setMenuContext(opening);
     document.body.classList.add('dialog-open');
@@ -584,7 +557,7 @@ export function mountPortfolio() {
       projectOpen = opening;
       projectView.hidden = !opening;
       projectView.inert = !opening;
-      root.classList.remove('is-project-transitioning', 'is-project-opening');
+      root.classList.remove('is-project-transitioning', 'is-project-opening', 'is-project-replacing');
       projectPage.style.visibility = originalVisibility;
       root.classList.toggle('has-project', opening);
       skipLink.href = opening ? '#detail-title' : '#project-caption';
@@ -598,25 +571,16 @@ export function mountPortfolio() {
     }
   }
 
-  async function runProjectRequests() {
-    if (projectBusy) return;
-    projectBusy = true;
+  async function openProject(request, { replacing }) {
+    const backdrop = replacing && canAnimateTiles({ reducedMotion: reducedMotion.matches })
+      ? captureProjectBackdrop(root, projectPage, { scrollTop: projectView.scrollTop }) : null;
     try {
-      while (pendingProject) {
-        const request = pendingProject;
-        pendingProject = null;
-        if (projectOpen && request.index !== active) await transitionProject(false);
-        if (pendingProject) continue;
-        if (request.index !== null && !projectOpen) {
-          projectOrigin = request.origin || projectOrigin;
-          projectReturnFocus = request.returnFocus || projectReturnFocus;
-          fillProject(request.index);
-          await transitionProject(true);
-        }
-      }
+      projectOrigin = request.origin || projectOrigin;
+      projectReturnFocus = request.returnFocus || projectReturnFocus;
+      fillProject(request.index);
+      await transitionProject(true, { replacing });
     } finally {
-      projectBusy = false;
-      restoreProjectFocus();
+      backdrop?.remove();
     }
   }
 
@@ -630,9 +594,7 @@ export function mountPortfolio() {
 
   function requestProject(index, options = {}) {
     closeAbout({ restoreFocus: false });
-    pendingProject = { index: index === null ? null : clamp(index), ...options };
-    projectAbort?.abort();
-    void runProjectRequests();
+    void projectRequests.request({ index: index === null ? null : clamp(index), ...options });
   }
 
   function restoreHeader() {
@@ -644,7 +606,9 @@ export function mountPortfolio() {
     aboutReturnFocus = restoreFocus;
     restoreHeader();
     aboutDialog.close();
-    document.body.classList.toggle('dialog-open', projectOpen || projectBusy);
+    setMenuContext(projectOpen || projectRequests.busy);
+    setMenuTitle(projects[active].title);
+    document.body.classList.toggle('dialog-open', projectOpen || projectRequests.busy);
   }
 
   function openAbout() {
@@ -655,6 +619,8 @@ export function mountPortfolio() {
     // Native modals occupy the browser's top layer. Put navigation in that same layer.
     aboutDialog.append(siteHeader);
     aboutDialog.showModal();
+    setMenuContext('about');
+    setMenuTitle(siteHeader.dataset.owner);
     aboutDialog.scrollTop = 0;
     document.body.classList.add('dialog-open');
     aboutDialog.querySelector('[data-close]').focus({ preventScroll: true });
@@ -673,8 +639,8 @@ export function mountPortfolio() {
     const choice = event.target.closest('[data-menu-project]');
     if (choice) {
       const index = Number(choice.dataset.menuProject);
-      if (projectOpen || projectBusy) requestProject(index, { origin: clickOrigin(event, choice), returnFocus: choice });
-      else { closeAbout({ restoreFocus: false }); select(index); closeMenu({ focus: true }); }
+      closeMenu({ focus: true });
+      requestProject(index, { origin: clickOrigin(event, choice), returnFocus: choice });
       return;
     }
     if (event.target.closest('[data-close]')) { closeAbout(); return; }
@@ -686,8 +652,9 @@ export function mountPortfolio() {
       });
     }
     if (actionButton?.dataset.action === 'gallery') {
-      if (projectOpen || projectBusy) requestProject(null);
-      else { closeAbout({ restoreFocus: false }); closeMenu({ focus: true }); }
+      closeAbout({ restoreFocus: false });
+      closeMenu({ focus: true });
+      if (projectOpen || projectRequests.busy) requestProject(null);
     }
     if (actionButton?.dataset.action === 'about') openAbout();
   });
@@ -767,19 +734,26 @@ export function mountPortfolio() {
   document.addEventListener('keydown', event => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     if (event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
-    if (menuDesiredOpen) {
+    if (menuNavigation.expanded) {
+      if ((event.key === 'Escape' || event.key === 'ArrowLeft') && projectNavigation.expanded && projectsMenu.contains(event.target)) {
+        event.preventDefault(); projectNavigation.set(false, { focus: true }); return;
+      }
+      if (event.key === 'ArrowRight' && event.target === projectsToggle) {
+        event.preventDefault(); projectNavigation.set(true); menuProjects[Math.max(0, active)]?.focus({ preventScroll: true }); return;
+      }
       if (event.key === 'Escape') { event.preventDefault(); closeMenu({ focus: true }); return; }
       if (menu.contains(event.target) && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
         event.preventDefault();
-        const current = menuChoices.indexOf(document.activeElement);
-        const next = event.key === 'Home' ? 0 : event.key === 'End' ? menuChoices.length - 1
-          : Math.max(0, Math.min(menuChoices.length - 1, current + (event.key === 'ArrowDown' ? 1 : -1)));
-        menuChoices[next].focus();
+        const choices = visibleMenuChoices();
+        const current = choices.indexOf(document.activeElement);
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? choices.length - 1
+          : Math.max(0, Math.min(choices.length - 1, current + (event.key === 'ArrowDown' ? 1 : -1)));
+        choices[next]?.focus();
       }
       return;
     }
     if (aboutDialog.open) return;
-    if (projectOpen || projectBusy) {
+    if (projectOpen || projectRequests.busy) {
       if (event.key === 'Escape') { event.preventDefault(); requestProject(null); }
       return;
     }
@@ -793,7 +767,9 @@ export function mountPortfolio() {
     dialog.addEventListener('close', () => {
       if (dialog.open) return;
       restoreHeader();
-      document.body.classList.toggle('dialog-open', projectOpen || projectBusy);
+      setMenuContext(projectOpen || projectRequests.busy);
+      setMenuTitle(projects[active].title);
+      document.body.classList.toggle('dialog-open', projectOpen || projectRequests.busy);
       if (aboutReturnFocus) dialogReturnFocus?.focus({ preventScroll: true });
     });
     dialog.addEventListener('cancel', event => {
@@ -814,18 +790,20 @@ export function mountPortfolio() {
   reducedMotion.addEventListener('change', () => {
     if (reducedMotion.matches) {
       projectAbort?.abort();
-      setMenuContext(contextIsProject, { immediate: true });
+      setMenuContext(menuContext, { immediate: true });
       setMenuTitle(desiredMenuTitle, { immediate: true });
+      projectNavigation.set(projectNavigation.expanded, { immediate: true });
     }
     if (reducedMotion.matches && titleFrame) finishTitle();
     if (reducedMotion.matches && liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
     if (reducedMotion.matches && animationFrame) animateTo(destination, { immediate: true });
-    if (reducedMotion.matches && menuAnimation) animateMenu(menuDesiredOpen);
+    if (reducedMotion.matches && menuNavigation.animating) menuNavigation.set(menuNavigation.expanded, { immediate: true });
   });
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) return;
     projectAbort?.abort();
     stopWheel();
+    if (menuNavigation.animating) menuNavigation.set(menuNavigation.expanded, { immediate: true });
     if (animationFrame) animateTo(Math.round(destination), { immediate: true });
     if (titleFrame) finishTitle();
     if (liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
