@@ -2,12 +2,14 @@ import { settleTiles, canAnimateTiles, captureProjectBackdrop } from './project-
 import { mountProjectMenu } from './project-menu.js';
 import { mountSiteMenu } from './site-menu.js';
 import { createProjectRequests } from './project-navigation.js';
+import { mountProjectFavicon } from './favicon.js';
 
 export function mountPortfolio() {
   const root = document.getElementById('portfolio');
   const data = document.getElementById('portfolio-data');
   if (!root || !data) return;
   const projects = JSON.parse(data.textContent);
+  const updateFavicon = mountProjectFavicon(document.querySelector('[data-project-favicon]'));
   const slides = [...root.querySelectorAll('[data-slide]')];
   const slideImages = slides.map(slide => slide.querySelector('img'));
   const captionButton = root.querySelector('.caption-link');
@@ -423,6 +425,7 @@ export function mountPortfolio() {
     const distance = Math.abs(destination - from);
     const finish = () => {
       render(destination);
+      updateFavicon(projects[active].favicon);
       root.classList.remove('is-moving');
       animationFrame = 0;
       slideEndsAt = 0;
@@ -809,5 +812,6 @@ export function mountPortfolio() {
     if (liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
   });
   measure();
+  updateFavicon(projects[Math.max(0, active)].favicon);
   root.dataset.ready = 'true';
 }

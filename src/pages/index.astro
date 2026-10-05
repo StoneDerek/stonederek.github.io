@@ -3,10 +3,11 @@ import Layout from '../layouts/Layout.astro';
 import projects from '../data/projects.json';
 import site from '../data/site.json';
 import { publicationDate } from '../data/publication.js';
+import { projectIcon } from '../data/project-icons.js';
 const base = import.meta.env.BASE_URL;
 const url = (path) => `${base}${path}`;
 const first = projects[0];
-const serialized = JSON.stringify(projects).replace(/</g, '\\u003c');
+const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon: projectIcon(project.palette) }))).replace(/</g, '\\u003c');
 const published = publicationDate();
 const cat = ['/\\_/\\', '= ( • . • ) =', '/     \\'].join('\n');
 ---

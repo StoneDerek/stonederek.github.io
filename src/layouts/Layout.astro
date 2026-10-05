@@ -12,7 +12,7 @@ const { title = site.title, description = site.description } = Astro.props;
     <meta name="theme-color" content="#ffffff" />
     <meta name="description" content={description} />
     <title>{title}</title>
-    <link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" />
+    <link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" data-project-favicon />
     <style is:inline set:html={css}></style>
   </head>
   <body>
