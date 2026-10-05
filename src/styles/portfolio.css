@@ -3,6 +3,7 @@ html { background: #fff; }
 body { margin: 0; background: #fff; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
 button, a, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 button { font: inherit; cursor: pointer; border: 0; }
+.control-arrow { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 :focus-visible { outline: none; }
 .portfolio { --thumb-width: 80px; --strip-inset: 16px; position: relative; height: 100svh; min-height: 260px; overflow: hidden; isolation: isolate; color: var(--accent); background: #fff; transition: color 320ms ease; }
 .skip-link { position: absolute; top: 12px; left: 12px; z-index: 10; padding: 12px; border-radius: 6px; background: var(--accent); color: var(--ink); transform: translateY(-200%); font-size: 12px; }
@@ -66,7 +67,7 @@ dialog::backdrop { background: #050b1bc9; }
 .project-page { min-height: 100%; }
 .project-toolbar { position: sticky; z-index: 2; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 70px; padding: 12px 32px; background: #fff; }
 .back-button { display: inline-flex; align-items: center; gap: 18px; min-height: 44px; padding: 10px 14px; border-radius: 6px; background: var(--accent); color: var(--ink); font-size: 12px; font-weight: 600; }
-.back-button span { font-size: 18px; }
+.back-button .control-arrow { width: 18px; height: 18px; }
 .back-button:hover { filter: brightness(.93); }
 .back-button:focus-visible { background: color-mix(in srgb, var(--accent) 72%, white); }
 .project-view-meta, .project-view-number { font-size: 11px; }
@@ -105,6 +106,7 @@ dialog::backdrop { background: #050b1bc9; }
   .mobile-controls button:active:not(:disabled) { transform: scale(.96); }
   .mobile-controls button:focus-visible { background: var(--ink); color: var(--accent); }
   .mobile-inspect { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 12px; font-size: 12px; font-weight: 600; }
+  .mobile-inspect-label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
   .mobile-count { font-size: 10px; font-weight: 400; white-space: nowrap; }
   .project-toolbar { min-height: 72px; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left)); gap: 12px; }
   .back-button { min-height: 48px; }
