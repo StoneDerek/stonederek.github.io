@@ -15,12 +15,12 @@ const serialized = JSON.stringify(projects).replace(/</g, '\\u003c');
       <details class="site-menu" data-menu>
         <summary aria-label="Portfolio navigation" aria-controls="project-navigation" aria-expanded="false">
           <span class="menu-name">{site.name}</span>
-          <span class="menu-location">Work: <span data-menu-title>{first.title}</span></span>
+          <span class="menu-location"><span class="menu-context"><span class="menu-context-row" data-menu-context="work">Work:</span><span class="menu-context-row menu-context-project" data-menu-context="project" aria-hidden="true">Project:</span></span><span class="menu-title-window"><span data-menu-title>{first.title}</span></span></span>
           <svg class="menu-icon" viewBox="0 0 16 16" aria-hidden="true"><path class="menu-bars" d="M3 4h10M3 8h10M3 12h10" /><path class="menu-cross" d="m4 4 8 8m0-8-8 8" /></svg>
         </summary>
         <div class="menu-body">
         <nav id="project-navigation" aria-label="Projects and About">
-          <span class="menu-heading">Selected work</span>
+          <button type="button" class="menu-heading" data-action="gallery">Selected work</button>
           {projects.map((project, index) => (
             <button type="button" class="menu-project" data-menu-project={index} aria-current={index === 0 ? 'true' : undefined}><span>{project.title}</span><span class="menu-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span></button>
           ))}
@@ -36,13 +36,13 @@ const serialized = JSON.stringify(projects).replace(/</g, '\\u003c');
         {projects.map((project, index) => (
           <div class:list={['artwork-slide', { 'is-active': index === 0 }]} data-slide={index} aria-hidden={index !== 0}>
             <div class="artwork-card">
-            <img src={url(project.image)} alt={project.imageAlt} width="1920" height="1200" style={`object-position:${project.position}`} fetchpriority={index === 0 ? 'high' : 'auto'} decoding="async" draggable="false" />
+            <img src={url(project.image)} alt={project.imageAlt} width="1920" height="1200" style={`object-position:${project.position}`} loading={index < 2 ? 'eager' : 'lazy'} fetchpriority={index === 0 ? 'high' : 'auto'} decoding="async" draggable="false" />
             </div>
           </div>
         ))}
         </div>
         <div id="project-caption" class="project-caption" tabindex="-1">
-          <h1 aria-label={first.title}><button type="button" class="caption-link" data-action="project" data-project="0" aria-haspopup="dialog" aria-label={`View ${first.title}`}><span class="caption-word"><span class="caption-metrics" data-title-metrics aria-hidden="true">{first.title}</span><span class="caption-letters" data-title aria-hidden="true">{first.title}</span></span><svg class="caption-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button></h1>
+          <h1 aria-label={first.title}><button type="button" class="caption-link" data-action="project" data-project="0" aria-controls="project-article" aria-label={`View ${first.title}`}><span class="caption-word"><span class="caption-metrics" data-title-metrics aria-hidden="true">{first.title}</span><span class="caption-letters" data-title aria-hidden="true">{first.title}</span></span><svg class="caption-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button></h1>
         </div>
       </div>
       <p class="sr-only" data-announcement aria-live="polite" aria-atomic="true"></p>
@@ -65,20 +65,20 @@ const serialized = JSON.stringify(projects).replace(/</g, '\\u003c');
 
     <nav class="mobile-controls" aria-label="Gallery controls">
       <button type="button" class="mobile-arrow" data-step="-1" aria-label="Previous project" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" /></svg></button>
-      <button type="button" class="mobile-inspect" data-action="project" aria-haspopup="dialog"><span class="mobile-inspect-label">View project <svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 12 12 4M5 4h7v7" /></svg></span><span class="mobile-count" data-mobile-count>01 / {String(projects.length).padStart(2, '0')}</span></button>
+      <button type="button" class="mobile-inspect" data-action="project" aria-controls="project-article"><span class="mobile-inspect-label">View project <svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 12 12 4M5 4h7v7" /></svg></span><span class="mobile-count" data-mobile-count>01 / {String(projects.length).padStart(2, '0')}</span></button>
       <button type="button" class="mobile-arrow" data-step="1" aria-label="Next project"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7" /></svg></button>
     </nav>
 
-    <dialog class="project-view" data-dialog="project" aria-labelledby="detail-title">
+    <section id="project-article" class="project-view" data-project-view aria-labelledby="detail-title" hidden>
       <article class="project-page">
-        <header class="project-toolbar"><button type="button" class="back-button" data-close aria-label="Back to gallery"><svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m7 3-5 5 5 5M2 8h12" /></svg> Selected work</button><span class="project-view-meta"><span data-detail-category>{first.category}</span> / <span data-detail-year>{first.year}</span></span><span class="project-view-number" data-detail-number>01 / {String(projects.length).padStart(2, '0')}</span></header>
-        <div class="project-image-wrap"><img class="project-image" data-detail-image src={url(first.image)} alt={first.imageAlt} width="1920" height="1200" /></div>
+        <header class="project-toolbar"><button type="button" class="back-button" data-action="gallery" aria-label="Back to gallery"><svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m7 3-5 5 5 5M2 8h12" /></svg> Selected work</button><span class="project-view-meta"><span data-detail-category>{first.category}</span> / <span data-detail-year>{first.year}</span></span><span class="project-view-number" data-detail-number>01 / {String(projects.length).padStart(2, '0')}</span></header>
         <section class="project-story">
-          <div><p class="dialog-eyebrow">Placeholder project</p><h2 id="detail-title" data-detail-title>{first.title}</h2></div>
+          <div><p class="dialog-eyebrow">Placeholder project</p><h2 id="detail-title" data-detail-title tabindex="-1">{first.title}</h2></div>
           <div class="project-prose"><p class="detail-description" data-detail-description>{first.description}</p><p class="detail-note" data-detail-note>{first.note}</p></div>
         </section>
+        <div class="project-media" data-detail-media data-asset-base={base} hidden></div>
       </article>
-    </dialog>
+    </section>
 
     <dialog class="about-dialog" data-dialog="about" aria-labelledby="about-title">
       <div class="dialog-top"><span>{site.name}</span><button type="button" class="close-button" data-close aria-label="Close About">×</button></div>

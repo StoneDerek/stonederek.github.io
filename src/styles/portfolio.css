@@ -1,4 +1,5 @@
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { background: #fff; }
 body { margin: 0; background: #fff; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
 button, a, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -6,22 +7,28 @@ button { font: inherit; cursor: pointer; border: 0; }
 .control-arrow { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 :focus-visible { outline: none; }
 .portfolio { --thumb-width: 80px; --strip-inset: 16px; position: relative; height: 100svh; min-height: 260px; overflow: hidden; isolation: isolate; color: var(--accent); background: #fff; transition: color 320ms ease; }
-.skip-link { position: absolute; top: 12px; left: 12px; z-index: 10; padding: 12px; border-radius: 6px; background: var(--accent); color: var(--ink); transform: translateY(-200%); font-size: 12px; }
+.skip-link { position: absolute; top: 12px; left: 12px; z-index: 70; padding: 12px; border-radius: 6px; background: var(--accent); color: var(--ink); transform: translateY(-200%); font-size: 12px; }
 .skip-link:focus { transform: translateY(0); }
-.site-header { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 3; width: min(300px, calc(100% - 32px)); color: var(--ink); }
+.site-header { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 60; width: min(300px, calc(100% - 32px)); color: var(--ink); }
 .site-menu { --menu-height: calc(100svh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom))); position: relative; background: var(--accent); border-radius: 8px; overflow: hidden; transition: background-color 320ms ease, color 320ms ease; }
 .site-menu[open] { height: var(--menu-height); }
 .menu-body { display: flex; flex-direction: column; height: calc(var(--menu-height) - var(--menu-summary-height, 50px)); }
 .site-menu summary { position: relative; display: flex; flex-direction: column; justify-content: center; flex: 0 0 auto; min-height: 50px; padding: 9px 36px 9px 12px; list-style: none; cursor: pointer; font-size: 11px; line-height: 1.25; }
 .site-menu summary::-webkit-details-marker { display: none; }
 .menu-name { font-size: 14px; font-weight: 700; letter-spacing: -.025em; }
-.menu-location { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.menu-location { display: flex; align-items: center; gap: 4px; min-width: 0; min-height: 16px; margin-top: 1px; line-height: 16px; white-space: nowrap; }
+.menu-context { position: relative; flex: 0 0 45px; width: 45px; height: 16px; overflow: hidden; }
+.menu-context-row { position: absolute; inset: 0; display: block; }
+.menu-context-project { opacity: 0; transform: translateY(100%); }
+.menu-title-window { display: block; flex: 1; min-width: 0; height: 16px; overflow: hidden; }
+[data-menu-title] { display: block; overflow: hidden; text-overflow: ellipsis; }
 .menu-icon { position: absolute; right: 12px; top: 18px; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; }
 .menu-cross, .site-menu[open] .menu-bars { display: none; }
 .site-menu[open] .menu-cross { display: block; }
 .site-menu nav { padding: 12px 8px; overflow-y: auto; flex: 1; min-height: 0; }
 .menu-heading { display: block; padding: 0 9px 12px; font-size: 10px; text-transform: uppercase; font-weight: 700; letter-spacing: .05em; }
 .site-menu button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 48px; padding: 11px 9px; margin: 2px 0; border-radius: 5px; background: transparent; color: inherit; text-align: left; font-size: 16px; font-weight: 600; letter-spacing: -.02em; }
+.site-menu .menu-heading { min-height: 44px; padding: 8px 9px; font-size: 10px; letter-spacing: .05em; }
 .site-menu button:hover, .site-menu button[aria-current="true"] { background: color-mix(in srgb, var(--ink) 12%, transparent); }
 .site-menu button:focus-visible, .site-menu summary:focus-visible { background: var(--ink); color: var(--accent); }
 .menu-number { font-size: 10px; font-weight: 400; opacity: .7; }
@@ -29,7 +36,8 @@ button { font: inherit; cursor: pointer; border: 0; }
 .menu-footer p { margin: 14px 9px 0; font-size: 10px; }
 .carousel { position: absolute; inset: 0; outline: none; }
 .artwork-stage { position: absolute; inset: 0; touch-action: pan-y pinch-zoom; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.artwork-track { display: flex; width: 100%; height: 100%; will-change: transform; }
+.artwork-track { display: flex; width: 100%; height: 100%; }
+.is-moving .artwork-track, .is-dragging .artwork-track, .is-lifting .artwork-track { will-change: transform; }
 .artwork-slide { position: relative; flex: 0 0 calc(100% - var(--gallery-inset, 0px)); width: calc(100% - var(--gallery-inset, 0px)); height: 100%; }
 .artwork-card { position: absolute; top: 0; left: 0; width: calc(100% + var(--gallery-inset, 0px)); height: 100%; overflow: hidden; border-radius: var(--gallery-radius, 0px); transform: scale(var(--gallery-scale, 1)); }
 .artwork-card > img { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; pointer-events: none; }
@@ -63,17 +71,26 @@ h1 { margin: 0; font-size: 14px; line-height: 1.25; font-weight: 600; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 dialog { position: fixed; inset: 0; margin: auto; padding: 0; border: 0; color: var(--ink); background: var(--accent); overscroll-behavior: contain; }
 dialog::backdrop { background: #050b1bc9; }
-.project-view { width: 100%; height: 100svh; max-width: none; max-height: none; margin: 0; border-radius: 0; overflow: auto; background: #fff; color: var(--ink); }
-.project-page { min-height: 100%; }
-.project-toolbar { position: sticky; z-index: 2; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 70px; padding: 12px 32px; background: #fff; }
+.project-view { position: fixed; inset: 0; z-index: 10; width: 100%; height: 100svh; overflow: auto; scrollbar-gutter: stable; background: #fff; color: var(--ink); overscroll-behavior: contain; }
+.project-page { min-height: 100%; padding-top: calc(84px + env(safe-area-inset-top)); background: #fff; }
+.project-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 70px; max-width: 1400px; width: calc(100% - 80px); margin: 0 auto; padding: 12px 0; background: #fff; }
+.has-project:not(.is-project-transitioning) :is(.carousel, .filmstrip, .mobile-controls) { visibility: hidden; }
+.is-project-transitioning .project-view { background: transparent; scrollbar-color: transparent transparent; }
+.is-project-transitioning .project-view > .project-page { visibility: hidden; }
+.is-project-transitioning.is-project-opening :is(.carousel, .filmstrip, .mobile-controls) { animation: gallery-away 360ms 260ms ease both; }
+@keyframes gallery-away { from { opacity: 1; } to { opacity: 0; } }
+.project-tile-layer { position: fixed; inset: 0; z-index: 20; overflow: hidden; contain: layout paint; visibility: hidden; clip-path: inset(50%); background: #fff; color: var(--ink); pointer-events: none; }
+.project-tile-layer > .project-page { position: absolute; left: 0; right: 0; }
 .back-button { display: inline-flex; align-items: center; gap: 18px; min-height: 44px; padding: 10px 14px; border-radius: 6px; background: var(--accent); color: var(--ink); font-size: 12px; font-weight: 600; }
 .back-button .control-arrow { width: 18px; height: 18px; }
 .back-button:hover { filter: brightness(.93); }
 .back-button:focus-visible { background: color-mix(in srgb, var(--accent) 72%, white); }
 .project-view-meta, .project-view-number { font-size: 11px; }
-.project-image-wrap { display: flex; justify-content: center; max-width: 1600px; width: calc(100% - 64px); margin: 8px auto 0; }
-.project-image { display: block; width: auto; height: auto; max-width: 100%; max-height: calc(100svh - 112px); object-fit: contain; border-radius: 0; }
-.project-story { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; max-width: 1400px; width: calc(100% - 80px); margin: 0 auto; padding: 68px 0 90px; }
+.project-story { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; max-width: 1400px; width: calc(100% - 80px); margin: 0 auto; padding: 48px 0 70px; }
+.project-media { max-width: 1400px; width: calc(100% - 80px); margin: 0 auto; padding-bottom: 70px; }
+.project-figure { margin: 0 0 36px; }
+.project-figure img { display: block; width: 100%; height: auto; }
+.project-figure figcaption { margin-top: 12px; font-size: 13px; line-height: 1.5; }
 .dialog-eyebrow { margin: 0 0 16px; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
 .project-story h2 { margin: 0; font-size: clamp(44px, 5vw, 80px); font-weight: 500; line-height: 1.03; letter-spacing: -.055em; }
 .detail-description { margin: 0 0 24px; font-size: 21px; line-height: 1.45; letter-spacing: -.02em; }
@@ -108,12 +125,11 @@ dialog::backdrop { background: #050b1bc9; }
   .mobile-inspect { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 12px; font-size: 12px; font-weight: 600; }
   .mobile-inspect-label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
   .mobile-count { font-size: 10px; font-weight: 400; white-space: nowrap; }
-  .project-toolbar { min-height: 72px; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left)); gap: 12px; }
+  .project-toolbar { min-height: 72px; width: calc(100% - 40px); padding: 12px 0; gap: 12px; }
   .back-button { min-height: 48px; }
   .project-view-meta { display: none; }
-  .project-image-wrap { width: calc(100% - 24px); }
-  .project-image { height: auto; min-height: 0; max-height: calc(100svh - 88px); aspect-ratio: 1920 / 1200; }
   .project-story { width: calc(100% - 40px); grid-template-columns: 1fr; gap: 28px; padding: 40px 0 60px; }
+  .project-media { width: calc(100% - 40px); padding-bottom: 50px; }
   .detail-description { font-size: 19px; }
   .dialog-copy { padding: 26px; }
 }
