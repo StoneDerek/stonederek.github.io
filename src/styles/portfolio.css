@@ -53,6 +53,12 @@ html[data-gallery-handoff]::view-transition-group(*), html[data-gallery-handoff]
 html[data-gallery-handoff]::view-transition-old(*) { opacity: 0 !important; }
 html[data-gallery-handoff]::view-transition-new(*) { opacity: 1 !important; }
 html[data-gallery-handoff] [data-astro-transition-scope] { animation: none !important; }
+.section-outgoing { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+.section-outgoing-art { z-index: 1; }
+.section-outgoing-text { z-index: 2; }
+html[data-touch-section-motion] :is(.profile-main, .profile-footer) { position: relative; z-index: 2; }
+html[data-touch-section-motion] .carousel { z-index: auto; }
+html[data-touch-section-motion] .project-caption { z-index: 2; }
 body { margin: 0; background: #fff; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
 button, a, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 button { font: inherit; cursor: pointer; border: 0; }

@@ -5,6 +5,7 @@ import { mountSectionLinks } from './section-links.js';
 import { sectionDirection, sectionFromPath } from './section-state.js';
 import { sectionTiming } from '../data/section-motion.js';
 import { prepareGalleryImages } from './section-assets.js';
+import { captureTouchSectionMotion, finishTouchSectionMotion, usesTouchSectionMotion } from './touch-section-motion.js';
 
 let mountedHeader = null;
 let dispose = () => {};
@@ -56,6 +57,7 @@ if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ !== undefined) {
 }
 
 document.addEventListener('astro:before-preparation', event => {
+  finishTouchSectionMotion();
   const loader = event.loader;
   event.loader = async () => {
     await loader();
@@ -66,6 +68,19 @@ document.addEventListener('astro:before-preparation', event => {
   document.documentElement.style.setProperty('--section-drift', `${direction * sectionTiming.distance}px`);
 });
 document.addEventListener('astro:before-swap', event => {
+  const direction = sectionDirection(sectionFromPath(event.from.pathname), sectionFromPath(event.to.pathname));
+  if (usesTouchSectionMotion()) {
+    // Keep the short drift on live elements, without relying on an incoming
+    // browser snapshot being available to paint on touch devices.
+    event.viewTransition.ready.catch(() => {});
+    event.viewTransition.skipTransition();
+    if (!event.info?.gallerySwipe && !window.matchMedia('(prefers-reduced-motion: reduce)').matches &&
+        document.querySelector('.site-header') && event.newDocument.querySelector('.site-header')) {
+      const startMotion = captureTouchSectionMotion(direction);
+      const swap = event.swap;
+      event.swap = () => { swap(); startMotion(); };
+    }
+  }
   // The fallback keeps the header anchored and blends its actual drawn colors.
   const menu = document.querySelector('.site-menu');
   const nextMenu = event.newDocument.querySelector('.site-menu');
@@ -75,7 +90,6 @@ document.addEventListener('astro:before-swap', event => {
     nextMenu.style.setProperty('--navigation-from-ink', style.color);
   }
   event.newDocument.documentElement.toggleAttribute('data-gallery-handoff', Boolean(event.info?.gallerySwipe));
-  const direction = sectionDirection(sectionFromPath(event.from.pathname), sectionFromPath(event.to.pathname));
   event.newDocument.documentElement.style.setProperty('--section-drift', `${direction * sectionTiming.distance}px`);
   dispose();
 });
