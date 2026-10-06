@@ -65,7 +65,9 @@ function initializePreview({ pages, assets }) {
   const resumeAddress = URL.createObjectURL(new Blob([resume], { type: 'text/html' }));
   let previousRoute = null;
   let pendingHandoff = false;
-  const render = () => {
+  let renderGeneration = 0;
+  const render = async () => {
+    const generation = ++renderGeneration;
     const [requested, fragment = ''] = location.hash.slice(1).split('?');
     const route = ['home', 'about', 'projects'].includes(requested) ? requested : 'home';
     document.title = route === 'home' ? 'Derek Stone — Portfolio preview' : `Derek Stone — ${route === 'about' ? 'About' : 'Projects'} preview`;
@@ -73,6 +75,8 @@ function initializePreview({ pages, assets }) {
     const order = ['home', 'about', 'projects'];
     const direction = previousRoute && !pendingHandoff ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
     pendingHandoff = false;
+    if (direction) await frame.contentWindow?.__PORTFOLIO_PREVIEW_EXIT__?.();
+    if (generation !== renderGeneration) return;
     previousRoute = route;
     const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
     html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);

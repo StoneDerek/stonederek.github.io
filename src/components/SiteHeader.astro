@@ -2,6 +2,7 @@
 import site from '../data/site.json';
 import projects from '../data/projects.json';
 import { publicationDate } from '../data/publication.js';
+import { sectionFade } from '../data/section-motion.js';
 const { page = 'home' } = Astro.props;
 const base = import.meta.env.BASE_URL;
 const url = (path = '') => `${base}${path}`;
@@ -14,7 +15,7 @@ const location = gallery ? projects[0].title : page === 'about' ? site.name : 'I
   <details class="site-menu" data-menu>
     <summary aria-label={`Open navigation. ${page === 'home' ? 'Home' : gallery ? 'Projects' : 'About'}: ${location}`} aria-controls="project-navigation">
       <span class="menu-name">{site.header}</span>
-      <span class="menu-status-row"><span class="menu-status"><span class="menu-location"><span class="menu-context">
+      <span class="menu-status-row"><span class="menu-status"><span class="menu-location" data-section-fade transition:name="navigation-location" transition:animate={sectionFade}><span class="menu-context">
         <span class="menu-context-row" data-menu-context="work" aria-hidden={page === 'about'}>{gallery ? 'Projects:' : 'Home:'}</span>
         <span class="menu-context-row menu-context-project" data-menu-context="project" aria-hidden="true">Project:</span>
         <span class:list={['menu-context-row', 'menu-context-about', { 'is-page-context': page === 'about' }]} data-menu-context="about" aria-hidden={page !== 'about'}>About:</span>

@@ -3,6 +3,7 @@ import { mountPortfolio } from './carousel.js';
 import { mountProfileNavigation } from './profile-navigation.js';
 import { mountSectionLinks } from './section-links.js';
 import { sectionDirection, sectionFromPath } from './section-state.js';
+import { sectionTiming } from '../data/section-motion.js';
 
 let mountedHeader = null;
 let dispose = () => {};
@@ -20,25 +21,38 @@ function mount() {
 
 function animatePreviewEntry(direction) {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const offset = direction * 12;
+  const offset = direction * sectionTiming.distance;
   document.querySelectorAll('[data-section-motion]').forEach(element => {
     // Add the short drift to the element's existing centering transform.
     const resting = getComputedStyle(element).transform;
     element.animate([{ opacity: 0, transform: `translateX(${offset}px) ${resting === 'none' ? '' : resting}` },
-      { opacity: 1, transform: resting }], { duration: 180, easing: 'cubic-bezier(.22,.7,.2,1)' });
+      { opacity: 1, transform: resting }], { duration: sectionTiming.enter, easing: sectionTiming.easing });
   });
-  document.querySelector('.artwork-visual')?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
+  document.querySelectorAll('[data-section-fade], .artwork-visual').forEach(element =>
+    element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: sectionTiming.enter, easing: sectionTiming.easing }));
+}
+
+// The offline preview swaps frames instead of using Astro's document router.
+// Give it the same exit phase, keeping navigation available for a newer choice.
+if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ !== undefined) {
+  window.__PORTFOLIO_PREVIEW_EXIT__ = () => {
+    document.dispatchEvent(new Event('portfolio:preview-exit'));
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return Promise.resolve();
+    return Promise.allSettled([...document.querySelectorAll('[data-section-motion], [data-section-fade], .artwork-visual')].map(element =>
+      element.animate([{ opacity: getComputedStyle(element).opacity }, { opacity: 0 }],
+        { duration: sectionTiming.exit, easing: 'ease-in', fill: 'forwards' }).finished));
+  };
 }
 
 document.addEventListener('astro:before-preparation', event => {
   document.documentElement.toggleAttribute('data-gallery-handoff', Boolean(event.info?.gallerySwipe));
   const direction = sectionDirection(sectionFromPath(event.from.pathname), sectionFromPath(event.to.pathname));
-  document.documentElement.style.setProperty('--section-drift', `${direction * 12}px`);
+  document.documentElement.style.setProperty('--section-drift', `${direction * sectionTiming.distance}px`);
 });
 document.addEventListener('astro:before-swap', event => {
   event.newDocument.documentElement.toggleAttribute('data-gallery-handoff', Boolean(event.info?.gallerySwipe));
   const direction = sectionDirection(sectionFromPath(event.from.pathname), sectionFromPath(event.to.pathname));
-  event.newDocument.documentElement.style.setProperty('--section-drift', `${direction * 12}px`);
+  event.newDocument.documentElement.style.setProperty('--section-drift', `${direction * sectionTiming.distance}px`);
   dispose();
 });
 document.addEventListener('astro:page-load', mount);

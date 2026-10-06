@@ -964,10 +964,12 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     if (liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
   });
   listen(document, 'astro:before-preparation', event => {
+    closeMenu({ immediate: true });
     if (event.info?.gallerySwipe) return;
     cancelDrag();
     stopAbout({ reset: true });
   });
+  listen(document, 'portfolio:preview-exit', () => closeMenu({ immediate: true }));
   measure();
   updateFavicon(projects[Math.max(0, active)].favicon);
   root.dataset.ready = 'true';

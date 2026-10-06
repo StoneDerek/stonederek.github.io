@@ -51,6 +51,12 @@ export function mountProfileNavigation() {
     nested.set(nested.expanded, { immediate: true });
   });
   listen(window, 'resize', () => { if (navigation.animating) navigation.set(navigation.expanded, { immediate: true }); });
+  const prepareExit = () => {
+    navigation.set(false, { immediate: true });
+    nested.set(false, { immediate: true });
+  };
+  listen(document, 'astro:before-preparation', prepareExit);
+  listen(document, 'portfolio:preview-exit', prepareExit);
   listen(document, 'visibilitychange', () => {
     if (document.hidden && navigation.animating) navigation.set(navigation.expanded, { immediate: true });
   });

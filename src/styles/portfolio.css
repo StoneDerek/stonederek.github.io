@@ -2,28 +2,34 @@
 :root { --default-accent: #ded3ff; --default-ink: #241a36; --default-accent-hover: #ccbaf5; --default-accent-mark: #a78bdd; }
 [hidden] { display: none !important; }
 html { background: #fff; }
-@keyframes section-fade-out { to { opacity: 0; } }
+@keyframes section-fade-out { from { opacity: 1; } to { opacity: 0; } }
 @keyframes section-fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes section-drift-in { from { opacity: 0; transform: translateX(var(--section-drift, 12px)); } to { opacity: 1; transform: translateX(0); } }
+@keyframes section-drift-in { from { opacity: 0; transform: translateX(var(--section-drift, 8px)); } to { opacity: 1; transform: translateX(0); } }
 /* Page content has its own identity. Only the anchored header is shared. */
 ::view-transition-group(*) { animation: none !important; }
 /* Keep outgoing rules available after Astro swaps to a different page's head. */
-::view-transition-old(home-content), ::view-transition-old(about-content),
+::view-transition-old(navigation-location), ::view-transition-old(home-content), ::view-transition-old(about-content),
 ::view-transition-old(home-footer), ::view-transition-old(about-footer),
 ::view-transition-old(gallery-caption), ::view-transition-old(gallery-filmstrip),
 ::view-transition-old(gallery-controls), ::view-transition-old(gallery-art),
 ::view-transition-old(gallery-article) {
-  animation: section-fade-out 120ms ease-out both !important;
+  animation: section-fade-out var(--section-exit) ease-in both !important;
   mix-blend-mode: normal;
 }
 ::view-transition-new(home-content), ::view-transition-new(about-content),
 ::view-transition-new(home-footer), ::view-transition-new(about-footer),
 ::view-transition-new(gallery-caption), ::view-transition-new(gallery-filmstrip),
 ::view-transition-new(gallery-controls), ::view-transition-new(gallery-article) {
-  animation: section-drift-in 180ms cubic-bezier(.22,.7,.2,1) both !important;
+  animation: section-drift-in var(--section-enter) var(--section-ease) var(--section-exit) both !important;
   mix-blend-mode: normal;
 }
-::view-transition-new(gallery-art) { animation: section-fade-in 180ms ease-out both !important; mix-blend-mode: normal; }
+::view-transition-new(gallery-art), ::view-transition-new(navigation-location) { animation: section-fade-in var(--section-enter) var(--section-ease) var(--section-exit) both !important; mix-blend-mode: normal; }
+/* Crossfade the anchored header without moving or briefly dimming it. */
+::view-transition-image-pair(site-navigation) { isolation: isolate; }
+::view-transition-old(site-navigation) { animation: section-fade-out var(--section-header) linear both !important; mix-blend-mode: plus-lighter !important; }
+::view-transition-new(site-navigation) { animation: section-fade-in var(--section-header) linear both !important; mix-blend-mode: plus-lighter !important; }
+/* Astro's fallback already waits for the exit before swapping documents. */
+html[data-astro-transition-fallback="new"] :is([data-section-motion], [data-section-fade], .artwork-visual) { animation-delay: 0ms !important; }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
