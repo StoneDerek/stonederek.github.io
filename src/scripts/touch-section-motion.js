@@ -11,7 +11,7 @@ export function finishTouchSectionMotion() {
 
 // Keep only the drawing of an outgoing element. Its duplicate controls must
 // never become part of the new page's carousel, navigation, or accessibility tree.
-function copyDrawing(element) {
+function copyDrawing(element, { freeze = false } = {}) {
   const clone = element.cloneNode(true);
   const originals = [element, ...element.querySelectorAll('*')];
   const copies = [clone, ...clone.querySelectorAll('*')];
@@ -21,7 +21,7 @@ function copyDrawing(element) {
     for (const attribute of [...copy.attributes]) {
       if (attribute.name === 'id' || attribute.name.startsWith('data-')) copy.removeAttribute(attribute.name);
     }
-    if (original.getAnimations().length) {
+    if (freeze || original.getAnimations().length) {
       const style = getComputedStyle(original);
       copy.style.transform = style.transform;
       copy.style.translate = style.translate;
@@ -50,7 +50,7 @@ window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',
   if (event.matches) finishTouchSectionMotion();
 });
 
-export function captureTouchSectionMotion(direction) {
+export function captureTouchSectionMotion(direction, { projectEntry = false } = {}) {
   finishTouchSectionMotion();
   const drawings = [...document.querySelectorAll(contentSelector)].filter(element => {
     const style = getComputedStyle(element);
@@ -63,9 +63,11 @@ export function captureTouchSectionMotion(direction) {
   const menuStyle = getComputedStyle(menu);
   const label = document.querySelector('.menu-location');
   const previous = { backgroundColor: menuStyle.backgroundColor, color: menuStyle.color };
-  const labelDrawing = copyDrawing(label);
+  // A label copy loses its page-scoped selectors when its routing attributes
+  // are removed. Freeze those hidden rows as well as any running animation.
+  const labelDrawing = copyDrawing(label, { freeze: true });
 
-  return () => {
+  return ({ projectFinished = Promise.resolve() } = {}) => {
     const host = document.querySelector('#portfolio, .profile-shell');
     const incoming = [...document.querySelectorAll(contentSelector)];
     const animations = [];
@@ -80,7 +82,7 @@ export function captureTouchSectionMotion(direction) {
         drawing.clone.style.left = `${drawing.rect.left}px`;
         drawing.clone.style.top = `${drawing.rect.top}px`;
         layer.append(drawing.clone);
-        animations.push(drawing.clone.animate([{ opacity: drawing.opacity }, { opacity: 0 }], {
+        if (!projectEntry) animations.push(drawing.clone.animate([{ opacity: drawing.opacity }, { opacity: 0 }], {
           duration: artwork ? sectionTiming.artwork : sectionTiming.exit,
           easing: artwork ? 'linear' : 'ease-in', fill: 'both'
         }));
@@ -91,7 +93,7 @@ export function captureTouchSectionMotion(direction) {
       }
     }
     drawings.forEach(drawing => drawing.restoreScroll());
-    incoming.forEach(element => {
+    if (!projectEntry) incoming.forEach(element => {
       const artwork = element.matches('[data-section-art]');
       const resting = getComputedStyle(element).transform;
       const frames = artwork ? [{ opacity: 0 }, { opacity: 1 }] : [
@@ -110,12 +112,18 @@ export function captureTouchSectionMotion(direction) {
       { duration: sectionTiming.header, easing: 'linear' }));
     const nextLabel = document.querySelector('.menu-location');
     nextLabel.parentElement.append(labelDrawing.clone);
+    labelDrawing.clone.classList.add('section-outgoing-location');
     labelDrawing.clone.setAttribute('aria-hidden', 'true');
     labelDrawing.clone.inert = true;
     layers.push(labelDrawing.clone);
-    animations.push(labelDrawing.clone.animate([{ opacity: labelDrawing.opacity }, { opacity: 0 }],
+    animations.push(labelDrawing.clone.animate([
+      { opacity: labelDrawing.opacity, transform: 'translateY(0)' },
+      { opacity: 0, transform: 'translateY(-100%)' }
+    ],
       { duration: sectionTiming.exit, easing: 'ease-in', fill: 'both' }));
-    animations.push(nextLabel.animate([{ opacity: 0 }, { opacity: 1 }],
+    animations.push(nextLabel.animate([
+      { opacity: 0, transform: 'translateY(100%)' }, { opacity: 1, transform: 'translateY(0)' }
+    ],
       { duration: sectionTiming.enter, delay: sectionTiming.exit, easing: sectionTiming.easing, fill: 'both' }));
 
     const motion = { finish() {
@@ -127,7 +135,9 @@ export function captureTouchSectionMotion(direction) {
       }
     } };
     activeMotion = motion;
-    Promise.allSettled(animations.map(animation => animation.finished)).then(() => {
+    // A direct project entry keeps the original section behind the tile reveal.
+    // Only its anchored header uses the short section-label/palette transition.
+    Promise.allSettled([...animations.map(animation => animation.finished), projectFinished]).then(() => {
       if (activeMotion === motion) motion.finish();
     });
   };

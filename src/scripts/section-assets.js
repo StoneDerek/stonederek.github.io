@@ -1,9 +1,20 @@
+import { projectIndexFromHash } from './project-links.js';
+
 // Decode the visible gallery assets before the router captures its new page.
 // A slower connection keeps the current section usable instead of capturing
 // empty image boxes and replacing them after the transition finishes.
 export function prepareGalleryImages(doc, base, signal) {
-  const images = doc?.querySelectorAll('#portfolio [data-slide="0"] img, #portfolio [data-thumbnail] img') || [];
-  return Promise.all([...images].map(node => new Promise(resolve => {
+  const data = doc?.getElementById('portfolio-data');
+  const projects = data ? JSON.parse(data.textContent) : [];
+  const index = projectIndexFromHash(base.hash, projects);
+  const images = doc?.querySelectorAll(`#portfolio [data-slide="${Math.max(0, index)}"] img, #portfolio [data-thumbnail] img`) || [];
+  const assets = [...images].map(node => ({ src: node.getAttribute('src'), priority: node.closest('[data-slide]') ? 'high' : 'low' }));
+  const firstMedia = projects[index]?.articleMedia?.find(item => item.src);
+  if (firstMedia) {
+    const assetBase = doc.querySelector('[data-detail-media]').dataset.assetBase;
+    assets.push({ src: /^(https?:\/\/|\/)/.test(firstMedia.src) ? firstMedia.src : `${assetBase}${firstMedia.src}`, priority: 'high' });
+  }
+  return Promise.all(assets.map(asset => new Promise(resolve => {
     if (signal?.aborted) { resolve(); return; }
     const image = new Image();
     let done = false;
@@ -21,7 +32,7 @@ export function prepareGalleryImages(doc, base, signal) {
     };
     image.onerror = finish;
     signal?.addEventListener('abort', abort, { once: true });
-    image.fetchPriority = node.closest('[data-slide]') ? 'high' : 'low';
-    image.src = new URL(node.getAttribute('src'), base).href;
+    image.fetchPriority = asset.priority;
+    image.src = new URL(asset.src, base).href;
   })));
 }

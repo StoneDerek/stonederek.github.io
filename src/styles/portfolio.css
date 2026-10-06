@@ -59,6 +59,8 @@ html[data-gallery-handoff] [data-astro-transition-scope] { animation: none !impo
 html[data-touch-section-motion] :is(.profile-main, .profile-footer) { position: relative; z-index: 2; }
 html[data-touch-section-motion] .carousel { z-index: auto; }
 html[data-touch-section-motion] .project-caption { z-index: 2; }
+html[data-touch-section-motion] .site-menu { transition: none; }
+.portfolio[data-section-project-entry] :is(.carousel, .filmstrip, .mobile-controls) { visibility: hidden !important; }
 body { margin: 0; background: #fff; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
 button, a, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 button { font: inherit; cursor: pointer; border: 0; }
@@ -77,7 +79,7 @@ button { font: inherit; cursor: pointer; border: 0; }
 .site-menu summary::-webkit-details-marker { display: none; }
 .menu-name { font: inherit; font-weight: 700; }
 .menu-status-row { display: flex; align-items: center; gap: 12px; min-width: 0; margin-top: 2px; }
-.menu-status { position: relative; flex: 1; min-width: 0; height: 18px; }
+.menu-status { position: relative; flex: 1; min-width: 0; height: 18px; overflow: hidden; }
 .menu-location { display: flex; align-items: center; gap: 4px; min-width: 0; height: 18px; line-height: 18px; white-space: nowrap; transition: opacity 160ms ease; }
 .menu-open-label { position: absolute; inset: 0; opacity: 0; line-height: 18px; transition: opacity 160ms ease; }
 .site-menu[data-expanded="true"] .menu-location, .site-menu:not([data-expanded])[open] .menu-location { opacity: 0; }

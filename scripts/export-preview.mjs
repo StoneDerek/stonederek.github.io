@@ -8,6 +8,7 @@ import { build } from 'esbuild';
 const routes = { home: 'index.html', about: 'about/index.html', projects: 'projects/index.html', resume: 'resume/index.html' };
 const pages = {};
 const assets = {};
+const projectSlugs = JSON.parse(await readFile(resolve('src/data/projects.json'), 'utf8')).map(project => project.slug);
 const embedded = new Map();
 const resumePDF = await readFile(resolve('dist', 'resume.pdf')).then(bytes => bytes.toString('base64')).catch(error => {
   if (error.code !== 'ENOENT') throw error;
@@ -54,7 +55,7 @@ for (const [route, file] of Object.entries(routes)) {
   pages[route] = html;
 }
 
-function initializePreview({ pages, assets, resumePDF }) {
+function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
   const frame = document.querySelector('iframe');
   const favicon = document.createElement('link');
   favicon.rel = 'icon'; favicon.type = 'image/svg+xml'; document.head.append(favicon);
@@ -80,6 +81,7 @@ function initializePreview({ pages, assets, resumePDF }) {
     let html = expanded(route);
     const order = ['home', 'about', 'projects'];
     const direction = previousRoute && !pendingHandoff ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
+    const projectEntry = direction && route === 'projects' && projectSlugs.includes(new URLSearchParams(fragment).get('project'));
     pendingHandoff = false;
     const menu = frame.contentDocument?.querySelector('.site-menu');
     const style = menu && frame.contentWindow.getComputedStyle(menu);
@@ -87,7 +89,8 @@ function initializePreview({ pages, assets, resumePDF }) {
     if (direction) await frame.contentWindow?.__PORTFOLIO_PREVIEW_EXIT__?.();
     if (generation !== renderGeneration) return;
     previousRoute = route;
-    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_NAVIGATION__=${escapeScript(navigationPalette)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
+    if (projectEntry) html = html.replace(/<main\b([^>]*\bid="portfolio"[^>]*)>/, '<main$1 data-section-project-entry>');
+    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_NAVIGATION__=${escapeScript(navigationPalette)};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
     html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
     html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*(")/, `$1${resumeAddress}$2`);
     // Attributes can appear in either order in compiler output.
@@ -130,7 +133,7 @@ function initializePreview({ pages, assets, resumePDF }) {
   });
   render();
 }
-const payload = JSON.stringify({ pages, assets, resumePDF }).replaceAll('<', '\\u003c');
+const payload = JSON.stringify({ pages, assets, resumePDF, projectSlugs }).replaceAll('<', '\\u003c');
 const loader = `(${initializePreview.toString()})(JSON.parse(document.getElementById('preview-data').textContent));`;
 new Script(loader, { filename: 'preview-navigation.js' });
 const output = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Derek Stone — Portfolio preview</title><style>html,body{margin:0;width:100%;height:100%;background:#fff}iframe{display:block;width:100%;height:100%;border:0}noscript{padding:24px;font:16px/1.5 Arial,sans-serif}</style></head><body><iframe title="Derek Stone’s portfolio"></iframe><noscript>Open this preview in a browser with JavaScript enabled to explore Home, About, and Projects.</noscript><script type="application/json" id="preview-data">${payload}</script><script>${loader}</script></body></html>`;

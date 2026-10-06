@@ -9,7 +9,8 @@ import { createMotionSpring } from './motion-spring.js';
 import { createAboutHeader } from './about-header.js';
 import { aboutPalette, linksPalette } from '../data/section-palettes.js';
 
-export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
+export function mountPortfolio({ sectionLinks = { hide() {} },
+  fragment = window.__PORTFOLIO_PREVIEW_FRAGMENT__ ?? window.location.hash, sectionEntry = false } = {}) {
   const root = document.getElementById('portfolio');
   const data = document.getElementById('portfolio-data');
   if (!root || !data) return;
@@ -20,6 +21,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   const endPanel = root.querySelector('[data-gallery-end]');
   const endReturn = root.querySelector('[data-end-return]');
   const projects = JSON.parse(data.textContent);
+  const requestedIndex = projectIndexFromHash(fragment, projects);
   const aboutHeader = createAboutHeader(projects[0].palette, aboutPalette);
   const updateFavicon = mountProjectFavicon(document.querySelector('[data-project-favicon]'));
   const slides = [...root.querySelectorAll('[data-slide]')];
@@ -72,8 +74,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   const hasDialog = () => projectOpen || projectRequests.busy || aboutCommitting;
   let active = -1;
   let endOpen = false;
-  let position = 0;
-  let destination = 0;
+  let position = requestedIndex >= 0 ? requestedIndex : 0;
+  let destination = position;
   let stageWidth = 1;
   let galleryInset = 0;
   let lift = 0;
@@ -677,7 +679,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     (target?.isConnected ? target : captionButton).focus({ preventScroll: true });
   }
 
-  async function transitionProject(opening, { replacing = false } = {}) {
+  async function transitionProject(opening, { replacing = false, sectionEntry = false } = {}) {
     if (disposed) return;
     const scrollTop = projectView.scrollTop;
     const originalVisibility = projectPage.style.visibility;
@@ -693,7 +695,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     root.classList.toggle('is-project-opening', opening);
     root.classList.toggle('is-project-replacing', replacing);
     projectView.hidden = false;
-    setMenuContext(opening);
+    setMenuContext(opening, { immediate: sectionEntry });
     document.body.classList.add('dialog-open');
     try {
       await settleTiles(root, projectPage, {
@@ -707,6 +709,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
       root.classList.remove('is-project-transitioning', 'is-project-opening', 'is-project-replacing');
       projectPage.style.visibility = originalVisibility;
       root.classList.toggle('has-project', opening);
+      root.removeAttribute('data-section-project-entry');
       skipLink.href = opening ? '#detail-title' : '#project-caption';
       gallerySurfaces.forEach(surface => {
         surface.inert = opening;
@@ -726,7 +729,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
       projectOrigin = request.origin || projectOrigin;
       projectReturnFocus = request.returnFocus || projectReturnFocus;
       fillProject(request.index);
-      await transitionProject(true, { replacing });
+      await transitionProject(true, { replacing, sectionEntry: request.sectionEntry });
     } finally {
       backdrop?.remove();
     }
@@ -746,19 +749,23 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     stopAbout({ reset: true });
     const selected = index === null ? null : clamp(index);
     const fragment = selected === null ? '' : `#project=${encodeURIComponent(projects[selected].slug)}`;
-    if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ !== undefined) {
-      window.parent.postMessage({ type: 'portfolio-preview-fragment', fragment }, '*');
-    } else {
-      const address = new URL(window.location.href);
-      address.hash = fragment;
-      window.history.replaceState(window.history.state, '', address);
+    // Astro moves to the destination URL after a section swap; its initial
+    // project fragment must not be written onto the outgoing section's URL.
+    if (!options.skipHistory) {
+      if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ !== undefined) {
+        window.parent.postMessage({ type: 'portfolio-preview-fragment', fragment }, '*');
+      } else {
+        const address = new URL(window.location.href);
+        address.hash = fragment;
+        window.history.replaceState(window.history.state, '', address);
+      }
     }
     if (pendingAbout) {
       document.dispatchEvent(new CustomEvent('portfolio:section-navigate', {
         detail: { route: 'projects', fragment: fragment.slice(1), replace: true }
       }));
     }
-    void projectRequests.request({ index: selected, ...options });
+    return projectRequests.request({ index: selected, ...options });
   }
 
   listen(root, 'click', event => {
@@ -983,6 +990,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     if (liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
   });
   listen(document, 'astro:before-preparation', event => {
+    // Finish the local reveal before handing off to section navigation.
+    projectAbort?.abort();
     closeMenu({ immediate: true });
     if (event.info?.gallerySwipe) return;
     cancelDrag();
@@ -991,15 +1000,15 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   listen(document, 'portfolio:preview-exit', () => closeMenu({ immediate: true }));
   measure();
   updateFavicon(projects[Math.max(0, active)].favicon);
+  const entryDone = requestedIndex >= 0
+    ? requestProject(requestedIndex, { sectionEntry, skipHistory: true }) : Promise.resolve();
   root.dataset.ready = 'true';
-  const requestedIndex = projectIndexFromHash(window.__PORTFOLIO_PREVIEW_FRAGMENT__ ?? window.location.hash, projects);
-  if (requestedIndex >= 0) requestProject(requestedIndex);
   listen(window, 'hashchange', () => {
     if (window.location.hash && !new URLSearchParams(window.location.hash.slice(1)).has('project')) return;
     const index = projectIndexFromHash(window.location.hash, projects);
     requestProject(index >= 0 ? index : null);
   });
-  return () => {
+  const cleanup = () => {
     disposed = true;
     controller.abort();
     projectAbort?.abort();
@@ -1018,4 +1027,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     root.getAnimations({ subtree: true }).forEach(animation => animation.cancel());
     document.body.classList.remove('dialog-open');
   };
+  cleanup.entryDone = entryDone;
+  return cleanup;
 }

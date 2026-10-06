@@ -6,40 +6,48 @@ import { sectionDirection, sectionFromPath } from './section-state.js';
 import { sectionTiming } from '../data/section-motion.js';
 import { prepareGalleryImages } from './section-assets.js';
 import { captureTouchSectionMotion, finishTouchSectionMotion, usesTouchSectionMotion } from './touch-section-motion.js';
+import { projectSectionEntry } from './project-links.js';
 
 let mountedHeader = null;
 let dispose = () => {};
+const projectEntryHandoffs = new WeakSet();
 
-function mount() {
+function mount({ fragment, sectionEntry = Boolean(window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__) } = {}) {
   const header = document.querySelector('.site-header');
   if (!header || header === mountedHeader) return;
   dispose();
   mountedHeader = header;
   const links = mountSectionLinks();
-  const cleanup = header.dataset.page === 'projects' ? mountPortfolio({ sectionLinks: links }) : mountProfileNavigation();
+  const cleanup = header.dataset.page === 'projects'
+    ? mountPortfolio({ sectionLinks: links, fragment, sectionEntry }) : mountProfileNavigation();
   dispose = () => { cleanup?.(); links.destroy(); mountedHeader = null; };
   if (window.__PORTFOLIO_PREVIEW_DIRECTION__) animatePreviewEntry(window.__PORTFOLIO_PREVIEW_DIRECTION__);
+  return cleanup;
 }
 
 function animatePreviewEntry(direction) {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const offset = direction * sectionTiming.distance;
-  document.querySelectorAll('[data-section-motion]').forEach(element => {
+  if (!window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__) document.querySelectorAll('[data-section-motion]').forEach(element => {
     // Add the short drift to the element's existing centering transform.
     const resting = getComputedStyle(element).transform;
     element.animate([{ opacity: 0, transform: `translateX(${offset}px) ${resting === 'none' ? '' : resting}` },
       { opacity: 1, transform: resting }], { duration: sectionTiming.enter, easing: sectionTiming.easing });
   });
   document.querySelectorAll('[data-section-fade]').forEach(element =>
-    element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: sectionTiming.enter, easing: sectionTiming.easing }));
-  document.querySelectorAll('[data-section-art]').forEach(element =>
+    element.animate([{ opacity: 0, transform: 'translateY(100%)' }, { opacity: 1, transform: 'translateY(0)' }],
+      { duration: sectionTiming.enter, easing: sectionTiming.easing }));
+  if (!window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__) document.querySelectorAll('[data-section-art]').forEach(element =>
     element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: sectionTiming.artwork, easing: 'linear' }));
   const menu = document.querySelector('.site-menu');
   const previous = window.__PORTFOLIO_PREVIEW_NAVIGATION__;
   if (menu && previous) {
+    const transition = menu.style.transition;
+    menu.style.transition = 'none';
     const next = getComputedStyle(menu);
-    menu.animate([previous, { backgroundColor: next.backgroundColor, color: next.color }],
+    const palette = menu.animate([previous, { backgroundColor: next.backgroundColor, color: next.color }],
       { duration: sectionTiming.header, easing: 'linear' });
+    palette.finished.catch(() => {}).then(() => { menu.style.transition = transition; });
   }
 }
 
@@ -57,6 +65,9 @@ if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ !== undefined) {
 }
 
 document.addEventListener('astro:before-preparation', event => {
+  // Interrupt an entry with another live section handoff, rather than starting
+  // a second snapshot transition while the first reveal is still settling.
+  if (document.querySelector('#portfolio[data-section-project-entry]')) projectEntryHandoffs.add(event.signal);
   finishTouchSectionMotion();
   const loader = event.loader;
   event.loader = async () => {
@@ -69,17 +80,29 @@ document.addEventListener('astro:before-preparation', event => {
 });
 document.addEventListener('astro:before-swap', event => {
   const direction = sectionDirection(sectionFromPath(event.from.pathname), sectionFromPath(event.to.pathname));
-  if (usesTouchSectionMotion()) {
+  const data = event.newDocument.getElementById('portfolio-data');
+  const projectEntry = data && projectSectionEntry(event.from, event.to, JSON.parse(data.textContent)) >= 0;
+  if (projectEntry) event.newDocument.getElementById('portfolio').setAttribute('data-section-project-entry', '');
+  let startMotion;
+  if (usesTouchSectionMotion() || projectEntry || projectEntryHandoffs.has(event.signal)) {
     // Keep the short drift on live elements, without relying on an incoming
     // browser snapshot being available to paint on touch devices.
     event.viewTransition.ready.catch(() => {});
     event.viewTransition.skipTransition();
     if (!event.info?.gallerySwipe && !window.matchMedia('(prefers-reduced-motion: reduce)').matches &&
         document.querySelector('.site-header') && event.newDocument.querySelector('.site-header')) {
-      const startMotion = captureTouchSectionMotion(direction);
-      const swap = event.swap;
-      event.swap = () => { swap(); startMotion(); };
+      startMotion = captureTouchSectionMotion(direction, { projectEntry });
     }
+  }
+  if (startMotion || projectEntry) {
+    const swap = event.swap;
+    event.swap = () => {
+      swap();
+      // Initialize the requested article before the first incoming paint. The
+      // normal page-load event is too late and would expose the gallery first.
+      const cleanup = projectEntry ? mount({ fragment: event.to.hash, sectionEntry: true }) : null;
+      startMotion?.({ projectFinished: cleanup?.entryDone });
+    };
   }
   // The fallback keeps the header anchored and blends its actual drawn colors.
   const menu = document.querySelector('.site-menu');
