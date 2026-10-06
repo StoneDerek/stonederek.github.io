@@ -73,6 +73,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   };
   const hasDialog = () => projectOpen || projectRequests.busy || aboutCommitting;
   let active = -1;
+  let faviconIndex = Math.max(0, requestedIndex);
   let endOpen = false;
   let position = requestedIndex >= 0 ? requestedIndex : 0;
   let destination = position;
@@ -226,6 +227,17 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       else button.removeAttribute('aria-current');
     });
     setMenuTitle(endOpen ? 'Links' : project.title, { immediate });
+  }
+
+  function selectGalleryFavicon(index) {
+    faviconIndex = Math.round(clampPosition(index));
+    updateFavicon(faviconIndex === end ? endPanel.dataset.favicon : projects[faviconIndex].favicon);
+  }
+
+  function followGalleryFavicon(value) {
+    // The incoming card wins after 55% travel; reversing must pass back below
+    // 45%. Small movements around the midpoint cannot flash the tab icon.
+    if (Math.abs(value - faviconIndex) > .55) selectGalleryFavicon(value);
   }
 
   function updateEnd(progress, links) {
@@ -421,6 +433,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     }
     updateEnd(frame.endProgress, frame.links);
     updateActive(frame.project);
+    if (!root.classList.contains('is-moving') && !aboutTravel) followGalleryFavicon(position);
   }
 
   function presentCards(value) {
@@ -504,6 +517,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
         root.style.removeProperty('--about-menu-opacity');
         root.style.removeProperty('--about-links-opacity');
         sectionLinks.previewAbout?.(0);
+        selectGalleryFavicon(position);
         // Settle the cancelled swipe before restoring ordinary palette transitions.
         getComputedStyle(menu).backgroundColor;
         aboutHeaderActive = false;
@@ -524,6 +538,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   function animateAbout(target, { commit = false, velocity = aboutVelocity } = {}) {
     stopAbout();
     aboutCommitting = commit;
+    if (commit) updateFavicon(aboutPreview.dataset.favicon);
     const from = aboutTravel;
     const finish = () => {
       aboutFrame = 0;
@@ -561,11 +576,13 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     prepareImages(Math.round(destination));
     updateBounds(Math.round(destination));
     animateLift(0, { duration: immediate ? 0 : 280 });
+    // A click or released swipe has a known destination before the spring runs.
+    selectGalleryFavicon(destination);
     const from = position;
     const distance = Math.abs(destination - from);
     const finish = () => {
       render(destination);
-      updateFavicon(endOpen ? endPanel.dataset.favicon : projects[active].favicon);
+      selectGalleryFavicon(destination);
       root.classList.remove('is-moving');
       animationFrame = 0;
       motionVelocity = 0;
@@ -811,6 +828,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     stopAnimation();
     stopAbout({ reset: !aboutEligible });
     destination = position;
+    // Re-grabbing abandons the previous target and restores the visible card.
+    selectGalleryFavicon(position);
     const capture = event.target.closest('button') || surface;
     const about = aboutEligible ? createAboutSwipe(stageWidth) : null;
     drag = {
