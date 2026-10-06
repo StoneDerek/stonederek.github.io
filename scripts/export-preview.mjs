@@ -68,7 +68,7 @@ function initializePreview({ pages, assets, resumePDF }) {
   const pdfAddress = resumePDF ? URL.createObjectURL(new Blob([Uint8Array.from(atob(resumePDF), char => char.charCodeAt(0))], { type: 'application/pdf' })) : null;
   let resume = expanded('resume').replace(/(<a\b[^>]*\bdata-resume-home\b[^>]*\bhref=")[^"]*(")/, `$1${home}$2`);
   if (pdfAddress) resume = resume.replace(/(<a\b[^>]*\bdata-resume-pdf\b[^>]*\bhref=")[^"]*(")/, `$1${pdfAddress}$2`);
-  const resumeAddress = URL.createObjectURL(new Blob([resume], { type: 'text/html' }));
+  const resumeAddress = pdfAddress || URL.createObjectURL(new Blob([resume], { type: 'text/html' }));
   let previousRoute = null;
   let pendingHandoff = false;
   let renderGeneration = 0;
@@ -122,7 +122,7 @@ function initializePreview({ pages, assets, resumePDF }) {
   window.addEventListener('pagehide', event => {
     if (!event.persisted) {
       URL.revokeObjectURL(resumeAddress);
-      if (pdfAddress) URL.revokeObjectURL(pdfAddress);
+      if (pdfAddress && pdfAddress !== resumeAddress) URL.revokeObjectURL(pdfAddress);
     }
   });
   render();

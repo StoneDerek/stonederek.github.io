@@ -1,11 +1,12 @@
 ---
 import site from '../data/site.json';
 import { shortDrift } from '../data/section-motion.js';
+import { resumeURL } from '../data/resume.js';
 const { page } = Astro.props;
 const base = import.meta.env.BASE_URL;
 ---
 <footer class="profile-footer" data-section-motion transition:name={`${page}-footer`} transition:animate={shortDrift}>
   <a href={`mailto:${site.email}`}>{site.email}</a>
-  <div><a href={site.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a><a href={`${base}resume/`} data-resume-link target="_blank" rel="noopener">Résumé</a></div>
+  <div><a href={site.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a><a href={resumeURL(base)} data-resume-link target="_blank" rel="noopener" aria-label="Resume PDF (opens in a new tab)" title="Resume PDF — opens in a new tab">Resume</a></div>
   <span class="profile-signature" aria-hidden="true">ds.</span>
 </footer>

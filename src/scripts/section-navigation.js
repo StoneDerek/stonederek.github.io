@@ -4,6 +4,7 @@ import { mountProfileNavigation } from './profile-navigation.js';
 import { mountSectionLinks } from './section-links.js';
 import { sectionDirection, sectionFromPath } from './section-state.js';
 import { sectionTiming } from '../data/section-motion.js';
+import { prepareGalleryImages } from './section-assets.js';
 
 let mountedHeader = null;
 let dispose = () => {};
@@ -28,8 +29,10 @@ function animatePreviewEntry(direction) {
     element.animate([{ opacity: 0, transform: `translateX(${offset}px) ${resting === 'none' ? '' : resting}` },
       { opacity: 1, transform: resting }], { duration: sectionTiming.enter, easing: sectionTiming.easing });
   });
-  document.querySelectorAll('[data-section-fade], .artwork-visual').forEach(element =>
+  document.querySelectorAll('[data-section-fade]').forEach(element =>
     element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: sectionTiming.enter, easing: sectionTiming.easing }));
+  document.querySelectorAll('[data-section-art]').forEach(element =>
+    element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: sectionTiming.artwork, easing: 'linear' }));
 }
 
 // The offline preview swaps frames instead of using Astro's document router.
@@ -38,13 +41,19 @@ if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ !== undefined) {
   window.__PORTFOLIO_PREVIEW_EXIT__ = () => {
     document.dispatchEvent(new Event('portfolio:preview-exit'));
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return Promise.resolve();
-    return Promise.allSettled([...document.querySelectorAll('[data-section-motion], [data-section-fade], .artwork-visual')].map(element =>
+    return Promise.allSettled([...document.querySelectorAll('[data-section-motion], [data-section-fade], [data-section-art]')].map(element =>
       element.animate([{ opacity: getComputedStyle(element).opacity }, { opacity: 0 }],
-        { duration: sectionTiming.exit, easing: 'ease-in', fill: 'forwards' }).finished));
+        { duration: element.matches('[data-section-art]') ? sectionTiming.artwork : sectionTiming.exit,
+          easing: element.matches('[data-section-art]') ? 'linear' : 'ease-in', fill: 'forwards' }).finished));
   };
 }
 
 document.addEventListener('astro:before-preparation', event => {
+  const loader = event.loader;
+  event.loader = async () => {
+    await loader();
+    if (!event.signal.aborted) await prepareGalleryImages(event.newDocument, event.to, event.signal);
+  };
   document.documentElement.toggleAttribute('data-gallery-handoff', Boolean(event.info?.gallerySwipe));
   const direction = sectionDirection(sectionFromPath(event.from.pathname), sectionFromPath(event.to.pathname));
   document.documentElement.style.setProperty('--section-drift', `${direction * sectionTiming.distance}px`);

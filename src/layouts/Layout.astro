@@ -8,7 +8,7 @@ import { sectionTiming } from '../data/section-motion.js';
 const { title = site.title, description = site.description, favicon = projectIcon(homePalette) } = Astro.props;
 ---
 <!doctype html>
-<html lang="en" transition:name="root" transition:animate="none" style={`--section-exit:${sectionTiming.exit}ms;--section-enter:${sectionTiming.enter}ms;--section-header:${sectionTiming.header}ms;--section-ease:${sectionTiming.easing}`}>
+<html lang="en" transition:name="root" transition:animate="none" style={`--section-exit:${sectionTiming.exit}ms;--section-enter:${sectionTiming.enter}ms;--section-header:${sectionTiming.header}ms;--section-artwork:${sectionTiming.artwork}ms;--section-ease:${sectionTiming.easing}`}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />

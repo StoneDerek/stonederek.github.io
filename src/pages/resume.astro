@@ -1,22 +1,17 @@
 ---
-import { existsSync, readFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
-import { resolve } from 'node:path';
+import { hasResume, resumeURL } from '../data/resume.js';
 import Layout from '../layouts/Layout.astro';
 import site from '../data/site.json';
 const base = import.meta.env.BASE_URL;
-const pdf = resolve('public/resume.pdf');
-const hasPDF = existsSync(pdf);
-const version = hasPDF ? createHash('sha256').update(readFileSync(pdf)).digest('hex').slice(0, 12) : '';
 ---
-<Layout title={`Résumé — ${site.name}`} description={`The latest résumé for ${site.name}.`}>
+<Layout title={`Resume — ${site.name}`} description={`The latest resume for ${site.name}.`}>
   <main class="resume-page">
     <a class="resume-home" data-resume-home href={base}><svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="m7 3-5 5 5 5M2 8h12" /></svg> {site.header}</a>
-    <header><p class="resume-label">Résumé</p><h1>{site.name}</h1></header>
-    {hasPDF ? (
-      <a class="resume-pdf" data-resume-pdf href={`${base}resume.pdf?v=${version}`}>View résumé PDF <svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
+    <header><p class="resume-label">Resume</p><h1>{site.name}</h1></header>
+    {hasResume ? (
+      <a class="resume-pdf" data-resume-pdf href={resumeURL(base)}>View resume PDF <svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
     ) : (
-      <p class="resume-message">The latest résumé will be available here soon.</p>
+      <p class="resume-message">The latest resume will be available here soon.</p>
     )}
     <footer><a href={`mailto:${site.email}`}>{site.email}</a><a href={site.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn <svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a></footer>
   </main>

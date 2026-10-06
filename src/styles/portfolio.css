@@ -7,11 +7,19 @@ html { background: #fff; }
 @keyframes section-drift-in { from { opacity: 0; transform: translateX(var(--section-drift, 8px)); } to { opacity: 1; transform: translateX(0); } }
 /* Page content has its own identity. Only the anchored header is shared. */
 ::view-transition-group(*) { animation: none !important; }
+/* Snapshot groups have their own stacking order; DOM z-index does not carry over. */
+::view-transition-group(gallery-art) { z-index: 1; }
+::view-transition-group(home-content), ::view-transition-group(about-content),
+::view-transition-group(home-footer), ::view-transition-group(about-footer),
+::view-transition-group(gallery-caption), ::view-transition-group(gallery-filmstrip),
+::view-transition-group(gallery-controls), ::view-transition-group(gallery-article) { z-index: 2; }
+::view-transition-group(site-navigation) { z-index: 3; }
+::view-transition-group(navigation-location) { z-index: 4; }
 /* Keep outgoing rules available after Astro swaps to a different page's head. */
 ::view-transition-old(navigation-location), ::view-transition-old(home-content), ::view-transition-old(about-content),
 ::view-transition-old(home-footer), ::view-transition-old(about-footer),
 ::view-transition-old(gallery-caption), ::view-transition-old(gallery-filmstrip),
-::view-transition-old(gallery-controls), ::view-transition-old(gallery-art),
+::view-transition-old(gallery-controls),
 ::view-transition-old(gallery-article) {
   animation: section-fade-out var(--section-exit) ease-in both !important;
   mix-blend-mode: normal;
@@ -23,7 +31,9 @@ html { background: #fff; }
   animation: section-drift-in var(--section-enter) var(--section-ease) var(--section-exit) both !important;
   mix-blend-mode: normal;
 }
-::view-transition-new(gallery-art), ::view-transition-new(navigation-location) { animation: section-fade-in var(--section-enter) var(--section-ease) var(--section-exit) both !important; mix-blend-mode: normal; }
+::view-transition-new(navigation-location) { animation: section-fade-in var(--section-enter) var(--section-ease) var(--section-exit) both !important; mix-blend-mode: normal; }
+::view-transition-old(gallery-art) { animation: section-fade-out var(--section-artwork) linear both !important; mix-blend-mode: normal; }
+::view-transition-new(gallery-art) { animation: section-fade-in var(--section-artwork) linear both !important; mix-blend-mode: normal; }
 /* Crossfade the anchored header without moving or briefly dimming it. */
 ::view-transition-image-pair(site-navigation) { isolation: isolate; }
 ::view-transition-old(site-navigation) { animation: section-fade-out var(--section-header) linear both !important; mix-blend-mode: plus-lighter !important; }

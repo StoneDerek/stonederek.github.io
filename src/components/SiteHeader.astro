@@ -3,6 +3,7 @@ import site from '../data/site.json';
 import projects from '../data/projects.json';
 import { publicationDate } from '../data/publication.js';
 import { sectionFade } from '../data/section-motion.js';
+import { resumeURL } from '../data/resume.js';
 const { page = 'home' } = Astro.props;
 const base = import.meta.env.BASE_URL;
 const url = (path = '') => `${base}${path}`;
@@ -44,7 +45,7 @@ const location = gallery ? projects[0].title : page === 'about' ? site.name : 'I
         <div class="menu-contact"><a href={`mailto:${site.email}`}>Email: {site.email} <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a></div>
         <div class="menu-links" aria-label="Professional links">
           <a href={site.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn (opens in a new tab)">LinkedIn <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
-          <a href={url('resume/')} data-resume-link target="_blank" rel="noopener" aria-label="Résumé (opens in a new tab)">Résumé <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
+          <a href={resumeURL(base)} data-resume-link target="_blank" rel="noopener" aria-label="Resume PDF (opens in a new tab)" title="Resume PDF — opens in a new tab">Resume <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
         </div>
         <div class="menu-colophon"><p class="menu-signature"><span aria-hidden="true">.✦ ݁˖ </span>{site.name}</p><time class="menu-published" datetime={published.iso} aria-label={`Version published ${published.label}`}>{published.label}</time></div>
       </footer>
