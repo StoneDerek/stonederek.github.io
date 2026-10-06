@@ -213,7 +213,7 @@ dialog::backdrop { background: #050b1bc9; }
 .menu-context-about.is-page-context { opacity: 1; transform: translateY(0); }
 .site-menu a.menu-section, .site-menu a.menu-project { color: inherit; text-decoration: none; }
 .menu-gallery-link { font-weight: 600 !important; }
-.page-links { display: flex; align-items: center; justify-content: center; gap: 3px; margin-top: 6px; padding: 3px; border-radius: 6px; background: #fff; color: var(--ink); transition: opacity 160ms ease, transform 160ms ease, visibility 160ms; }
+.page-links { display: flex; align-items: center; justify-content: center; gap: 3px; width: fit-content; max-width: 100%; margin: 6px auto 0; padding: 5px 8px; border-radius: 6px; background: #fff; color: var(--ink); transition: opacity 160ms ease, transform 160ms ease, visibility 160ms; }
 .page-links[data-scrolled="true"] { opacity: 0; transform: translateY(-6px); visibility: hidden; pointer-events: none; }
 .page-links a { display: grid; place-items: center; min-width: 82px; min-height: 34px; padding: 6px 13px; border-radius: 4px; color: inherit; text-decoration: none; font-size: 14px; }
 .page-links a[aria-current="page"] { background: color-mix(in srgb, var(--accent) 35%, white); }
