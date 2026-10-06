@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAboutSwipe, createScrollReveal, sectionDirection, sectionFromPath, settleProjectSwipe } from '../src/scripts/section-state.js';
+import { createAboutSwipe, createScrollReveal, galleryFrame, sectionDirection, sectionFromPath, settleProjectSwipe } from '../src/scripts/section-state.js';
 
 test('section direction follows the selected sections, including project base paths', () => {
   assert.equal(sectionFromPath('/portfolio/about/index.html'), 'about');
@@ -28,9 +28,32 @@ test('About crosses during movement at a reachable distance, without a release s
     assert.deepEqual(swipe.move(-100), { travel: 0, commit: false });
     assert.equal(swipe.move(swipe.threshold - 1).commit, false);
     assert.equal(swipe.move(swipe.threshold).commit, true);
-    assert.ok(swipe.threshold <= width * .3);
+    assert.ok(swipe.threshold <= width * .4);
     assert.equal(typeof swipe.release, 'undefined');
   }
+});
+
+test('short project swipes and the former About crossing do not accidentally leave the gallery', () => {
+  for (const width of [320, 390, 430, 1440]) {
+    const swipe = createAboutSwipe(width);
+    const previousCrossing = Math.min(240, Math.max(72, width * .24));
+    assert.equal(swipe.move(56).commit, false);
+    assert.equal(swipe.move(previousCrossing).commit, false);
+    assert.equal(swipe.move(swipe.threshold).commit, true);
+  }
+});
+
+test('the links space is reachable beyond the final project without inventing another project', () => {
+  for (let position = -1; position < 8; position += .05) {
+    const frame = galleryFrame(position, 6);
+    assert.ok(frame.position >= 0 && frame.position <= 6);
+    assert.ok(frame.project >= 0 && frame.project < 6);
+    assert.ok(frame.endProgress >= 0 && frame.endProgress <= 1);
+  }
+  assert.deepEqual(galleryFrame(6, 6), { position: 6, project: 5, endProgress: 1, links: true });
+  assert.equal(galleryFrame(5.49, 6).links, false);
+  assert.equal(galleryFrame(5.5, 6).links, true);
+  assert.deepEqual(galleryFrame(5, 6), { position: 5, project: 5, endProgress: 0, links: false });
 });
 
 test('the bump has continuous, nearly one-to-one motion and no threshold jump', () => {

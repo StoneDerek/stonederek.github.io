@@ -4,8 +4,9 @@ import { mountSiteMenu } from './site-menu.js';
 import { createProjectRequests } from './project-navigation.js';
 import { mountProjectFavicon } from './favicon.js';
 import { projectIndexFromHash } from './project-links.js';
-import { createAboutSwipe, settleProjectSwipe } from './section-state.js';
+import { createAboutSwipe, galleryFrame, settleProjectSwipe } from './section-state.js';
 import { createMotionSpring } from './motion-spring.js';
+import { aboutPalette, homePalette } from '../data/section-palettes.js';
 
 export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   const root = document.getElementById('portfolio');
@@ -15,11 +16,14 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   const listen = (target, type, handler, options = {}) => target.addEventListener(type, handler, { ...options, signal: controller.signal });
   let disposed = false;
   const aboutPreview = root.querySelector('[data-about-preview]');
+  const endPanel = root.querySelector('[data-gallery-end]');
+  const endReturn = root.querySelector('[data-end-return]');
   const projects = JSON.parse(data.textContent);
   const updateFavicon = mountProjectFavicon(document.querySelector('[data-project-favicon]'));
   const slides = [...root.querySelectorAll('[data-slide]')];
   const slideImages = slides.map(slide => slide.querySelector('img'));
   const captionButton = root.querySelector('.caption-link');
+  const caption = root.querySelector('.project-caption');
   const captionWord = captionButton.querySelector('.caption-word');
   const titleText = captionButton.querySelector('[data-title]');
   const titleMetrics = captionButton.querySelector('[data-title-metrics]');
@@ -39,6 +43,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   const projectView = root.querySelector('[data-project-view]');
   const projectPage = projectView.querySelector('.project-page');
   const gallerySurfaces = [...root.querySelectorAll('.carousel, .filmstrip, .mobile-controls')];
+  const endSurfaces = gallerySurfaces.filter(surface => !surface.classList.contains('carousel'));
   const workLabel = menu.querySelector('[data-menu-context="work"]');
   const projectLabel = menu.querySelector('[data-menu-context="project"]');
   const aboutLabel = menu.querySelector('[data-menu-context="about"]');
@@ -53,7 +58,9 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   const detailMedia = root.querySelector('[data-detail-media]');
   const skipLink = root.querySelector('.skip-link');
   const last = projects.length - 1;
+  const end = projects.length;
   const clamp = value => Math.max(0, Math.min(last, value));
+  const clampPosition = value => Math.max(0, Math.min(end, value));
   const textNodes = new Map();
   const setText = (selector, value) => {
     if (!textNodes.has(selector)) textNodes.set(selector, root.querySelector(selector));
@@ -62,6 +69,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   };
   const hasDialog = () => projectOpen || projectRequests.busy || aboutCommitting;
   let active = -1;
+  let endOpen = false;
   let position = 0;
   let destination = 0;
   let stageWidth = 1;
@@ -104,6 +112,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   let renderedInset = NaN;
   let renderedScale = NaN;
   let renderedRadius = NaN;
+  let renderedEndProgress = NaN;
   const menuNavigation = mountSiteMenu(menu, reducedMotion, { signal: controller.signal, onChange: updateMenuName });
   const projectRequests = createProjectRequests({
     getCurrent: () => ({ open: projectOpen, index: active }),
@@ -115,7 +124,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
 
   function updateMenuName() {
     const location = menuContext === 'about' ? `About: ${siteHeader.dataset.owner}`
-      : `${menuContext === 'project' ? 'Project' : 'Projects'}: ${projects[Math.max(0, active)].title}`;
+      : `${menuContext === 'project' ? 'Project' : 'Projects'}: ${endOpen ? 'Links' : projects[Math.max(0, active)].title}`;
     menuToggle.setAttribute('aria-label', `${menuNavigation.expanded ? 'Close' : 'Open'} navigation. ${location}`);
     homeMenuButton.removeAttribute('aria-current');
     aboutMenuButton.removeAttribute('aria-current');
@@ -190,12 +199,54 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   }
 
   function announce() {
-    setText('[data-announcement]', `${projects[active].title}, project ${active + 1} of ${projects.length}. ${projects[active].caption}`);
+    setText('[data-announcement]', endOpen ? 'Professional links. End of selected work.'
+      : `${projects[active].title}, project ${active + 1} of ${projects.length}. ${projects[active].caption}`);
   }
 
   function updateBounds(index) {
     previousButton.disabled = index <= 0;
-    nextButton.disabled = index >= last;
+    nextButton.disabled = index >= end;
+    previousButton.setAttribute('aria-label', index >= end ? 'Back to last project' : 'Previous project');
+    nextButton.setAttribute('aria-label', index >= last ? 'Show professional links' : 'Next project');
+  }
+
+  function updateGalleryIdentity({ immediate = false } = {}) {
+    const project = projects[Math.max(0, active)];
+    const palette = endOpen ? homePalette : project.palette;
+    root.style.setProperty('--accent', palette.accent);
+    root.style.setProperty('--ink', palette.ink);
+    root.style.setProperty('--caption-color', palette.caption || palette.accent);
+    menuProjects.forEach(button => {
+      if (!endOpen && Number(button.dataset.menuProject) === active) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+    });
+    setMenuTitle(endOpen ? 'Links' : project.title, { immediate });
+  }
+
+  function updateEnd(progress, links) {
+    const focused = document.activeElement;
+    if (progress !== renderedEndProgress) {
+      root.style.setProperty('--end-progress', String(progress));
+      renderedEndProgress = progress;
+    }
+    if (endPanel.inert !== !links) endPanel.inert = !links;
+    if (endPanel.getAttribute('aria-hidden') !== String(!links)) endPanel.setAttribute('aria-hidden', String(!links));
+    if (caption.getAttribute('aria-hidden') !== String(links)) caption.setAttribute('aria-hidden', String(links));
+    // Keep a held caption's pointer capture alive until its drag ends.
+    const captionInert = links && drag?.capture !== captionButton;
+    if (captionButton.inert !== captionInert) captionButton.inert = captionInert;
+    const surfacesHidden = links || projectOpen || projectRequests.busy;
+    endSurfaces.forEach(surface => {
+      if (surface.inert !== surfacesHidden) surface.inert = surfacesHidden;
+      if (surface.getAttribute('aria-hidden') !== String(surfacesHidden)) surface.setAttribute('aria-hidden', String(surfacesHidden));
+    });
+    if (!links && endPanel.contains(focused)) root.querySelector('.carousel').focus({ preventScroll: true });
+    else if (links && !drag && [captionButton, rail, previousButton, nextButton, mobileInspect].some(node => node.contains(focused))) endReturn.focus({ preventScroll: true });
+    if (endOpen === links) return;
+    endOpen = links;
+    root.dataset.atGalleryEnd = String(links);
+    skipLink.href = links ? '#gallery-end' : '#project-caption';
+    updateGalleryIdentity();
   }
 
   function finishTitle() {
@@ -311,9 +362,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     active = index;
     prepareImages(active);
     const project = projects[active];
-    root.style.setProperty('--accent', project.palette.accent);
-    root.style.setProperty('--ink', project.palette.ink);
-    root.style.setProperty('--caption-color', project.palette.caption || project.palette.accent);
     captionButton.dataset.project = String(active);
     captionButton.setAttribute('aria-label', `View ${project.title}`);
     captionHeading.setAttribute('aria-label', project.title);
@@ -329,11 +377,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
       button.setAttribute('aria-pressed', String(i === active));
       button.tabIndex = i === active ? 0 : -1;
     });
-    menuProjects.forEach(button => {
-      if (Number(button.dataset.menuProject) === active) button.setAttribute('aria-current', 'true');
-      else button.removeAttribute('aria-current');
-    });
-    setMenuTitle(project.title, { immediate: previous < 0 });
+    updateGalleryIdentity({ immediate: previous < 0 });
     setText('[data-mobile-count]', `${String(active + 1).padStart(2, '0')} / ${String(projects.length).padStart(2, '0')}`);
     mobileInspect.setAttribute('aria-label', `View ${project.title}`);
     updateBounds(root.classList.contains('is-moving') ? Math.round(destination) : active);
@@ -348,13 +392,14 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   }
 
   function render(value) {
-    position = clamp(value);
+    const frame = galleryFrame(value, projects.length);
+    position = frame.position;
     const x = -position * (stageWidth - galleryInset);
     if (x !== renderedX) {
       galleryTrack.style.transform = `translateX(${x}px)`;
       renderedX = x;
     }
-    const scroll = position * stride;
+    const scroll = Math.min(last, position) * stride;
     if (scroll !== renderedScroll) {
       rail.scrollLeft = scroll;
       renderedScroll = scroll;
@@ -369,7 +414,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
       });
       focusedPosition = position;
     }
-    updateActive(Math.round(position));
+    updateEnd(frame.endProgress, frame.links);
+    updateActive(frame.project);
   }
 
   function presentCards(value) {
@@ -459,8 +505,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
       aboutVelocity = 0;
       presentAbout(target);
       if (!commit || disposed) return;
-      root.style.setProperty('--accent', '#cde9ff');
-      root.style.setProperty('--ink', '#1b2b43');
+      root.style.setProperty('--accent', aboutPalette.accent);
+      root.style.setProperty('--ink', aboutPalette.ink);
       setMenuContext('about', { immediate: true });
       setMenuTitle(siteHeader.dataset.owner, { immediate: true });
       document.dispatchEvent(new CustomEvent('portfolio:section-navigate', {
@@ -470,7 +516,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     if (reducedMotion.matches || Math.abs(target - from) < .001) { finish(); return; }
     const start = performance.now();
     const spring = createMotionSpring({ from: from / stageWidth, to: target / stageWidth,
-      velocity: velocity / stageWidth, unit: stageWidth });
+      velocity: velocity / stageWidth, unit: stageWidth, response: commit ? 360 : 280 });
     const frame = now => {
       const state = spring.sample(now - start);
       aboutVelocity = state.velocity * stageWidth;
@@ -490,7 +536,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   function animateTo(value, { immediate = false, velocity = motionVelocity, response,
     focusThumbnail = false, announceSelection = true } = {}) {
     stopAnimation();
-    destination = clamp(value);
+    destination = clampPosition(value);
     prepareImages(Math.round(destination));
     updateBounds(Math.round(destination));
     animateLift(0, { duration: immediate ? 0 : 280 });
@@ -498,12 +544,12 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     const distance = Math.abs(destination - from);
     const finish = () => {
       render(destination);
-      updateFavicon(projects[active].favicon);
+      updateFavicon(endOpen ? endPanel.dataset.favicon : projects[active].favicon);
       root.classList.remove('is-moving');
       animationFrame = 0;
       motionVelocity = 0;
       slideEndsAt = 0;
-      if (focusThumbnail) thumbnails[active].focus({ preventScroll: true });
+      if (focusThumbnail) (endOpen ? endReturn : thumbnails[active]).focus({ preventScroll: true });
       if (announceSelection) announce();
     };
     if (immediate || reducedMotion.matches || distance < .001) { finish(); return; }
@@ -607,6 +653,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     const target = menuNavigation.expanded
       ? menu.querySelector(projectOpen ? `[data-menu-project="${active}"]` : '[data-action="gallery"]')
       : projectOpen ? projectView.querySelector('[data-detail-title]')
+      : endOpen ? endReturn
       : siteHeader.contains(projectReturnFocus) ? menuToggle : projectReturnFocus;
     (target?.isConnected ? target : captionButton).focus({ preventScroll: true });
   }
@@ -705,6 +752,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     if (thumbnail && !hasDialog()) { select(Number(thumbnail.dataset.thumbnail), { focusThumbnail: true }); return; }
     const step = event.target.closest('[data-step]');
     if (step && !hasDialog()) { select(Math.round(destination) + Number(step.dataset.step)); return; }
+    if (event.target.closest('[data-end-return]') && !hasDialog()) { select(last, { focusThumbnail: true }); return; }
     const choice = event.target.closest('[data-menu-project]');
     if (choice) {
       const index = Number(choice.dataset.menuProject);
@@ -723,14 +771,16 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
       event.preventDefault();
       closeMenu({ focus: true });
       if (projectOpen || projectRequests.busy || aboutCommitting) requestProject(null);
+      else if (endOpen || destination > last) select(last);
     }
   });
 
   function beginDrag(event, surface, unit) {
     if (!event.isPrimary || event.button !== 0 || hasDialog()) return;
-    const aboutEligible = surface === stage && position < .001 && !animationFrame;
     // A fresh press is intentional; only the click generated by the preceding drag is suppressed.
     suppressClickUntil = 0;
+    if (event.target.closest('[data-end-link]')) return;
+    const aboutEligible = surface === stage && position < .001 && !animationFrame;
     stopWheel();
     stopAnimation();
     stopAbout({ reset: !aboutEligible });
@@ -784,7 +834,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
       render(drag.start - distance / drag.unit);
       return;
     }
-    render(drag.start - dx / drag.unit);
+    const nextPosition = drag.start - dx / drag.unit;
+    render(drag.surface === rail ? clamp(nextPosition) : nextPosition);
   }
   function endDrag(event, cancelled = false) {
     if (!drag || drag.id !== event.pointerId) return;
@@ -803,9 +854,9 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     if (finished.moved) {
       suppressClickUntil = performance.now() + 250;
       const recentVelocity = moving ? finished.velocity : 0;
-      select(settleProjectSwipe({ start: finished.start, position, velocity: recentVelocity,
-        deltaX: event.clientX - finished.x, unit: finished.unit, touch: finished.touch, cancelled }),
-        { velocity: recentVelocity });
+      const next = settleProjectSwipe({ start: finished.start, position, velocity: recentVelocity,
+        deltaX: event.clientX - finished.x, unit: finished.unit, touch: finished.touch, cancelled });
+      select(finished.surface === rail ? clamp(next) : next, { velocity: recentVelocity });
     } else if (Math.abs(position - Math.round(position)) > .001) {
       select(Math.round(position));
     }
@@ -871,7 +922,10 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     if (event.key === 'Escape' && aboutTravel > 0) {
       event.preventDefault(); cancelDrag(); stopAbout(); animateAbout(0); animateLift(0); return;
     }
-    const directions = { ArrowLeft: Math.round(destination) - 1, ArrowRight: Math.round(destination) + 1, Home: 0, End: last };
+    if (event.key === 'Escape' && endOpen) {
+      event.preventDefault(); select(last, { focusThumbnail: true }); return;
+    }
+    const directions = { ArrowLeft: Math.round(destination) - 1, ArrowRight: Math.round(destination) + 1, Home: 0, End: end };
     if (!(event.key in directions)) return;
     event.preventDefault();
     select(directions[event.key], { focusThumbnail: rail.contains(event.target) });
