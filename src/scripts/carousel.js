@@ -5,6 +5,7 @@ import { createProjectRequests } from './project-navigation.js';
 import { mountProjectFavicon } from './favicon.js';
 import { projectIndexFromHash } from './project-links.js';
 import { createAboutSwipe, settleProjectSwipe } from './section-state.js';
+import { createMotionSpring } from './motion-spring.js';
 
 export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   const root = document.getElementById('portfolio');
@@ -69,12 +70,14 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   let liftFrame = 0;
   let stride = 1;
   let animationFrame = 0;
+  let motionVelocity = 0;
   let resizeFrame = 0;
   let wheelTimer = 0;
   let wheelPosition = null;
   let drag = null;
   let aboutTravel = 0;
   let aboutFrame = 0;
+  let aboutVelocity = 0;
   let aboutCommitting = false;
   let aboutWarmed = false;
   let suppressClickUntil = 0;
@@ -414,6 +417,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   function stopAnimation() {
     cancelAnimationFrame(animationFrame);
     animationFrame = 0;
+    motionVelocity = 0;
     slideEndsAt = 0;
     root.classList.remove('is-moving');
   }
@@ -434,6 +438,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   function stopAbout({ reset = false } = {}) {
     cancelAnimationFrame(aboutFrame);
     aboutFrame = 0;
+    aboutVelocity = 0;
     aboutCommitting = false;
     if (!reset) return;
     presentAbout(0);
@@ -445,12 +450,13 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     }
   }
 
-  function animateAbout(target, { commit = false } = {}) {
+  function animateAbout(target, { commit = false, velocity = aboutVelocity } = {}) {
     stopAbout();
     aboutCommitting = commit;
     const from = aboutTravel;
     const finish = () => {
       aboutFrame = 0;
+      aboutVelocity = 0;
       presentAbout(target);
       if (!commit || disposed) return;
       root.style.setProperty('--accent', '#cde9ff');
@@ -463,11 +469,13 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     };
     if (reducedMotion.matches || Math.abs(target - from) < .001) { finish(); return; }
     const start = performance.now();
-    const duration = commit ? 240 : 180;
+    const spring = createMotionSpring({ from: from / stageWidth, to: target / stageWidth,
+      velocity: velocity / stageWidth, unit: stageWidth });
     const frame = now => {
-      const progress = Math.min(1, (now - start) / duration);
-      presentAbout(from + (target - from) * (1 - (1 - progress) ** 3));
-      if (progress < 1) aboutFrame = requestAnimationFrame(frame);
+      const state = spring.sample(now - start);
+      aboutVelocity = state.velocity * stageWidth;
+      presentAbout(state.position * stageWidth);
+      if (!state.done) aboutFrame = requestAnimationFrame(frame);
       else finish();
     };
     aboutFrame = requestAnimationFrame(frame);
@@ -479,7 +487,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     root.classList.remove('is-dragging');
   }
 
-  function animateTo(value, { immediate = false, duration, focusThumbnail = false, announceSelection = true } = {}) {
+  function animateTo(value, { immediate = false, velocity = motionVelocity, response,
+    focusThumbnail = false, announceSelection = true } = {}) {
     stopAnimation();
     destination = clamp(value);
     prepareImages(Math.round(destination));
@@ -492,20 +501,21 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
       updateFavicon(projects[active].favicon);
       root.classList.remove('is-moving');
       animationFrame = 0;
+      motionVelocity = 0;
       slideEndsAt = 0;
       if (focusThumbnail) thumbnails[active].focus({ preventScroll: true });
       if (announceSelection) announce();
     };
     if (immediate || reducedMotion.matches || distance < .001) { finish(); return; }
-    const length = duration ?? Math.min(800, 380 + distance * 85);
+    const spring = createMotionSpring({ from, to: destination, velocity, unit: stageWidth, response });
     const start = performance.now();
-    slideEndsAt = start + length;
+    slideEndsAt = start + spring.duration;
     root.classList.add('is-moving');
     const frame = now => {
-      const progress = Math.min(1, (now - start) / length);
-      const eased = 1 - (1 - progress) ** 3;
-      render(from + (destination - from) * eased);
-      if (progress < 1) animationFrame = requestAnimationFrame(frame);
+      const state = spring.sample(now - start);
+      motionVelocity = state.velocity;
+      render(state.position);
+      if (!state.done) animationFrame = requestAnimationFrame(frame);
       else finish();
     };
     animationFrame = requestAnimationFrame(frame);
@@ -730,7 +740,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     drag = {
       id: event.pointerId, surface, capture, unit,
       x: event.clientX, y: event.clientY, start: position,
-      lastX: event.clientX, lastTime: performance.now(), velocity: 0, moved: false,
+      lastX: event.clientX, lastTime: performance.now(), velocity: 0, aboutVelocity: 0, moved: false,
       about,
       aboutStart: about?.distanceForTravel(aboutTravel) || 0,
       touch: surface === stage && (event.pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches)
@@ -760,13 +770,14 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     if (drag.about) {
       const distance = dx + drag.aboutStart;
       const next = drag.about.move(distance);
+      drag.aboutVelocity = (next.travel - aboutTravel) / elapsed;
       presentAbout(next.travel);
       if (distance > 0) {
         render(0);
         if (next.commit) {
           suppressClickUntil = performance.now() + 600;
           animateLift(0, { duration: 180 });
-          animateAbout(stageWidth, { commit: true });
+          animateAbout(stageWidth, { commit: true, velocity: drag.aboutVelocity });
         }
         return;
       }
@@ -782,17 +793,19 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     root.classList.remove('is-dragging');
     if (finished.capture.hasPointerCapture(event.pointerId)) finished.capture.releasePointerCapture(event.pointerId);
     if (aboutCommitting) return;
+    const moving = performance.now() - finished.lastTime < 100 && !cancelled;
     if (aboutTravel > 0) {
       if (finished.moved) suppressClickUntil = performance.now() + 250;
       animateLift(0);
-      animateAbout(0);
+      animateAbout(0, { velocity: moving ? finished.aboutVelocity : 0 });
       return;
     }
     if (finished.moved) {
       suppressClickUntil = performance.now() + 250;
-      const recentVelocity = performance.now() - finished.lastTime < 100 && !cancelled ? finished.velocity : 0;
+      const recentVelocity = moving ? finished.velocity : 0;
       select(settleProjectSwipe({ start: finished.start, position, velocity: recentVelocity,
-        deltaX: event.clientX - finished.x, unit: finished.unit, touch: finished.touch, cancelled }));
+        deltaX: event.clientX - finished.x, unit: finished.unit, touch: finished.touch, cancelled }),
+        { velocity: recentVelocity });
     } else if (Math.abs(position - Math.round(position)) > .001) {
       select(Math.round(position));
     }
@@ -815,7 +828,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     stopAbout({ reset: true });
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rail.clientWidth : 1;
     wheelPosition = clamp((wheelPosition ?? position) + delta * unit / stride);
-    animateTo(wheelPosition, { duration: 140, announceSelection: false });
+    animateTo(wheelPosition, { response: 140, announceSelection: false });
     clearTimeout(wheelTimer);
     wheelTimer = setTimeout(() => {
       const next = Math.round(wheelPosition);

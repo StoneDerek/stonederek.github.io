@@ -10,7 +10,7 @@ const base = import.meta.env.BASE_URL;
   <div class="profile-shell home-shell">
     <a class="skip-link" href="#introduction">Skip to introduction</a>
     <SiteHeader page="home" />
-    <main data-section-motion transition:name="section-content" transition:animate={shortDrift} class="profile-main home-main" id="introduction" tabindex="-1">
+    <main data-section-motion transition:name="home-content" transition:animate={shortDrift} class="profile-main home-main" id="introduction" tabindex="-1">
       <section class="home-introduction" aria-labelledby="home-title">
         <div class="introduction-copy">
           <p class="profile-eyebrow">Lorem ipsum / Dolor sit amet</p>
@@ -27,6 +27,6 @@ const base = import.meta.env.BASE_URL;
       </section>
 
     </main>
-    <ProfileFooter />
+    <ProfileFooter page="home" />
   </div>
   </Layout>

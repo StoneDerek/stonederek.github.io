@@ -27,7 +27,7 @@ function animatePreviewEntry(direction) {
     element.animate([{ opacity: 0, transform: `translateX(${offset}px) ${resting === 'none' ? '' : resting}` },
       { opacity: 1, transform: resting }], { duration: 180, easing: 'cubic-bezier(.22,.7,.2,1)' });
   });
-  document.querySelector('.artwork-visual')?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180 });
+  document.querySelector('.artwork-visual')?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
 }
 
 document.addEventListener('astro:before-preparation', event => {

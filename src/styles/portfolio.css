@@ -5,7 +5,28 @@ html { background: #fff; }
 @keyframes section-fade-out { to { opacity: 0; } }
 @keyframes section-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes section-drift-in { from { opacity: 0; transform: translateX(var(--section-drift, 12px)); } to { opacity: 1; transform: translateX(0); } }
-::view-transition-group(root), ::view-transition-group(site-navigation), ::view-transition-group(gallery-art) { animation-duration: 180ms; }
+/* Page content has its own identity. Only the anchored header is shared. */
+::view-transition-group(*) { animation: none !important; }
+/* Keep outgoing rules available after Astro swaps to a different page's head. */
+::view-transition-old(home-content), ::view-transition-old(about-content),
+::view-transition-old(home-footer), ::view-transition-old(about-footer),
+::view-transition-old(gallery-caption), ::view-transition-old(gallery-filmstrip),
+::view-transition-old(gallery-controls), ::view-transition-old(gallery-art),
+::view-transition-old(gallery-article) {
+  animation: section-fade-out 120ms ease-out both !important;
+  mix-blend-mode: normal;
+}
+::view-transition-new(home-content), ::view-transition-new(about-content),
+::view-transition-new(home-footer), ::view-transition-new(about-footer),
+::view-transition-new(gallery-caption), ::view-transition-new(gallery-filmstrip),
+::view-transition-new(gallery-controls), ::view-transition-new(gallery-article) {
+  animation: section-drift-in 180ms cubic-bezier(.22,.7,.2,1) both !important;
+  mix-blend-mode: normal;
+}
+::view-transition-new(gallery-art) { animation: section-fade-in 180ms ease-out both !important; mix-blend-mode: normal; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
 html[data-gallery-handoff]::view-transition-group(*), html[data-gallery-handoff]::view-transition-old(*), html[data-gallery-handoff]::view-transition-new(*) { animation: none !important; }
 html[data-gallery-handoff] [data-astro-transition-scope] { animation: none !important; }
 body { margin: 0; background: #fff; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }

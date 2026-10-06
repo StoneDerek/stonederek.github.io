@@ -11,9 +11,9 @@ import AboutContent from '../components/AboutContent.astro';
   <div class="profile-shell about-shell">
     <a class="skip-link" href="#about-title">Skip to About</a>
     <SiteHeader page="about" />
-    <main data-section-motion transition:name="section-content" transition:animate={shortDrift} class="profile-main about-main">
+    <main data-section-motion transition:name="about-content" transition:animate={shortDrift} class="profile-main about-main">
       <AboutContent />
     </main>
-    <ProfileFooter />
+    <ProfileFooter page="about" />
   </div>
   </Layout>

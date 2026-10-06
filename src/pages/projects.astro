@@ -35,7 +35,7 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
         </div>
         </div>
         <div id="project-caption" class="project-caption" tabindex="-1">
-          <div data-section-motion transition:name="section-content" transition:animate={shortDrift}>
+          <div data-section-motion transition:name="gallery-caption" transition:animate={shortDrift}>
           <h1 aria-label={first.title}><button type="button" class="caption-link" data-action="project" data-project="0" aria-controls="project-article" aria-label={`View ${first.title}`}><span class="caption-word"><span class="caption-metrics" data-title-metrics aria-hidden="true">{first.title}</span><span class="caption-letters" data-title aria-hidden="true">{first.title}</span></span><svg class="caption-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button></h1>
           </div>
         </div>
@@ -43,7 +43,7 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
       <p class="sr-only" data-announcement aria-live="polite" aria-atomic="true"></p>
     </section>
 
-    <footer class="filmstrip" aria-label="Project previews" data-section-motion transition:name="section-filmstrip" transition:animate={shortDrift}>
+    <footer class="filmstrip" aria-label="Project previews" data-section-motion transition:name="gallery-filmstrip" transition:animate={shortDrift}>
       <div class="thumbnail-rail" role="group" aria-label="Choose a project">
         <div class="thumbnail-track">
           <div class="thumbnail-group">
@@ -58,13 +58,13 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
       <span class="selection-frame" aria-hidden="true"></span>
     </footer>
 
-    <nav class="mobile-controls" aria-label="Gallery controls" data-section-motion transition:name="section-controls" transition:animate={shortDrift}>
+    <nav class="mobile-controls" aria-label="Gallery controls" data-section-motion transition:name="gallery-controls" transition:animate={shortDrift}>
       <button type="button" class="mobile-arrow" data-step="-1" aria-label="Previous project" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" /></svg></button>
       <button type="button" class="mobile-inspect" data-action="project" aria-controls="project-article"><span class="mobile-inspect-label">View project <svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 12 12 4M5 4h7v7" /></svg></span><span class="mobile-count" data-mobile-count>01 / {String(projects.length).padStart(2, '0')}</span></button>
       <button type="button" class="mobile-arrow" data-step="1" aria-label="Next project"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7" /></svg></button>
     </nav>
 
-    <section id="project-article" class="project-view" data-project-view aria-labelledby="detail-title" hidden>
+    <section id="project-article" class="project-view" data-project-view data-section-motion transition:name="gallery-article" transition:animate={shortDrift} aria-labelledby="detail-title" hidden>
       <article class="project-page">
         <header class="project-toolbar"><button type="button" class="back-button" data-action="gallery" aria-label="Back to gallery"><svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m7 3-5 5 5 5M2 8h12" /></svg> Selected work</button><span class="project-view-meta"><span data-detail-category>{first.category}</span> / <span data-detail-year>{first.year}</span></span><span class="project-view-number" data-detail-number>01 / {String(projects.length).padStart(2, '0')}</span></header>
         <section class="project-story">
