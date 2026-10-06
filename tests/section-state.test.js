@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAboutSwipe, createScrollReveal, sectionDirection, sectionFromPath } from '../src/scripts/section-state.js';
+import { createAboutSwipe, createScrollReveal, sectionDirection, sectionFromPath, settleProjectSwipe } from '../src/scripts/section-state.js';
 
 test('section direction follows the selected sections, including project base paths', () => {
   assert.equal(sectionFromPath('/portfolio/about/index.html'), 'about');
@@ -22,33 +22,53 @@ test('upward intent reveals links, down hides them, small reversals do not flick
   assert.equal(nav.move(NaN), true);
 });
 
-test('an ordinary rightward project swipe does not arm About; a longer drag crosses a resisted detent', () => {
+test('About crosses during movement at a reachable distance, without a release step', () => {
   for (const width of [320, 390, 1440]) {
     const swipe = createAboutSwipe(width);
-    assert.equal(swipe.move(-swipe.threshold * 2).armed, false);
-    assert.equal(swipe.release(), false);
-    const normal = swipe.move(swipe.threshold * .45);
-    assert.equal(normal.armed, false);
-    assert.equal(normal.travel, swipe.threshold * .45);
-    assert.equal(swipe.release(), false);
-    const resistance = swipe.move(swipe.threshold - 1);
-    const crossed = swipe.move(swipe.threshold + 1);
-    assert.equal(resistance.armed, false);
-    assert.equal(crossed.armed, true);
-    assert.ok(crossed.travel - resistance.travel > 12);
-    assert.ok(crossed.travel < swipe.threshold);
-    assert.equal(swipe.release(), true);
+    assert.deepEqual(swipe.move(-100), { travel: 0, commit: false });
+    assert.equal(swipe.move(swipe.threshold - 1).commit, false);
+    assert.equal(swipe.move(swipe.threshold).commit, true);
+    assert.ok(swipe.threshold <= width * .3);
+    assert.equal(typeof swipe.release, 'undefined');
   }
 });
 
-test('backtracking and pointer cancellation prevent a section change', () => {
+test('the bump has continuous, nearly one-to-one motion and no threshold jump', () => {
   const swipe = createAboutSwipe(390);
-  swipe.move(swipe.threshold + 40);
-  assert.equal(swipe.move(swipe.threshold - 10).armed, true);
-  assert.equal(swipe.move(swipe.threshold - 30).armed, false);
-  assert.equal(swipe.release(), false);
-  swipe.move(swipe.threshold + 40);
-  assert.equal(swipe.release({ cancelled: true }), false);
-  assert.equal(swipe.move(-500).armed, false);
-  assert.equal(swipe.release(), false);
+  let previous = 0;
+  for (let distance = 1; distance <= 140; distance++) {
+    const { travel } = swipe.move(distance);
+    assert.ok(travel - previous >= .75 && travel - previous <= 1.001);
+    assert.ok(travel >= distance * .92 && travel <= distance);
+    previous = travel;
+  }
+  const below = swipe.move(swipe.threshold - .1).travel;
+  const above = swipe.move(swipe.threshold + .1).travel;
+  assert.ok(Math.abs(above - below - .2) < .001);
+});
+
+test('backtracking before the crossing restores the untouched boundary', () => {
+  const swipe = createAboutSwipe(390);
+  assert.equal(swipe.move(swipe.threshold - 1).commit, false);
+  assert.equal(swipe.move(25).commit, false);
+  assert.deepEqual(swipe.move(0), { travel: 0, commit: false });
+});
+
+test('short, slow mobile swipes advance a project in either direction', () => {
+  for (const unit of [320, 390, 430]) {
+    const delta = Math.max(24, Math.min(56, unit * .15));
+    for (const direction of [-1, 1]) {
+      const input = { start: 2, position: 2 + direction * delta / unit,
+        deltaX: -direction * delta, unit, touch: true };
+      assert.equal(settleProjectSwipe(input), 2 + direction);
+      assert.equal(settleProjectSwipe({ ...input, touch: false }), 2);
+      assert.equal(settleProjectSwipe({ ...input, cancelled: true }), 2);
+      assert.equal(settleProjectSwipe({ ...input, deltaX: -direction * 16 }), 2);
+    }
+  }
+});
+
+test('gallery settling retains momentum and does not limit long drags to one project', () => {
+  assert.equal(settleProjectSwipe({ start: 0, position: .3, velocity: .003, deltaX: -117, unit: 390 }), 1);
+  assert.equal(settleProjectSwipe({ start: 0, position: 2.2, deltaX: -858, unit: 390, touch: true }), 2);
 });

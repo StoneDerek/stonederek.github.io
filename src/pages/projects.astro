@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import projects from '../data/projects.json';
 import site from '../data/site.json';
 import SiteHeader from '../components/SiteHeader.astro';
+import AboutContent from '../components/AboutContent.astro';
 import { projectIcon } from '../data/project-icons.js';
 import { sectionFade, shortDrift } from '../data/section-motion.js';
 const base = import.meta.env.BASE_URL;
@@ -15,6 +16,10 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
     <a class="skip-link" href="#project-caption">Skip to selected project</a>
 
     <SiteHeader page="projects" />
+
+    <div class="about-preview" data-about-preview aria-hidden="true" inert hidden>
+      <div class="profile-shell about-shell"><div class="profile-main about-main"><AboutContent prefix="preview-" /></div></div>
+    </div>
 
     <section class="carousel" aria-roledescription="carousel" aria-label="Selected placeholder projects" tabindex="0">
       <div class="artwork-stage" data-stage>
@@ -34,7 +39,6 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
           <h1 aria-label={first.title}><button type="button" class="caption-link" data-action="project" data-project="0" aria-controls="project-article" aria-label={`View ${first.title}`}><span class="caption-word"><span class="caption-metrics" data-title-metrics aria-hidden="true">{first.title}</span><span class="caption-letters" data-title aria-hidden="true">{first.title}</span></span><svg class="caption-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button></h1>
           </div>
         </div>
-        <div class="section-swipe-cue" data-about-swipe-cue aria-hidden="true">Keep swiping for About</div>
       </div>
       <p class="sr-only" data-announcement aria-live="polite" aria-atomic="true"></p>
     </section>

@@ -39,7 +39,13 @@ for (const [route, file] of Object.entries(routes)) {
     const script = result.outputFiles[0].text;
     const classic = `(function(){function start(){${script}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',start,{once:true})}else{start()}})();`;
     new Script(classic, { filename: `preview-${route}.js` });
-    html = html.replace(match[0], `<script>${classic.replaceAll('</script', '<\\/script')}</script>`);
+    // A function replacement keeps minified $&, $` and $' sequences literal.
+    html = html.replace(match[0], () => `<script>${classic.replaceAll('</script', '<\\/script')}</script>`);
+  }
+  // Validate the inserted bytes too, not only the bundle before substitution.
+  for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
+    if (match[1].includes('application/json')) continue;
+    new Script(match[2], { filename: `embedded-preview-${route}.js` });
   }
   pages[route] = html;
 }
@@ -58,15 +64,17 @@ function initializePreview({ pages, assets }) {
   const resume = expanded('resume').replace(/(<a\b[^>]*\bdata-resume-home\b[^>]*\bhref=")[^"]*(")/, `$1${home}$2`);
   const resumeAddress = URL.createObjectURL(new Blob([resume], { type: 'text/html' }));
   let previousRoute = null;
+  let pendingHandoff = false;
   const render = () => {
     const [requested, fragment = ''] = location.hash.slice(1).split('?');
     const route = ['home', 'about', 'projects'].includes(requested) ? requested : 'home';
     document.title = route === 'home' ? 'Derek Stone — Portfolio preview' : `Derek Stone — ${route === 'about' ? 'About' : 'Projects'} preview`;
     let html = expanded(route);
     const order = ['home', 'about', 'projects'];
-    const direction = previousRoute ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
+    const direction = previousRoute && !pendingHandoff ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
+    pendingHandoff = false;
     previousRoute = route;
-    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:''},'*')};<\/script>`;
+    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:'',gallerySwipe:!!options?.gallerySwipe},'*')};<\/script>`;
     html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
     html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*(")/, `$1${resumeAddress}$2`);
     // Attributes can appear in either order in compiler output.
@@ -88,6 +96,7 @@ function initializePreview({ pages, assets }) {
   window.addEventListener('message', event => {
     if (event.source !== frame.contentWindow) return;
     if (event.data?.type === 'portfolio-preview-route' && ['home', 'about', 'projects'].includes(event.data.route)) {
+      pendingHandoff = Boolean(event.data.gallerySwipe);
       location.hash = `${event.data.route}${event.data.fragment ? `?${event.data.fragment}` : ''}`;
     }
     if (event.data?.type === 'portfolio-preview-favicon' && typeof event.data.href === 'string' && event.data.href.startsWith('data:image/')) {

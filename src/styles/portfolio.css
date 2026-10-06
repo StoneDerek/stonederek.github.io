@@ -6,6 +6,8 @@ html { background: #fff; }
 @keyframes section-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes section-drift-in { from { opacity: 0; transform: translateX(var(--section-drift, 12px)); } to { opacity: 1; transform: translateX(0); } }
 ::view-transition-group(root), ::view-transition-group(site-navigation), ::view-transition-group(gallery-art) { animation-duration: 180ms; }
+html[data-gallery-handoff]::view-transition-group(*), html[data-gallery-handoff]::view-transition-old(*), html[data-gallery-handoff]::view-transition-new(*) { animation: none !important; }
+html[data-gallery-handoff] [data-astro-transition-scope] { animation: none !important; }
 body { margin: 0; background: #fff; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
 button, a, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 button { font: inherit; cursor: pointer; border: 0; }
@@ -61,18 +63,17 @@ button { font: inherit; cursor: pointer; border: 0; }
 .menu-colophon { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding-top: 14px; }
 .menu-signature { margin: 0; }
 .menu-published { white-space: nowrap; }
-.carousel { position: absolute; inset: 0; outline: none; }
+.carousel { position: absolute; inset: 0; z-index: 1; outline: none; }
+.about-preview { position: absolute; inset: 0; z-index: 0; overflow: hidden; clip-path: inset(0 max(0px, calc(100% - var(--about-drag, 0px))) 0 0); pointer-events: none; }
 .artwork-stage { position: absolute; inset: 0; touch-action: pan-y pinch-zoom; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.artwork-visual { position: absolute; inset: 0; transform: translateX(var(--about-pull, 0px)); transition: transform 180ms cubic-bezier(.22,.7,.2,1); }
-.is-dragging .artwork-visual { transition: none; }
+.artwork-visual { position: absolute; inset: 0; transform: translateX(var(--about-drag, 0px)); }
 .artwork-track { display: flex; width: 100%; height: 100%; }
 .is-moving .artwork-track, .is-dragging .artwork-track, .is-lifting .artwork-track { will-change: transform; }
 .artwork-slide { position: relative; flex: 0 0 calc(100% - var(--gallery-inset, 0px)); width: calc(100% - var(--gallery-inset, 0px)); height: 100%; }
 .artwork-card { position: absolute; top: 0; left: 0; width: calc(100% + var(--gallery-inset, 0px)); height: 100%; overflow: hidden; border-radius: var(--gallery-radius, 0px); transform: scale(var(--gallery-scale, 1)); }
 .artwork-card > img { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; pointer-events: none; }
-.project-caption { position: absolute; z-index: 1; top: 50%; left: 50%; transform: translate(-50%, -50%); width: max-content; max-width: calc(100% - 40px); text-align: center; }
-.section-swipe-cue { position: absolute; z-index: 2; top: calc(50% + 40px); left: 50%; transform: translateX(-50%); color: var(--caption-color); font-size: 12px; line-height: 1.5; white-space: nowrap; opacity: 0; pointer-events: none; user-select: none; }
-.portfolio[data-about-swipe="armed"] .section-swipe-cue { font-weight: 600; }
+.project-caption { position: absolute; z-index: 1; top: 50%; left: 50%; transform: translate(calc(-50% + var(--about-drag, 0px)), -50%); width: max-content; max-width: calc(100% - 40px); text-align: center; }
+.filmstrip, .mobile-controls { translate: var(--about-drag, 0px) 0; }
 h1 { margin: 0; font-size: 14px; line-height: 1.25; font-weight: 600; }
 .caption-link { position: relative; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 6px 12px; border-radius: 5px; background: transparent; color: var(--caption-color); font-size: inherit; font-weight: inherit; line-height: inherit; user-select: none; -webkit-user-select: none; transition: color 180ms ease; }
 .caption-link::before { content: ''; position: absolute; z-index: -1; inset: 8px 0; border-radius: inherit; background: var(--accent); opacity: 0; transition: opacity 180ms ease; }

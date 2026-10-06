@@ -31,10 +31,12 @@ function animatePreviewEntry(direction) {
 }
 
 document.addEventListener('astro:before-preparation', event => {
+  document.documentElement.toggleAttribute('data-gallery-handoff', Boolean(event.info?.gallerySwipe));
   const direction = sectionDirection(sectionFromPath(event.from.pathname), sectionFromPath(event.to.pathname));
   document.documentElement.style.setProperty('--section-drift', `${direction * 12}px`);
 });
 document.addEventListener('astro:before-swap', event => {
+  event.newDocument.documentElement.toggleAttribute('data-gallery-handoff', Boolean(event.info?.gallerySwipe));
   const direction = sectionDirection(sectionFromPath(event.from.pathname), sectionFromPath(event.to.pathname));
   event.newDocument.documentElement.style.setProperty('--section-drift', `${direction * 12}px`);
   dispose();
@@ -43,8 +45,9 @@ document.addEventListener('astro:page-load', mount);
 document.addEventListener('portfolio:section-navigate', event => {
   const about = document.querySelector('[data-menu-about]');
   if (event.detail?.route !== 'about' || !about) return;
-  if (typeof window.__PORTFOLIO_PREVIEW_NAVIGATE__ === 'function') window.__PORTFOLIO_PREVIEW_NAVIGATE__('about');
-  else navigate(about.href);
+  const gallerySwipe = Boolean(event.detail?.gallerySwipe);
+  if (typeof window.__PORTFOLIO_PREVIEW_NAVIGATE__ === 'function') window.__PORTFOLIO_PREVIEW_NAVIGATE__('about', { gallerySwipe });
+  else navigate(about.href, { info: { gallerySwipe } });
 });
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
 else mount();

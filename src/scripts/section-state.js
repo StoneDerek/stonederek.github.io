@@ -27,22 +27,28 @@ export function createScrollReveal({ hidden = false } = {}) {
   };
 }
 
-// The gallery uses this detent only for a rightward pull from its first project.
-// Velocity never arms it, and backing away disarms before pointer release.
+// A mostly one-to-one drag with a short, smooth slowdown, not a hard barrier.
+// Crossing enters About immediately; no pointer release is needed.
 export function createAboutSwipe(width) {
-  const threshold = Math.max(220, width * .86);
-  const entry = threshold * .68;
-  let armed = false;
+  const threshold = Math.min(240, Math.max(72, width * .24));
+  const entry = threshold * .38;
+  const span = threshold * .35;
   return {
     threshold,
     move(rightwardDistance) {
       const distance = Math.max(0, rightwardDistance);
-      if (distance >= threshold) armed = true;
-      else if (distance < threshold - 24) armed = false;
-      const resisted = Math.min(distance, entry) + Math.max(0, Math.min(distance, threshold) - entry) * .18;
-      const travel = resisted + (armed ? 12 + Math.min(60, Math.max(0, distance - threshold)) * .45 : 0);
-      return { armed, travel, progress: Math.max(0, Math.min(1, (distance - entry) / (threshold - entry))) };
-    },
-    release({ cancelled = false } = {}) { return armed && !cancelled; }
+      const t = Math.max(0, Math.min(1, (distance - entry) / span));
+      const loss = span * .16 * t * t * (3 - 2 * t);
+      return { travel: distance - loss, commit: distance >= threshold };
+    }
   };
+}
+
+export function settleProjectSwipe({ start, position, velocity = 0, deltaX, unit, touch = false, cancelled = false }) {
+  const momentum = cancelled ? 0 : Math.max(-.55, Math.min(.55, velocity * 180));
+  const target = Math.round(position + momentum);
+  if (!touch || cancelled || Math.abs(deltaX) < Math.max(24, Math.min(56, unit * .15))) return target;
+  const direction = -Math.sign(deltaX);
+  const next = Math.round(start) + direction;
+  return direction > 0 ? Math.max(target, next) : Math.min(target, next);
 }
