@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import ProfileFooter from '../components/ProfileFooter.astro';
 import site from '../data/site.json';
+import { shortDrift } from '../data/section-motion.js';
 import { projectIcon } from '../data/project-icons.js';
 const base = import.meta.env.BASE_URL;
 const sections = [
@@ -17,7 +18,7 @@ const sections = [
   <div class="profile-shell about-shell">
     <a class="skip-link" href="#about-title">Skip to About</a>
     <SiteHeader page="about" />
-    <main class="profile-main about-main">
+    <main data-section-motion transition:name="section-content" transition:animate={shortDrift} class="profile-main about-main">
       <header class="about-heading"><p class="profile-eyebrow">About me</p><h1 id="about-title" tabindex="-1">Lorem ipsum<br />dolor sit<span class="name-period">.</span></h1><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p></header>
       <div class="about-layout">
         <nav class="about-contents" aria-label="On this page"><span>On this page</span>{sections.map(([id, title]) => <a href={`#${id}`}>{title}</a>)}<a class="about-projects-link" href={`${base}projects/`} data-site-route="projects">Explore projects</a></nav>
@@ -32,8 +33,4 @@ const sections = [
     </main>
     <ProfileFooter />
   </div>
-  <script>
-    import { mountProfileNavigation } from '../scripts/profile-navigation.js';
-    mountProfileNavigation();
-  </script>
-</Layout>
+  </Layout>

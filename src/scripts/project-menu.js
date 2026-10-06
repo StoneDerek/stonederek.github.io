@@ -1,6 +1,6 @@
 // Native details keeps the project list usable without JavaScript. With scripts,
 // animate its height and preserve the currently drawn frame on rapid reversals.
-export function mountProjectMenu(details, reducedMotion) {
+export function mountProjectMenu(details, reducedMotion, { signal } = {}) {
   const toggle = details.querySelector('[data-projects-toggle]');
   const panel = details.querySelector('[data-projects-panel]');
   let expanded = details.open;
@@ -40,12 +40,12 @@ export function mountProjectMenu(details, reducedMotion) {
     ], { duration: open ? 240 : 180, easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'both' });
     animation.onfinish = finish;
   }
-  toggle.addEventListener('click', event => { event.preventDefault(); set(!expanded); });
+  toggle.addEventListener('click', event => { event.preventDefault(); set(!expanded); }, { signal });
   details.addEventListener('toggle', () => {
     if (animation) return;
     expanded = details.open;
     sync();
-  });
+  }, { signal });
   sync();
   return { get expanded() { return expanded; }, set };
 }

@@ -10,7 +10,7 @@ const published = publicationDate();
 const cat = ['  ╱|、', '(˚ˎ 。7', ' |、˜〵', 'じしˍ,)ノ'].join('\n');
 const location = gallery ? projects[0].title : page === 'about' ? site.name : 'Introduction';
 ---
-<header class="site-header" data-owner={site.name} data-page={page}>
+<header class="site-header" data-owner={site.name} data-page={page} transition:name="site-navigation" transition:animate="none">
   <details class="site-menu" data-menu>
     <summary aria-label={`Open navigation. ${page === 'home' ? 'Home' : gallery ? 'Projects' : 'About'}: ${location}`} aria-controls="project-navigation">
       <span class="menu-name">{site.header}</span>
@@ -49,9 +49,9 @@ const location = gallery ? projects[0].title : page === 'about' ? site.name : 'I
       </footer>
     </div>
   </details>
-  {!gallery && <nav class="page-links" aria-label="Page navigation">
+  <nav class="page-links" aria-label="Page navigation" data-scrolled={String(gallery)} inert={gallery} aria-hidden={String(gallery)}>
     <a href={url()} data-site-route="home" aria-current={page === 'home' ? 'page' : undefined}>Home</a>
     <a href={url('about/')} data-site-route="about" aria-current={page === 'about' ? 'page' : undefined}>About</a>
     <a href={url('projects/')} data-site-route="projects" data-action={gallery ? 'gallery' : undefined} aria-current={gallery ? 'page' : undefined}>Projects</a>
-  </nav>}
+  </nav>
 </header>

@@ -1,6 +1,6 @@
 // Animate the native disclosure, then fully remove its body from layout/paint.
 // Measuring before cancellation lets a rapid reversal continue from its frame.
-export function mountSiteMenu(details, reducedMotion, { onChange = () => {} } = {}) {
+export function mountSiteMenu(details, reducedMotion, { onChange = () => {}, signal } = {}) {
   const toggle = details.querySelector('summary');
   const body = details.querySelector('.menu-body');
   let expanded = details.open;
@@ -66,7 +66,7 @@ export function mountSiteMenu(details, reducedMotion, { onChange = () => {} } = 
     details.style.height = '';
     sync();
     onChange();
-  });
+  }, { signal });
   body.hidden = !expanded;
   sync();
   return { get expanded() { return expanded; }, get animating() { return Boolean(animation); }, set };

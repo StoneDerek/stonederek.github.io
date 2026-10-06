@@ -4,11 +4,16 @@ import { mountSiteMenu } from './site-menu.js';
 import { createProjectRequests } from './project-navigation.js';
 import { mountProjectFavicon } from './favicon.js';
 import { projectIndexFromHash } from './project-links.js';
+import { createAboutSwipe } from './section-state.js';
 
-export function mountPortfolio() {
+export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   const root = document.getElementById('portfolio');
   const data = document.getElementById('portfolio-data');
   if (!root || !data) return;
+  const controller = new AbortController();
+  const listen = (target, type, handler, options = {}) => target.addEventListener(type, handler, { ...options, signal: controller.signal });
+  let disposed = false;
+  const swipeCue = root.querySelector('[data-about-swipe-cue]');
   const projects = JSON.parse(data.textContent);
   const updateFavicon = mountProjectFavicon(document.querySelector('[data-project-favicon]'));
   const slides = [...root.querySelectorAll('[data-slide]')];
@@ -38,7 +43,7 @@ export function mountPortfolio() {
   const aboutLabel = menu.querySelector('[data-menu-context="about"]');
   const menuTitle = menu.querySelector('[data-menu-title]');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const projectNavigation = mountProjectMenu(projectsMenu, reducedMotion);
+  const projectNavigation = mountProjectMenu(projectsMenu, reducedMotion, { signal: controller.signal });
   const visibleMenuChoices = () => menuChoices.filter(choice => choice === projectsToggle || !projectsMenu.contains(choice) || projectNavigation.expanded);
   const previousButton = root.querySelector('[data-step="-1"]');
   const nextButton = root.querySelector('[data-step="1"]');
@@ -92,7 +97,7 @@ export function mountPortfolio() {
   let renderedInset = NaN;
   let renderedScale = NaN;
   let renderedRadius = NaN;
-  const menuNavigation = mountSiteMenu(menu, reducedMotion, { onChange: updateMenuName });
+  const menuNavigation = mountSiteMenu(menu, reducedMotion, { signal: controller.signal, onChange: updateMenuName });
   const projectRequests = createProjectRequests({
     getCurrent: () => ({ open: projectOpen, index: active }),
     open: openProject,
@@ -467,20 +472,20 @@ export function mountPortfolio() {
     if (focusChoice !== null) visibleMenuChoices()[focusChoice]?.focus({ preventScroll: true });
   }
   function closeMenu(options) { animateMenu(false, options); }
-  menuToggle.addEventListener('click', event => {
+  listen(menuToggle, 'click', event => {
     event.preventDefault();
     animateMenu(!menuNavigation.expanded);
   });
-  menuToggle.addEventListener('keydown', event => {
+  listen(menuToggle, 'keydown', event => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     event.preventDefault();
     event.stopPropagation();
     animateMenu(true, { focusChoice: event.key === 'ArrowDown' ? 0 : visibleMenuChoices().length - 1 });
   });
-  document.addEventListener('pointerdown', event => {
+  listen(document, 'pointerdown', event => {
     if (menuNavigation.expanded && !menu.contains(event.target)) closeMenu();
   });
-  menu.addEventListener('focusout', event => {
+  listen(menu, 'focusout', event => {
     if (menuNavigation.expanded && event.relatedTarget && !menu.contains(event.relatedTarget)) closeMenu();
   });
 
@@ -523,6 +528,7 @@ export function mountPortfolio() {
   }
 
   function restoreProjectFocus() {
+    if (disposed) return;
     if (projectRequests.pending) return;
     const target = menuNavigation.expanded
       ? menu.querySelector(projectOpen ? `[data-menu-project="${active}"]` : '[data-action="gallery"]')
@@ -532,6 +538,7 @@ export function mountPortfolio() {
   }
 
   async function transitionProject(opening, { replacing = false } = {}) {
+    if (disposed) return;
     const scrollTop = projectView.scrollTop;
     const originalVisibility = projectPage.style.visibility;
     projectPage.style.visibility = 'hidden';
@@ -566,12 +573,13 @@ export function mountPortfolio() {
         if (opening) surface.setAttribute('aria-hidden', 'true');
         else surface.removeAttribute('aria-hidden');
       });
-      document.body.classList.toggle('dialog-open', opening);
+      if (!disposed) document.body.classList.toggle('dialog-open', opening);
       projectAbort = null;
     }
   }
 
   async function openProject(request, { replacing }) {
+    if (disposed) return;
     const backdrop = replacing && canAnimateTiles({ reducedMotion: reducedMotion.matches })
       ? captureProjectBackdrop(root, projectPage, { scrollTop: projectView.scrollTop }) : null;
     try {
@@ -600,12 +608,12 @@ export function mountPortfolio() {
     } else {
       const address = new URL(window.location.href);
       address.hash = fragment;
-      window.history.replaceState(null, '', address);
+      window.history.replaceState(window.history.state, '', address);
     }
     void projectRequests.request({ index: selected, ...options });
   }
 
-  root.addEventListener('click', event => {
+  listen(root, 'click', event => {
     if (performance.now() < suppressClickUntil && event.detail !== 0 && (stage.contains(event.target) || rail.contains(event.target))) {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -647,7 +655,8 @@ export function mountPortfolio() {
     drag = {
       id: event.pointerId, surface, capture, unit,
       x: event.clientX, y: event.clientY, start: position,
-      lastX: event.clientX, lastTime: performance.now(), velocity: 0, moved: false
+      lastX: event.clientX, lastTime: performance.now(), velocity: 0, moved: false,
+      about: surface === stage ? createAboutSwipe(stageWidth) : null, armed: false
     };
     capture.setPointerCapture(event.pointerId);
   }
@@ -659,6 +668,7 @@ export function mountPortfolio() {
       if (Math.abs(dx) < 6 || Math.abs(dx) < Math.abs(dy)) return;
       drag.moved = true;
       root.classList.add('is-dragging');
+      sectionLinks.hide();
       animateLift(1);
     }
     const now = performance.now();
@@ -666,14 +676,34 @@ export function mountPortfolio() {
     drag.velocity = (drag.lastX - event.clientX) / (elapsed * drag.unit);
     drag.lastX = event.clientX;
     drag.lastTime = now;
-    render(drag.start - dx / drag.unit);
+    let travel = -dx;
+    if (drag.about) {
+      const next = drag.about.move(travel);
+      if (!drag.armed && next.armed && !reducedMotion.matches) {
+        swipeCue.animate([{ transform: 'translateX(-50%) translateY(0)' }, { transform: 'translateX(-50%) translateY(-4px)' }, { transform: 'translateX(-50%) translateY(0)' }], { duration: 130 });
+      }
+      drag.armed = next.armed;
+      swipeCue.style.opacity = String(next.progress);
+      swipeCue.textContent = next.armed ? 'Release for About' : 'Keep swiping for About';
+      root.dataset.aboutSwipe = next.armed ? 'armed' : next.progress > 0 ? 'resisting' : '';
+      if (travel > 0) travel = next.travel;
+    }
+    render(drag.start + travel / drag.unit);
   }
   function endDrag(event, cancelled = false) {
     if (!drag || drag.id !== event.pointerId) return;
     const finished = drag;
     drag = null;
     root.classList.remove('is-dragging');
+    swipeCue.style.opacity = '';
+    delete root.dataset.aboutSwipe;
     if (finished.capture.hasPointerCapture(event.pointerId)) finished.capture.releasePointerCapture(event.pointerId);
+    if (finished.moved && finished.about?.release({ cancelled })) {
+      suppressClickUntil = performance.now() + 250;
+      animateLift(0);
+      document.dispatchEvent(new CustomEvent('portfolio:section-navigate', { detail: { route: 'about' } }));
+      return;
+    }
     if (finished.moved) {
       suppressClickUntil = performance.now() + 250;
       const recentVelocity = performance.now() - finished.lastTime < 100 && !cancelled ? finished.velocity : 0;
@@ -683,16 +713,16 @@ export function mountPortfolio() {
       select(Math.round(position));
     }
   }
-  stage.addEventListener('pointerdown', event => beginDrag(event, stage, stageWidth));
-  rail.addEventListener('pointerdown', event => beginDrag(event, rail, stride));
+  listen(stage, 'pointerdown', event => beginDrag(event, stage, stageWidth));
+  listen(rail, 'pointerdown', event => beginDrag(event, rail, stride));
   [stage, rail].forEach(surface => {
-    surface.addEventListener('selectstart', event => event.preventDefault());
-    surface.addEventListener('pointermove', moveDrag);
-    surface.addEventListener('pointerup', event => endDrag(event));
-    surface.addEventListener('pointercancel', event => endDrag(event, true));
+    listen(surface, 'selectstart', event => event.preventDefault());
+    listen(surface, 'pointermove', moveDrag);
+    listen(surface, 'pointerup', event => endDrag(event));
+    listen(surface, 'pointercancel', event => endDrag(event, true));
   });
 
-  rail.addEventListener('wheel', event => {
+  listen(rail, 'wheel', event => {
     if (event.ctrlKey || hasDialog() || drag) return;
     const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
     if (!delta) return;
@@ -708,7 +738,7 @@ export function mountPortfolio() {
     }, 160);
   }, { passive: false });
 
-  document.addEventListener('keydown', event => {
+  listen(document, 'keydown', event => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     if (event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
     if (menuNavigation.expanded) {
@@ -739,12 +769,12 @@ export function mountPortfolio() {
     select(directions[event.key], { focusThumbnail: rail.contains(event.target) });
   });
 
-  window.addEventListener('resize', () => {
+  listen(window, 'resize', () => {
     projectAbort?.abort();
     cancelAnimationFrame(resizeFrame);
     resizeFrame = requestAnimationFrame(measure);
   });
-  reducedMotion.addEventListener('change', () => {
+  listen(reducedMotion, 'change', () => {
     if (reducedMotion.matches) {
       projectAbort?.abort();
       setMenuContext(menuContext, { immediate: true });
@@ -756,7 +786,7 @@ export function mountPortfolio() {
     if (reducedMotion.matches && animationFrame) animateTo(destination, { immediate: true });
     if (reducedMotion.matches && menuNavigation.animating) menuNavigation.set(menuNavigation.expanded, { immediate: true });
   });
-  document.addEventListener('visibilitychange', () => {
+  listen(document, 'visibilitychange', () => {
     if (!document.hidden) return;
     projectAbort?.abort();
     stopWheel();
@@ -770,9 +800,27 @@ export function mountPortfolio() {
   root.dataset.ready = 'true';
   const requestedIndex = projectIndexFromHash(window.__PORTFOLIO_PREVIEW_FRAGMENT__ ?? window.location.hash, projects);
   if (requestedIndex >= 0) requestProject(requestedIndex);
-  window.addEventListener('hashchange', () => {
+  listen(window, 'hashchange', () => {
     if (window.location.hash && !new URLSearchParams(window.location.hash.slice(1)).has('project')) return;
     const index = projectIndexFromHash(window.location.hash, projects);
     requestProject(index >= 0 ? index : null);
   });
+  return () => {
+    disposed = true;
+    controller.abort();
+    projectAbort?.abort();
+    stopWheel();
+    stopAnimation();
+    [liftFrame, titleFrame, resizeFrame].forEach(cancelAnimationFrame);
+    contextGeneration += 1;
+    menuTitleGeneration += 1;
+    contextAnimations.forEach(animation => animation.cancel());
+    menuTitleAnimation?.cancel();
+    menuNavigation.set(false, { immediate: true });
+    projectNavigation.set(false, { immediate: true });
+    if (drag?.capture.hasPointerCapture(drag.id)) drag.capture.releasePointerCapture(drag.id);
+    drag = null;
+    root.getAnimations({ subtree: true }).forEach(animation => animation.cancel());
+    document.body.classList.remove('dialog-open');
+  };
 }

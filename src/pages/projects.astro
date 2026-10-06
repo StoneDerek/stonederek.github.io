@@ -4,6 +4,7 @@ import projects from '../data/projects.json';
 import site from '../data/site.json';
 import SiteHeader from '../components/SiteHeader.astro';
 import { projectIcon } from '../data/project-icons.js';
+import { sectionFade, shortDrift } from '../data/section-motion.js';
 const base = import.meta.env.BASE_URL;
 const url = (path) => `${base}${path}`;
 const first = projects[0];
@@ -17,6 +18,7 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
 
     <section class="carousel" aria-roledescription="carousel" aria-label="Selected placeholder projects" tabindex="0">
       <div class="artwork-stage" data-stage>
+        <div class="artwork-visual" transition:name="gallery-art" transition:animate={sectionFade}>
         <div class="artwork-track" data-gallery-track>
         {projects.map((project, index) => (
           <div class:list={['artwork-slide', { 'is-active': index === 0 }]} data-slide={index} aria-hidden={index !== 0}>
@@ -26,14 +28,18 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
           </div>
         ))}
         </div>
-        <div id="project-caption" class="project-caption" tabindex="-1">
-          <h1 aria-label={first.title}><button type="button" class="caption-link" data-action="project" data-project="0" aria-controls="project-article" aria-label={`View ${first.title}`}><span class="caption-word"><span class="caption-metrics" data-title-metrics aria-hidden="true">{first.title}</span><span class="caption-letters" data-title aria-hidden="true">{first.title}</span></span><svg class="caption-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button></h1>
         </div>
+        <div id="project-caption" class="project-caption" tabindex="-1">
+          <div data-section-motion transition:name="section-content" transition:animate={shortDrift}>
+          <h1 aria-label={first.title}><button type="button" class="caption-link" data-action="project" data-project="0" aria-controls="project-article" aria-label={`View ${first.title}`}><span class="caption-word"><span class="caption-metrics" data-title-metrics aria-hidden="true">{first.title}</span><span class="caption-letters" data-title aria-hidden="true">{first.title}</span></span><svg class="caption-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button></h1>
+          </div>
+        </div>
+        <div class="section-swipe-cue" data-about-swipe-cue aria-hidden="true">Keep swiping for About</div>
       </div>
       <p class="sr-only" data-announcement aria-live="polite" aria-atomic="true"></p>
     </section>
 
-    <footer class="filmstrip" aria-label="Project previews">
+    <footer class="filmstrip" aria-label="Project previews" data-section-motion transition:name="section-filmstrip" transition:animate={shortDrift}>
       <div class="thumbnail-rail" role="group" aria-label="Choose a project">
         <div class="thumbnail-track">
           <div class="thumbnail-group">
@@ -48,7 +54,7 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
       <span class="selection-frame" aria-hidden="true"></span>
     </footer>
 
-    <nav class="mobile-controls" aria-label="Gallery controls">
+    <nav class="mobile-controls" aria-label="Gallery controls" data-section-motion transition:name="section-controls" transition:animate={shortDrift}>
       <button type="button" class="mobile-arrow" data-step="-1" aria-label="Previous project" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" /></svg></button>
       <button type="button" class="mobile-inspect" data-action="project" aria-controls="project-article"><span class="mobile-inspect-label">View project <svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 12 12 4M5 4h7v7" /></svg></span><span class="mobile-count" data-mobile-count>01 / {String(projects.length).padStart(2, '0')}</span></button>
       <button type="button" class="mobile-arrow" data-step="1" aria-label="Next project"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7" /></svg></button>
@@ -68,10 +74,6 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
 
 
     <script type="application/json" id="portfolio-data" set:html={serialized}></script>
-    <script>
-      import { mountPortfolio } from '../scripts/carousel.js';
-      mountPortfolio();
-    </script>
     <noscript><div class="noscript-message">The first project is shown. Enable JavaScript to browse the other frames.</div></noscript>
   </main>
 </Layout>

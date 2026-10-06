@@ -1,11 +1,12 @@
 ---
 import site from '../data/site.json';
 import css from '../styles/portfolio.css?inline';
+import { ClientRouter } from 'astro:transitions';
 const base = import.meta.env.BASE_URL;
 const { title = site.title, description = site.description, favicon = `${base}favicon.svg` } = Astro.props;
 ---
 <!doctype html>
-<html lang="en">
+<html lang="en" transition:name="root" transition:animate="none">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -14,8 +15,10 @@ const { title = site.title, description = site.description, favicon = `${base}fa
     <title>{title}</title>
     <link rel="icon" href={favicon} type="image/svg+xml" data-project-favicon />
     <style is:inline set:html={css}></style>
+    <ClientRouter />
   </head>
   <body>
     <slot />
+    <script>import '../scripts/section-navigation.js';</script>
   </body>
 </html>

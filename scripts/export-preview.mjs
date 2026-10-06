@@ -12,6 +12,9 @@ const embedded = new Map();
 const mime = { webp: 'image/webp', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg' };
 for (const [route, file] of Object.entries(routes)) {
   let html = await readFile(resolve('dist', file), 'utf8');
+  // srcdoc routes use the preview's message bridge instead of network fetching.
+  html = html.replace(/<meta\b[^>]*name="astro-view-transitions-enabled"[^>]*>/g, '')
+    .replace(/(<meta\b[^>]*name="astro-view-transitions-fallback"[^>]*content=")animate("[^>]*>)/g, '$1none$2');
   for (const match of html.matchAll(/(?:src|href)="([^"]+\.(?:webp|svg|png|jpg))"/g)) {
     const path = match[1];
     const publicPath = path.match(/\/(art|thumbnails)\/.+$/)?.[0].slice(1) || path.match(/favicon\.svg$/)?.[0];
@@ -54,12 +57,16 @@ function initializePreview({ pages, assets }) {
   const home = `${location.href.split('#')[0]}#home`.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
   const resume = expanded('resume').replace(/(<a\b[^>]*\bdata-resume-home\b[^>]*\bhref=")[^"]*(")/, `$1${home}$2`);
   const resumeAddress = URL.createObjectURL(new Blob([resume], { type: 'text/html' }));
+  let previousRoute = null;
   const render = () => {
     const [requested, fragment = ''] = location.hash.slice(1).split('?');
     const route = ['home', 'about', 'projects'].includes(requested) ? requested : 'home';
     document.title = route === 'home' ? 'Derek Stone — Portfolio preview' : `Derek Stone — ${route === 'about' ? 'About' : 'Projects'} preview`;
     let html = expanded(route);
-    const setup = `<script>window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};<\/script>`;
+    const order = ['home', 'about', 'projects'];
+    const direction = previousRoute ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
+    previousRoute = route;
+    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:''},'*')};<\/script>`;
     html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
     html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*(")/, `$1${resumeAddress}$2`);
     // Attributes can appear in either order in compiler output.
