@@ -33,6 +33,13 @@ function animatePreviewEntry(direction) {
     element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: sectionTiming.enter, easing: sectionTiming.easing }));
   document.querySelectorAll('[data-section-art]').forEach(element =>
     element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: sectionTiming.artwork, easing: 'linear' }));
+  const menu = document.querySelector('.site-menu');
+  const previous = window.__PORTFOLIO_PREVIEW_NAVIGATION__;
+  if (menu && previous) {
+    const next = getComputedStyle(menu);
+    menu.animate([previous, { backgroundColor: next.backgroundColor, color: next.color }],
+      { duration: sectionTiming.header, easing: 'linear' });
+  }
 }
 
 // The offline preview swaps frames instead of using Astro's document router.
@@ -59,6 +66,14 @@ document.addEventListener('astro:before-preparation', event => {
   document.documentElement.style.setProperty('--section-drift', `${direction * sectionTiming.distance}px`);
 });
 document.addEventListener('astro:before-swap', event => {
+  // The fallback keeps the header anchored and blends its actual drawn colors.
+  const menu = document.querySelector('.site-menu');
+  const nextMenu = event.newDocument.querySelector('.site-menu');
+  if (menu && nextMenu) {
+    const style = getComputedStyle(menu);
+    nextMenu.style.setProperty('--navigation-from-accent', style.backgroundColor);
+    nextMenu.style.setProperty('--navigation-from-ink', style.color);
+  }
   event.newDocument.documentElement.toggleAttribute('data-gallery-handoff', Boolean(event.info?.gallerySwipe));
   const direction = sectionDirection(sectionFromPath(event.from.pathname), sectionFromPath(event.to.pathname));
   event.newDocument.documentElement.style.setProperty('--section-drift', `${direction * sectionTiming.distance}px`);

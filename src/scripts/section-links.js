@@ -13,6 +13,28 @@ export function mountSectionLinks() {
   let touch = null;
   let aboutProgress = 0;
   let aboutCurrent = false;
+  let press = null;
+  let pressTimer = 0;
+  const clearPress = () => {
+    clearTimeout(pressTimer);
+    press?.link.removeAttribute('data-pressed');
+    press = null;
+  };
+  // Touch browsers can omit :active while deciding whether a finger will scroll.
+  listen(links, 'pointerdown', event => {
+    if (!event.isPrimary || event.pointerType === 'mouse' || event.button !== 0) return;
+    clearPress();
+    const link = event.target.closest('a');
+    if (!link) return;
+    press = { link, id: event.pointerId };
+    link.setAttribute('data-pressed', '');
+  }, { passive: true });
+  listen(document, 'pointerup', event => {
+    if (press?.id === event.pointerId) pressTimer = setTimeout(clearPress, 80);
+  }, { passive: true });
+  listen(document, 'pointercancel', event => {
+    if (press?.id === event.pointerId) clearPress();
+  }, { passive: true });
   function apply(hidden) {
     if (hidden && !aboutProgress && links.contains(document.activeElement)) return;
     const inert = aboutProgress ? aboutProgress < 1 : hidden;
@@ -74,5 +96,5 @@ export function mountSectionLinks() {
   listen(document, 'touchcancel', () => { touch = null; }, { passive: true });
   listen(links, 'focusout', () => { queueMicrotask(() => apply(state.hidden)); });
   apply(state.hidden);
-  return { hide, previewAbout, destroy() { controller.abort(); } };
+  return { hide, previewAbout, destroy() { clearPress(); controller.abort(); } };
 }
