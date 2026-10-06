@@ -3,6 +3,7 @@ import { mountProjectMenu } from './project-menu.js';
 import { mountSiteMenu } from './site-menu.js';
 import { createProjectRequests } from './project-navigation.js';
 import { mountProjectFavicon } from './favicon.js';
+import { projectIndexFromHash } from './project-links.js';
 
 export function mountPortfolio() {
   const root = document.getElementById('portfolio');
@@ -28,9 +29,7 @@ export function mountPortfolio() {
   const projectsToggle = projectsMenu.querySelector('[data-projects-toggle]');
   const homeMenuButton = menu.querySelector('[data-menu-home]');
   const aboutMenuButton = menu.querySelector('[data-menu-about]');
-  const dialogs = [...root.querySelectorAll('dialog')];
   const siteHeader = root.querySelector('.site-header');
-  const aboutDialog = root.querySelector('[data-dialog="about"]');
   const projectView = root.querySelector('[data-project-view]');
   const projectPage = projectView.querySelector('.project-page');
   const gallerySurfaces = [...root.querySelectorAll('.carousel, .filmstrip, .mobile-controls')];
@@ -55,7 +54,7 @@ export function mountPortfolio() {
     const node = textNodes.get(selector);
     if (node.textContent !== String(value)) node.textContent = value;
   };
-  const hasDialog = () => projectOpen || projectRequests.busy || dialogs.some(dialog => dialog.open);
+  const hasDialog = () => projectOpen || projectRequests.busy;
   let active = -1;
   let position = 0;
   let destination = 0;
@@ -70,7 +69,6 @@ export function mountPortfolio() {
   let wheelPosition = null;
   let drag = null;
   let suppressClickUntil = 0;
-  let dialogReturnFocus = null;
   let titleFrame = 0;
   let titleSlots = [];
   let slideEndsAt = 0;
@@ -84,7 +82,6 @@ export function mountPortfolio() {
   let menuTitleAnimation = null;
   let menuTitleGeneration = 0;
   let desiredMenuTitle = menuTitle.textContent;
-  let aboutReturnFocus = true;
   const titleMeasure = document.createElement('canvas').getContext('2d');
   let measuredFont = '';
   const glyphWidths = new Map();
@@ -105,14 +102,14 @@ export function mountPortfolio() {
   });
 
   function updateMenuName() {
-    const location = menuContext === 'about' ? `About: ${siteHeader.dataset.owner}`
-      : `${menuContext === 'project' ? 'Project' : 'Home'}: ${projects[Math.max(0, active)].title}`;
+    const location = `${menuContext === 'project' ? 'Project' : 'Projects'}: ${projects[Math.max(0, active)].title}`;
     menuToggle.setAttribute('aria-label', `${menuNavigation.expanded ? 'Close' : 'Open'} navigation. ${location}`);
-    if (menuContext === 'home') homeMenuButton.setAttribute('aria-current', 'page');
-    else homeMenuButton.removeAttribute('aria-current');
-    if (menuContext === 'about') aboutMenuButton.setAttribute('aria-current', 'page');
-    else aboutMenuButton.removeAttribute('aria-current');
-    projectsMenu.dataset.current = String(menuContext === 'project');
+    homeMenuButton.removeAttribute('aria-current');
+    aboutMenuButton.removeAttribute('aria-current');
+    const galleryLink = menu.querySelector('[data-menu-gallery]');
+    if (menuContext === 'home') galleryLink.setAttribute('aria-current', 'page');
+    else galleryLink.removeAttribute('aria-current');
+    projectsMenu.dataset.current = 'true';
   }
 
   function setMenuContext(next, { immediate = false } = {}) {
@@ -526,7 +523,7 @@ export function mountPortfolio() {
   }
 
   function restoreProjectFocus() {
-    if (aboutDialog.open || projectRequests.pending) return;
+    if (projectRequests.pending) return;
     const target = menuNavigation.expanded
       ? menu.querySelector(projectOpen ? `[data-menu-project="${active}"]` : '[data-action="gallery"]')
       : projectOpen ? projectView.querySelector('[data-detail-title]')
@@ -569,7 +566,7 @@ export function mountPortfolio() {
         if (opening) surface.setAttribute('aria-hidden', 'true');
         else surface.removeAttribute('aria-hidden');
       });
-      document.body.classList.toggle('dialog-open', opening || aboutDialog.open);
+      document.body.classList.toggle('dialog-open', opening);
       projectAbort = null;
     }
   }
@@ -596,37 +593,16 @@ export function mountPortfolio() {
   }
 
   function requestProject(index, options = {}) {
-    closeAbout({ restoreFocus: false });
-    void projectRequests.request({ index: index === null ? null : clamp(index), ...options });
-  }
-
-  function restoreHeader() {
-    if (siteHeader.parentElement !== root) root.insertBefore(siteHeader, root.querySelector('.carousel'));
-  }
-
-  function closeAbout({ restoreFocus = true } = {}) {
-    if (!aboutDialog.open) return;
-    aboutReturnFocus = restoreFocus;
-    restoreHeader();
-    aboutDialog.close();
-    setMenuContext(projectOpen || projectRequests.busy);
-    setMenuTitle(projects[active].title);
-    document.body.classList.toggle('dialog-open', projectOpen || projectRequests.busy);
-  }
-
-  function openAbout() {
-    if (aboutDialog.open) return;
-    closeMenu();
-    dialogReturnFocus = menuToggle;
-    aboutReturnFocus = true;
-    // Native modals occupy the browser's top layer. Put navigation in that same layer.
-    aboutDialog.append(siteHeader);
-    aboutDialog.showModal();
-    setMenuContext('about');
-    setMenuTitle(siteHeader.dataset.owner);
-    aboutDialog.scrollTop = 0;
-    document.body.classList.add('dialog-open');
-    aboutDialog.querySelector('[data-close]').focus({ preventScroll: true });
+    const selected = index === null ? null : clamp(index);
+    const fragment = selected === null ? '' : `#project=${encodeURIComponent(projects[selected].slug)}`;
+    if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ !== undefined) {
+      window.parent.postMessage({ type: 'portfolio-preview-fragment', fragment }, '*');
+    } else {
+      const address = new URL(window.location.href);
+      address.hash = fragment;
+      window.history.replaceState(null, '', address);
+    }
+    void projectRequests.request({ index: selected, ...options });
   }
 
   root.addEventListener('click', event => {
@@ -646,7 +622,6 @@ export function mountPortfolio() {
       requestProject(index, { origin: clickOrigin(event, choice), returnFocus: choice });
       return;
     }
-    if (event.target.closest('[data-close]')) { closeAbout(); return; }
     const actionButton = event.target.closest('[data-action]');
     if (actionButton?.dataset.action === 'project') {
       closeMenu();
@@ -655,11 +630,10 @@ export function mountPortfolio() {
       });
     }
     if (actionButton?.dataset.action === 'gallery') {
-      closeAbout({ restoreFocus: false });
-      closeMenu({ focus: true });
+      event.preventDefault();
+        closeMenu({ focus: true });
       if (projectOpen || projectRequests.busy) requestProject(null);
     }
-    if (actionButton?.dataset.action === 'about') openAbout();
   });
 
   function beginDrag(event, surface, unit) {
@@ -755,7 +729,6 @@ export function mountPortfolio() {
       }
       return;
     }
-    if (aboutDialog.open) return;
     if (projectOpen || projectRequests.busy) {
       if (event.key === 'Escape') { event.preventDefault(); requestProject(null); }
       return;
@@ -766,25 +739,6 @@ export function mountPortfolio() {
     select(directions[event.key], { focusThumbnail: rail.contains(event.target) });
   });
 
-  dialogs.forEach(dialog => {
-    dialog.addEventListener('close', () => {
-      if (dialog.open) return;
-      restoreHeader();
-      setMenuContext(projectOpen || projectRequests.busy);
-      setMenuTitle(projects[active].title);
-      document.body.classList.toggle('dialog-open', projectOpen || projectRequests.busy);
-      if (aboutReturnFocus) dialogReturnFocus?.focus({ preventScroll: true });
-    });
-    dialog.addEventListener('cancel', event => {
-      event.preventDefault();
-      closeAbout();
-    });
-    dialog.addEventListener('click', event => {
-      if (event.target !== dialog) return;
-      const box = dialog.getBoundingClientRect();
-      if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) closeAbout();
-    });
-  });
   window.addEventListener('resize', () => {
     projectAbort?.abort();
     cancelAnimationFrame(resizeFrame);
@@ -814,4 +768,11 @@ export function mountPortfolio() {
   measure();
   updateFavicon(projects[Math.max(0, active)].favicon);
   root.dataset.ready = 'true';
+  const requestedIndex = projectIndexFromHash(window.__PORTFOLIO_PREVIEW_FRAGMENT__ ?? window.location.hash, projects);
+  if (requestedIndex >= 0) requestProject(requestedIndex);
+  window.addEventListener('hashchange', () => {
+    if (window.location.hash && !new URLSearchParams(window.location.hash.slice(1)).has('project')) return;
+    const index = projectIndexFromHash(window.location.hash, projects);
+    requestProject(index >= 0 ? index : null);
+  });
 }

@@ -1,69 +1,102 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { Script } from 'node:vm';
+import { build } from 'esbuild';
 
-// Export the actual production build, keeping the preview and website identical.
-// Run after `npm run build`. The result opens directly without a local server.
-let html = await readFile('dist/index.html', 'utf8');
-const mime = { webp: 'image/webp', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg' };
+// Bundle the actual production pages into one offline, navigable review file.
+// Each route runs in a fresh frame, so gallery event listeners never accumulate.
+const routes = { home: 'index.html', about: 'about/index.html', projects: 'projects/index.html', resume: 'resume/index.html' };
+const pages = {};
+const assets = {};
 const embedded = new Map();
-for (const match of html.matchAll(/(?:src|href)="([^"]+\.(?:webp|svg|png|jpg))"/g)) {
-  const path = match[1];
-  const publicPath = path.match(/\/(art|thumbnails)\/.+$/)?.[0].slice(1) || path.match(/favicon\.svg$/)?.[0];
-  if (!publicPath) throw new Error(`Cannot locate preview asset: ${path}`);
-  const bytes = await readFile(resolve('public', publicPath));
-  const extension = publicPath.split('.').pop();
-  embedded.set(path, `data:${mime[extension]};base64,${bytes.toString('base64')}`);
+const mime = { webp: 'image/webp', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg' };
+for (const [route, file] of Object.entries(routes)) {
+  let html = await readFile(resolve('dist', file), 'utf8');
+  for (const match of html.matchAll(/(?:src|href)="([^"]+\.(?:webp|svg|png|jpg))"/g)) {
+    const path = match[1];
+    const publicPath = path.match(/\/(art|thumbnails)\/.+$/)?.[0].slice(1) || path.match(/favicon\.svg$/)?.[0];
+    if (!publicPath) throw new Error(`Cannot locate preview asset: ${path}`);
+    if (!embedded.has(path)) {
+      const token = `__PORTFOLIO_ASSET_${embedded.size}__`;
+      const bytes = await readFile(resolve('public', publicPath));
+      assets[token] = `data:${mime[publicPath.split('.').pop()]};base64,${bytes.toString('base64')}`;
+      embedded.set(path, token);
+    }
+  }
+  for (const [path, token] of embedded) html = html.replaceAll(`="${path}"`, `="${token}"`);
+  for (const match of [...html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"[^>]*>/g)]) {
+    const relative = match[1].match(/\/_astro\/.+$/)?.[0].slice(1);
+    if (!relative) throw new Error(`Cannot locate preview stylesheet: ${match[1]}`);
+    html = html.replace(match[0], `<style>${await readFile(resolve('dist', relative), 'utf8')}</style>`);
+  }
+  for (const match of [...html.matchAll(/<script\b([^>]*?)\bsrc="([^"]+)"([^>]*?)><\/script>/g)]) {
+    const relative = match[2].match(/\/_astro\/.+$/)?.[0].slice(1);
+    if (!relative) throw new Error(`Cannot locate preview script: ${match[2]}`);
+    const result = await build({ entryPoints: [resolve('dist', relative)], bundle: true, write: false, format: 'iife', platform: 'browser', minify: true, logLevel: 'silent' });
+    const script = result.outputFiles[0].text;
+    const classic = `(function(){function start(){${script}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',start,{once:true})}else{start()}})();`;
+    new Script(classic, { filename: `preview-${route}.js` });
+    html = html.replace(match[0], `<script>${classic.replaceAll('</script', '<\\/script')}</script>`);
+  }
+  pages[route] = html;
 }
-for (const [path, uri] of embedded) html = html.replaceAll(`="${path}"`, `="${uri}"`);
 
-// Astro may inline small bundles or emit a separate script; support both.
-const scriptTags = [...html.matchAll(/<script\b([^>]*?)\bsrc="([^"]+)"([^>]*?)><\/script>/g)];
-for (const match of scriptTags) {
-  const relative = match[2].match(/\/_astro\/.+$/)?.[0].slice(1);
-  if (!relative) throw new Error(`Cannot locate preview script: ${match[2]}`);
-  const script = await readFile(resolve('dist', relative), 'utf8');
-  if (/\bimport\s*(?:\(|["'{*])/.test(script)) throw new Error('Preview bundle contains imports; inline dependencies before exporting.');
-  html = html.replace(match[0], `<script${match[1]}${match[3]}>${script.replaceAll('</script', '<\\/script')}</script>`);
+function initializePreview({ pages, assets }) {
+  const frame = document.querySelector('iframe');
+  const favicon = document.createElement('link');
+  favicon.rel = 'icon'; favicon.type = 'image/svg+xml'; document.head.append(favicon);
+  const expanded = route => {
+    let html = pages[route];
+    for (const [token, value] of Object.entries(assets)) html = html.replaceAll(token, value);
+    return html;
+  };
+  const escapeScript = value => JSON.stringify(value).replaceAll('<', '\\u003c');
+  const home = `${location.href.split('#')[0]}#home`.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
+  const resume = expanded('resume').replace(/(<a\b[^>]*\bdata-resume-home\b[^>]*\bhref=")[^"]*(")/, `$1${home}$2`);
+  const resumeAddress = URL.createObjectURL(new Blob([resume], { type: 'text/html' }));
+  const render = () => {
+    const [requested, fragment = ''] = location.hash.slice(1).split('?');
+    const route = ['home', 'about', 'projects'].includes(requested) ? requested : 'home';
+    document.title = route === 'home' ? 'Derek Stone — Portfolio preview' : `Derek Stone — ${route === 'about' ? 'About' : 'Projects'} preview`;
+    let html = expanded(route);
+    const setup = `<script>window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};<\/script>`;
+    html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
+    html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*(")/, `$1${resumeAddress}$2`);
+    // Attributes can appear in either order in compiler output.
+    html = html.replace(/(<a\b[^>]*\bhref=")[^"]*("[^>]*\bdata-resume-link\b)/g, `$1${resumeAddress}$2`);
+    const navigation = `<script>document.addEventListener('click',function(event){
+      if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+      const link=event.target.closest('a[data-site-route]');if(!link)return;
+      event.preventDefault();const fragment=link.getAttribute('href').split('#')[1]||'';
+      window.parent.postMessage({type:'portfolio-preview-route',route:link.dataset.siteRoute,fragment},'*');
+    });const icon=document.querySelector('[data-project-favicon]');
+    const syncIcon=function(){if(icon)window.parent.postMessage({type:'portfolio-preview-favicon',href:icon.href},'*')};
+    if(icon)new MutationObserver(syncIcon).observe(icon,{attributes:true,attributeFilter:['href']});syncIcon();
+    document.addEventListener('DOMContentLoaded',function(){
+      const id=window.__PORTFOLIO_PREVIEW_FRAGMENT__.slice(1);
+      if(id&&!id.startsWith('project='))document.getElementById(decodeURIComponent(id))?.scrollIntoView();
+    });<\/script>`;
+    frame.srcdoc = html.replace('</body>', `${navigation}</body>`);
+  };
+  window.addEventListener('message', event => {
+    if (event.source !== frame.contentWindow) return;
+    if (event.data?.type === 'portfolio-preview-route' && ['home', 'about', 'projects'].includes(event.data.route)) {
+      location.hash = `${event.data.route}${event.data.fragment ? `?${event.data.fragment}` : ''}`;
+    }
+    if (event.data?.type === 'portfolio-preview-favicon' && typeof event.data.href === 'string' && event.data.href.startsWith('data:image/')) {
+      favicon.href = event.data.href;
+    }
+    if (event.data?.type === 'portfolio-preview-fragment') {
+      history.replaceState(null, '', `#projects${event.data.fragment ? `?${event.data.fragment.slice(1)}` : ''}`);
+    }
+  });
+  window.addEventListener('hashchange', render);
+  window.addEventListener('pagehide', event => { if (!event.persisted) URL.revokeObjectURL(resumeAddress); });
+  render();
 }
-
-// The bundled gallery has no imports. A classic script also works in viewers
-// that allow JavaScript but do not start module scripts for local HTML files.
-html = html.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/g, (tag, attributes, script) => {
-  const moduleType = /\s+type\s*=\s*(["'])module\1/i;
-  if (!moduleType.test(attributes)) return tag;
-  // Reject module-only syntax rather than exporting a silently broken preview.
-  const classic = `(function () {\n"use strict";\n${script}\n})();`;
-  new Script(classic, { filename: 'portfolio-preview.html' });
-  return `<script${attributes.replace(moduleType, '')}>${classic}</script>`;
-});
-
-// File viewers can display HTML while blocking its scripts. Keep this message
-// visible until the gallery has actually finished initializing. Preview only.
-html = html.replace('</head>', `<style>
-.preview-help { position: absolute; z-index: 8; bottom: max(12px, env(safe-area-inset-bottom)); left: 12px; right: 12px; max-width: 420px; margin-inline: auto; padding: 14px 16px; border-radius: 6px; background: #fff; color: #191919; font-size: 13px; line-height: 1.45; }
-.portfolio[data-ready="true"] .preview-help { display: none; }
-</style></head>`);
-html = html.replace(/(<main\b[^>]*\bid="portfolio"[^>]*>)/, '$1<aside class="preview-help" role="status">Gallery controls have not started in this viewer. Try opening the preview in a browser.</aside>');
-html = html.replace(/(<a class="wordmark" href=")[^"]*(")/, '$1#$2');
-// Keep the résumé route usable in the single-file preview. A small document
-// blob opens the actual generated page; the production link remains /resume/.
-if (html.includes('data-resume-link')) {
-  let resume = await readFile('dist/resume/index.html', 'utf8');
-  resume = resume.replace(/(<a\b[^>]*\bdata-resume-home\b[^>]*\bhref=")[^"]*(")/, '$1__PORTFOLIO_PREVIEW_HOME__$2');
-  for (const [path, uri] of embedded) resume = resume.replaceAll(`="${path}"`, `="${uri}"`);
-  const markup = JSON.stringify(resume).replaceAll('<', '\\u003c');
-  const previewRoute = `(function () {
-    const link = document.querySelector('[data-resume-link]');
-    if (!link) return;
-    const home = location.href.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
-    const page = ${markup}.replace('__PORTFOLIO_PREVIEW_HOME__', home);
-    const address = URL.createObjectURL(new Blob([page], { type: 'text/html' }));
-    link.href = address;
-    window.addEventListener('pagehide', event => { if (!event.persisted) URL.revokeObjectURL(address); });
-  })();`;
-  new Script(previewRoute, { filename: 'resume-preview-route.js' });
-  html = html.replace('</body>', `<script>${previewRoute}</script></body>`);
-}
-await writeFile('portfolio-preview.html', html);
-console.log(`Exported portfolio-preview.html (${Math.round(Buffer.byteLength(html) / 1024)} KB).`);
+const payload = JSON.stringify({ pages, assets }).replaceAll('<', '\\u003c');
+const loader = `(${initializePreview.toString()})(JSON.parse(document.getElementById('preview-data').textContent));`;
+new Script(loader, { filename: 'preview-navigation.js' });
+const output = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Derek Stone — Portfolio preview</title><style>html,body{margin:0;width:100%;height:100%;background:#fff}iframe{display:block;width:100%;height:100%;border:0}noscript{padding:24px;font:16px/1.5 Arial,sans-serif}</style></head><body><iframe title="Derek Stone’s portfolio"></iframe><noscript>Open this preview in a browser with JavaScript enabled to explore Home, About, and Projects.</noscript><script type="application/json" id="preview-data">${payload}</script><script>${loader}</script></body></html>`;
+await writeFile('portfolio-preview.html', output);
+console.log(`Exported all three portfolio pages (${Math.round(Buffer.byteLength(output) / 1024)} KB).`);

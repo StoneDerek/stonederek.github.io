@@ -1,114 +1,35 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import projects from '../data/projects.json';
+import SiteHeader from '../components/SiteHeader.astro';
+import ProfileFooter from '../components/ProfileFooter.astro';
 import site from '../data/site.json';
-import { publicationDate } from '../data/publication.js';
-import { projectIcon } from '../data/project-icons.js';
 const base = import.meta.env.BASE_URL;
-const url = (path) => `${base}${path}`;
-const first = projects[0];
-const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon: projectIcon(project.palette) }))).replace(/</g, '\\u003c');
-const published = publicationDate();
-const cat = ['/\\_/\\', '= ( • . • ) =', '/     \\'].join('\n');
 ---
-<Layout>
-  <main id="portfolio" class="portfolio" style={`--accent:${first.palette.accent};--ink:${first.palette.ink};--caption-color:${first.palette.caption || first.palette.accent}`}>
-    <a class="skip-link" href="#project-caption">Skip to selected project</a>
-
-    <header class="site-header" data-owner={site.name}>
-      <details class="site-menu" data-menu>
-        <summary aria-label="Portfolio navigation" aria-controls="project-navigation">
-          <span class="menu-name">{site.header}</span>
-          <span class="menu-status-row"><span class="menu-status"><span class="menu-location"><span class="menu-context"><span class="menu-context-row" data-menu-context="work">Home:</span><span class="menu-context-row menu-context-project" data-menu-context="project" aria-hidden="true">Project:</span><span class="menu-context-row menu-context-about" data-menu-context="about" aria-hidden="true">About:</span></span><span class="menu-title-window"><span data-menu-title>{first.title}</span></span></span><span class="menu-open-label" aria-hidden="true">Menu</span></span><svg class="menu-icon" viewBox="0 0 16 16" aria-hidden="true"><path class="menu-bars" d="M3 4h10M3 8h10M3 12h10" /><path class="menu-cross" d="m4 4 8 8m0-8-8 8" /></svg></span>
-        </summary>
-        <div class="menu-body">
-        <nav id="project-navigation" class="menu-navigation" aria-label="Main navigation">
-          <button type="button" class="menu-section" data-action="gallery" data-menu-home aria-current="page">Home <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button>
-          <button type="button" class="menu-section" data-action="about" data-menu-about aria-haspopup="dialog">About <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button>
-          <details class="menu-projects" data-projects-menu>
-            <summary class="menu-section" data-projects-toggle aria-controls="menu-project-list">Projects <span class="projects-toggle-mark" aria-hidden="true"></span></summary>
-            <div id="menu-project-list" class="menu-projects-panel" data-projects-panel>
-              <div class="menu-project-list">
-              {projects.map((project, index) => (
-                <button type="button" class="menu-project" data-menu-project={index} aria-current={index === 0 ? 'true' : undefined}><span>{project.title}</span><svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button>
-              ))}
-              </div>
-            </div>
-          </details>
-        </nav>
-        <footer class="menu-footer">
-          <pre class="menu-cat" aria-hidden="true">{cat}</pre>
-          <div class="menu-contact"><a href={`mailto:${site.email}`}>Email: {site.email} <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a></div>
-          <div class="menu-links" aria-label="Professional links">
-            <a href={site.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn (opens in a new tab)">LinkedIn <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
-            <a href={url('resume/')} data-resume-link target="_blank" rel="noopener" aria-label="Résumé (opens in a new tab)">Résumé <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
+<Layout title={`${site.name} — Portfolio`} description="Lorem ipsum dolor sit amet, consectetur adipiscing elit.">
+  <div class="profile-shell home-shell">
+    <a class="skip-link" href="#introduction">Skip to introduction</a>
+    <SiteHeader page="home" />
+    <main class="profile-main home-main" id="introduction" tabindex="-1">
+      <section class="home-introduction" aria-labelledby="home-title">
+        <div class="introduction-copy">
+          <p class="profile-eyebrow">Lorem ipsum / Dolor sit amet</p>
+          <h1 id="home-title">Derek<br /> Stone<span class="name-period">.</span></h1>
+          <p class="introduction-lead">Lorem ipsum dolor sit amet.</p>
+        </div>
+        <div class="introduction-content">
+          <div class="introduction-prose">
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Cras mattis consectetur purus sit amet fermentum.</p>
           </div>
-          <div class="menu-colophon"><p class="menu-signature"><span aria-hidden="true">.✦ ݁˖ </span>{site.name}</p><time class="menu-published" datetime={published.iso} aria-label={`Version published ${published.label}`}>{published.label}</time></div>
-        </footer>
+          <div class="profile-actions"><a class="profile-button" href={`${base}projects/`} data-site-route="projects">Explore projects</a><a class="profile-text-link" href={`${base}about/`} data-site-route="about">More about me</a></div>
         </div>
-      </details>
-    </header>
+      </section>
 
-    <section class="carousel" aria-roledescription="carousel" aria-label="Selected placeholder projects" tabindex="0">
-      <div class="artwork-stage" data-stage>
-        <div class="artwork-track" data-gallery-track>
-        {projects.map((project, index) => (
-          <div class:list={['artwork-slide', { 'is-active': index === 0 }]} data-slide={index} aria-hidden={index !== 0}>
-            <div class="artwork-card">
-            <img src={url(project.image)} alt={project.imageAlt} width="1920" height="1200" style={`object-position:${project.position}`} loading={index < 2 ? 'eager' : 'lazy'} fetchpriority={index === 0 ? 'high' : 'auto'} decoding="async" draggable="false" />
-            </div>
-          </div>
-        ))}
-        </div>
-        <div id="project-caption" class="project-caption" tabindex="-1">
-          <h1 aria-label={first.title}><button type="button" class="caption-link" data-action="project" data-project="0" aria-controls="project-article" aria-label={`View ${first.title}`}><span class="caption-word"><span class="caption-metrics" data-title-metrics aria-hidden="true">{first.title}</span><span class="caption-letters" data-title aria-hidden="true">{first.title}</span></span><svg class="caption-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button></h1>
-        </div>
-      </div>
-      <p class="sr-only" data-announcement aria-live="polite" aria-atomic="true"></p>
-    </section>
-
-    <footer class="filmstrip" aria-label="Project previews">
-      <div class="thumbnail-rail" role="group" aria-label="Choose a project">
-        <div class="thumbnail-track">
-          <div class="thumbnail-group">
-            {projects.map((project, index) => (
-              <button type="button" class:list={['thumbnail', { 'is-active': index === 0 }]} data-thumbnail={index} tabindex={index === 0 ? 0 : -1} aria-pressed={index === 0} aria-label={`Show ${project.title}, project ${index + 1} of ${projects.length}`} title={project.title}>
-                <img src={url(project.thumbnail)} alt="" width="320" height="200" draggable="false" />
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-      <span class="selection-frame" aria-hidden="true"></span>
-    </footer>
-
-    <nav class="mobile-controls" aria-label="Gallery controls">
-      <button type="button" class="mobile-arrow" data-step="-1" aria-label="Previous project" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" /></svg></button>
-      <button type="button" class="mobile-inspect" data-action="project" aria-controls="project-article"><span class="mobile-inspect-label">View project <svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 12 12 4M5 4h7v7" /></svg></span><span class="mobile-count" data-mobile-count>01 / {String(projects.length).padStart(2, '0')}</span></button>
-      <button type="button" class="mobile-arrow" data-step="1" aria-label="Next project"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7" /></svg></button>
-    </nav>
-
-    <section id="project-article" class="project-view" data-project-view aria-labelledby="detail-title" hidden>
-      <article class="project-page">
-        <header class="project-toolbar"><button type="button" class="back-button" data-action="gallery" aria-label="Back to gallery"><svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m7 3-5 5 5 5M2 8h12" /></svg> Selected work</button><span class="project-view-meta"><span data-detail-category>{first.category}</span> / <span data-detail-year>{first.year}</span></span><span class="project-view-number" data-detail-number>01 / {String(projects.length).padStart(2, '0')}</span></header>
-        <section class="project-story">
-          <div><p class="dialog-eyebrow">Placeholder project</p><h2 id="detail-title" data-detail-title tabindex="-1">{first.title}</h2></div>
-          <div class="project-prose"><p class="detail-description" data-detail-description>{first.description}</p><p class="detail-note" data-detail-note>{first.note}</p></div>
-        </section>
-        <div class="project-media" data-detail-media data-asset-base={base} hidden></div>
-      </article>
-    </section>
-
-    <dialog class="about-dialog" data-dialog="about" aria-labelledby="about-title">
-      <div class="dialog-top"><span>{site.name}</span><button type="button" class="close-button" data-close aria-label="Close About">×</button></div>
-      <div class="dialog-copy"><p class="dialog-eyebrow">About / a first draft</p><h2 id="about-title">{site.aboutTitle}</h2><p class="detail-description">{site.aboutText}</p><p class="detail-note">{site.aboutNote}</p><span class="about-signature" aria-hidden="true">ds.</span></div>
-    </dialog>
-
-    <script type="application/json" id="portfolio-data" set:html={serialized}></script>
-    <script>
-      import { mountPortfolio } from '../scripts/carousel.js';
-      mountPortfolio();
-    </script>
-    <noscript><div class="noscript-message">The first project is shown. Enable JavaScript to browse the other frames.</div></noscript>
-  </main>
+    </main>
+    <ProfileFooter />
+  </div>
+  <script>
+    import { mountProfileNavigation } from '../scripts/profile-navigation.js';
+    mountProfileNavigation();
+  </script>
 </Layout>

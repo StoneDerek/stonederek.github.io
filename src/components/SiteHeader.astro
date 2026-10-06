@@ -1,0 +1,57 @@
+---
+import site from '../data/site.json';
+import projects from '../data/projects.json';
+import { publicationDate } from '../data/publication.js';
+const { page = 'home' } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const url = (path = '') => `${base}${path}`;
+const gallery = page === 'projects';
+const published = publicationDate();
+const cat = ['  ╱|、', '(˚ˎ 。7', ' |、˜〵', 'じしˍ,)ノ'].join('\n');
+const location = gallery ? projects[0].title : page === 'about' ? site.name : 'Introduction';
+---
+<header class="site-header" data-owner={site.name} data-page={page}>
+  <details class="site-menu" data-menu>
+    <summary aria-label={`Open navigation. ${page === 'home' ? 'Home' : gallery ? 'Projects' : 'About'}: ${location}`} aria-controls="project-navigation">
+      <span class="menu-name">{site.header}</span>
+      <span class="menu-status-row"><span class="menu-status"><span class="menu-location"><span class="menu-context">
+        <span class="menu-context-row" data-menu-context="work" aria-hidden={page === 'about'}>{gallery ? 'Projects:' : 'Home:'}</span>
+        <span class="menu-context-row menu-context-project" data-menu-context="project" aria-hidden="true">Project:</span>
+        <span class:list={['menu-context-row', 'menu-context-about', { 'is-page-context': page === 'about' }]} data-menu-context="about" aria-hidden={page !== 'about'}>About:</span>
+      </span><span class="menu-title-window"><span data-menu-title>{location}</span></span></span><span class="menu-open-label" aria-hidden="true">Menu</span></span><svg class="menu-icon" viewBox="0 0 16 16" aria-hidden="true"><path class="menu-bars" d="M3 4h10M3 8h10M3 12h10" /><path class="menu-cross" d="m4 4 8 8m0-8-8 8" /></svg></span>
+    </summary>
+    <div class="menu-body">
+      <nav id="project-navigation" class="menu-navigation" aria-label="Main navigation">
+        <a class="menu-section" href={url()} data-site-route="home" data-menu-home aria-current={page === 'home' ? 'page' : undefined}>Home <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
+        <a class="menu-section" href={url('about/')} data-site-route="about" data-menu-about aria-current={page === 'about' ? 'page' : undefined}>About <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
+        <details class="menu-projects" data-projects-menu data-current={gallery ? 'true' : 'false'}>
+          <summary class="menu-section" data-projects-toggle aria-controls="menu-project-list">Projects <span class="projects-toggle-mark" aria-hidden="true"></span></summary>
+          <div id="menu-project-list" class="menu-projects-panel" data-projects-panel>
+            <div class="menu-project-list">
+              <a class="menu-project menu-gallery-link" href={url('projects/')} data-site-route="projects" data-menu-gallery data-action={gallery ? 'gallery' : undefined} aria-current={gallery ? 'page' : undefined}>View gallery <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
+              {projects.map((project, index) => gallery ? (
+                <button type="button" class="menu-project" data-menu-project={index} aria-current={index === 0 ? 'true' : undefined}><span>{project.title}</span><svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button>
+              ) : (
+                <a class="menu-project" href={`${url('projects/')}#project=${project.slug}`} data-site-route="projects" data-project-link={index}><span>{project.title}</span><svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
+              ))}
+            </div>
+          </div>
+        </details>
+      </nav>
+      <footer class="menu-footer">
+        <pre class="menu-cat" aria-hidden="true">{cat}</pre>
+        <div class="menu-contact"><a href={`mailto:${site.email}`}>Email: {site.email} <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a></div>
+        <div class="menu-links" aria-label="Professional links">
+          <a href={site.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn (opens in a new tab)">LinkedIn <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
+          <a href={url('resume/')} data-resume-link target="_blank" rel="noopener" aria-label="Résumé (opens in a new tab)">Résumé <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
+        </div>
+        <div class="menu-colophon"><p class="menu-signature"><span aria-hidden="true">.✦ ݁˖ </span>{site.name}</p><time class="menu-published" datetime={published.iso} aria-label={`Version published ${published.label}`}>{published.label}</time></div>
+      </footer>
+    </div>
+  </details>
+  {!gallery && <nav class="page-links" aria-label="Page navigation">
+    <a href={url()} data-site-route="home" aria-current={page === 'home' ? 'page' : undefined}>Home</a>
+    <a href={url('about/')} data-site-route="about" aria-current={page === 'about' ? 'page' : undefined}>About</a>
+    <a href={url('projects/')} data-site-route="projects" data-action={gallery ? 'gallery' : undefined} aria-current={gallery ? 'page' : undefined}>Projects</a>
+  </nav>}
+</header>
