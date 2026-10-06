@@ -665,6 +665,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   }
 
   function requestProject(index, options = {}) {
+    const pendingAbout = aboutCommitting && menuContext === 'about';
     cancelDrag();
     stopAbout({ reset: true });
     const selected = index === null ? null : clamp(index);
@@ -675,6 +676,11 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
       const address = new URL(window.location.href);
       address.hash = fragment;
       window.history.replaceState(window.history.state, '', address);
+    }
+    if (pendingAbout) {
+      document.dispatchEvent(new CustomEvent('portfolio:section-navigate', {
+        detail: { route: 'projects', fragment: fragment.slice(1), replace: true }
+      }));
     }
     void projectRequests.request({ index: selected, ...options });
   }
@@ -705,8 +711,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     }
     if (actionButton?.dataset.action === 'gallery') {
       event.preventDefault();
-        closeMenu({ focus: true });
-      if (projectOpen || projectRequests.busy) requestProject(null);
+      closeMenu({ focus: true });
+      if (projectOpen || projectRequests.busy || aboutCommitting) requestProject(null);
     }
   });
 
@@ -720,12 +726,13 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     stopAbout({ reset: !aboutEligible });
     destination = position;
     const capture = event.target.closest('button') || surface;
+    const about = aboutEligible ? createAboutSwipe(stageWidth) : null;
     drag = {
       id: event.pointerId, surface, capture, unit,
       x: event.clientX, y: event.clientY, start: position,
       lastX: event.clientX, lastTime: performance.now(), velocity: 0, moved: false,
-      about: aboutEligible ? createAboutSwipe(stageWidth) : null,
-      aboutStart: aboutTravel,
+      about,
+      aboutStart: about?.distanceForTravel(aboutTravel) || 0,
       touch: surface === stage && (event.pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches)
     };
     capture.setPointerCapture(event.pointerId);
@@ -776,7 +783,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     if (finished.capture.hasPointerCapture(event.pointerId)) finished.capture.releasePointerCapture(event.pointerId);
     if (aboutCommitting) return;
     if (aboutTravel > 0) {
-      suppressClickUntil = performance.now() + 250;
+      if (finished.moved) suppressClickUntil = performance.now() + 250;
       animateLift(0);
       animateAbout(0);
       return;
@@ -797,6 +804,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     listen(surface, 'pointermove', moveDrag);
     listen(surface, 'pointerup', event => endDrag(event));
     listen(surface, 'pointercancel', event => endDrag(event, true));
+    listen(surface, 'lostpointercapture', event => endDrag(event, true));
   });
 
   listen(rail, 'wheel', event => {
@@ -804,6 +812,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
     if (!delta) return;
     event.preventDefault();
+    stopAbout({ reset: true });
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rail.clientWidth : 1;
     wheelPosition = clamp((wheelPosition ?? position) + delta * unit / stride);
     animateTo(wheelPosition, { duration: 140, announceSelection: false });
@@ -838,6 +847,12 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     }
     if (projectOpen || projectRequests.busy) {
       if (event.key === 'Escape') { event.preventDefault(); requestProject(null); }
+      return;
+    }
+    // The edge crossing commits to About. Keep its reveal steady while loading;
+    // normal section links can still choose a different destination.
+    if (aboutCommitting) {
+      if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(event.key)) event.preventDefault();
       return;
     }
     if (event.key === 'Escape' && aboutTravel > 0) {

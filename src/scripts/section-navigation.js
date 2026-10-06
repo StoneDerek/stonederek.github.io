@@ -43,11 +43,20 @@ document.addEventListener('astro:before-swap', event => {
 });
 document.addEventListener('astro:page-load', mount);
 document.addEventListener('portfolio:section-navigate', event => {
-  const about = document.querySelector('[data-menu-about]');
-  if (event.detail?.route !== 'about' || !about) return;
+  const route = event.detail?.route;
+  const link = document.querySelector(route === 'about' ? '[data-menu-about]' : '[data-menu-gallery]');
+  if (!['about', 'projects'].includes(route) || !link) return;
   const gallerySwipe = Boolean(event.detail?.gallerySwipe);
-  if (typeof window.__PORTFOLIO_PREVIEW_NAVIGATE__ === 'function') window.__PORTFOLIO_PREVIEW_NAVIGATE__('about', { gallerySwipe });
-  else navigate(about.href, { info: { gallerySwipe } });
+  const fragment = event.detail?.fragment || '';
+  const replace = Boolean(event.detail?.replace);
+  if (!gallerySwipe) document.documentElement.removeAttribute('data-gallery-handoff');
+  if (typeof window.__PORTFOLIO_PREVIEW_NAVIGATE__ === 'function') window.__PORTFOLIO_PREVIEW_NAVIGATE__(route, { gallerySwipe, fragment, replace });
+  else {
+    const url = new URL(link.href);
+    url.hash = fragment;
+    // Even a same-page hash navigation aborts Astro's pending About request.
+    void navigate(url.href, { info: { gallerySwipe }, history: replace ? 'replace' : 'push' });
+  }
 });
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
 else mount();

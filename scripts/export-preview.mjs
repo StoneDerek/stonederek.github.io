@@ -74,7 +74,7 @@ function initializePreview({ pages, assets }) {
     const direction = previousRoute && !pendingHandoff ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
     pendingHandoff = false;
     previousRoute = route;
-    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:'',gallerySwipe:!!options?.gallerySwipe},'*')};<\/script>`;
+    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
     html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
     html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*(")/, `$1${resumeAddress}$2`);
     // Attributes can appear in either order in compiler output.
@@ -97,7 +97,9 @@ function initializePreview({ pages, assets }) {
     if (event.source !== frame.contentWindow) return;
     if (event.data?.type === 'portfolio-preview-route' && ['home', 'about', 'projects'].includes(event.data.route)) {
       pendingHandoff = Boolean(event.data.gallerySwipe);
-      location.hash = `${event.data.route}${event.data.fragment ? `?${event.data.fragment}` : ''}`;
+      const hash = `#${event.data.route}${event.data.fragment ? `?${event.data.fragment}` : ''}`;
+      if (event.data.replace) { history.replaceState(history.state, '', hash); render(); }
+      else location.hash = hash;
     }
     if (event.data?.type === 'portfolio-preview-favicon' && typeof event.data.href === 'string' && event.data.href.startsWith('data:image/')) {
       favicon.href = event.data.href;

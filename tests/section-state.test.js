@@ -54,6 +54,20 @@ test('backtracking before the crossing restores the untouched boundary', () => {
   assert.deepEqual(swipe.move(0), { travel: 0, commit: false });
 });
 
+test('re-grabbing a returning page preserves its exact visible position and bump response', () => {
+  for (const width of [320, 390, 1440]) {
+    const swipe = createAboutSwipe(width);
+    for (let distance = 0; distance < swipe.threshold; distance += 3) {
+      const travel = swipe.move(distance).travel;
+      const resumed = swipe.distanceForTravel(travel);
+      assert.ok(Math.abs(resumed - distance) < .001);
+      assert.ok(Math.abs(swipe.move(resumed).travel - travel) < .001);
+      assert.ok(swipe.move(resumed + 8).travel - travel >= 6);
+      assert.equal(swipe.distanceForTravel(-20), 0);
+    }
+  }
+});
+
 test('short, slow mobile swipes advance a project in either direction', () => {
   for (const unit of [320, 390, 430]) {
     const delta = Math.max(24, Math.min(56, unit * .15));

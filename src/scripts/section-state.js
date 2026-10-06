@@ -33,13 +33,29 @@ export function createAboutSwipe(width) {
   const threshold = Math.min(240, Math.max(72, width * .24));
   const entry = threshold * .38;
   const span = threshold * .35;
+  function travelAt(distance) {
+    const t = Math.max(0, Math.min(1, (distance - entry) / span));
+    return distance - span * .16 * t * t * (3 - 2 * t);
+  }
   return {
     threshold,
     move(rightwardDistance) {
       const distance = Math.max(0, rightwardDistance);
-      const t = Math.max(0, Math.min(1, (distance - entry) / span));
-      const loss = span * .16 * t * t * (3 - 2 * t);
-      return { travel: distance - loss, commit: distance >= threshold };
+      return { travel: travelAt(distance), commit: distance >= threshold };
+    },
+    // Resume from the drawn position without applying the slowdown twice.
+    distanceForTravel(travel) {
+      const value = Math.max(0, travel);
+      if (value <= entry) return value;
+      if (value >= travelAt(entry + span)) return value + span * .16;
+      let low = value;
+      let high = value + span * .16;
+      while (high - low > .001) {
+        const middle = (low + high) / 2;
+        if (travelAt(middle) < value) low = middle;
+        else high = middle;
+      }
+      return (low + high) / 2;
     }
   };
 }
