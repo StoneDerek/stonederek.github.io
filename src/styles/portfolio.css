@@ -34,6 +34,8 @@ html[data-astro-transition-fallback="new"] :is([data-section-motion], [data-sect
   ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
 html[data-gallery-handoff]::view-transition-group(*), html[data-gallery-handoff]::view-transition-old(*), html[data-gallery-handoff]::view-transition-new(*) { animation: none !important; }
+html[data-gallery-handoff]::view-transition-old(*) { opacity: 0 !important; }
+html[data-gallery-handoff]::view-transition-new(*) { opacity: 1 !important; }
 html[data-gallery-handoff] [data-astro-transition-scope] { animation: none !important; }
 body { margin: 0; background: #fff; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
 button, a, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -58,6 +60,8 @@ button { font: inherit; cursor: pointer; border: 0; }
 .menu-open-label { position: absolute; inset: 0; opacity: 0; line-height: 18px; transition: opacity 160ms ease; }
 .site-menu[data-expanded="true"] .menu-location, .site-menu:not([data-expanded])[open] .menu-location { opacity: 0; }
 .site-menu[data-expanded="true"] .menu-open-label, .site-menu:not([data-expanded])[open] .menu-open-label { opacity: 1; }
+#portfolio[data-about-swipe] .site-menu, #portfolio[data-about-swipe] .menu-location { transition: none; }
+#portfolio[data-about-swipe] .site-menu:not([open]) .menu-location { opacity: var(--about-menu-opacity, 1); }
 .menu-context { position: relative; flex: 0 0 55px; width: 55px; height: 18px; overflow: hidden; }
 .menu-context-row { position: absolute; inset: 0; display: block; }
 .menu-context-project, .menu-context-about { opacity: 0; transform: translateY(100%); }
@@ -219,6 +223,8 @@ dialog::backdrop { background: #050b1bc9; }
 .page-links a[aria-current="page"] { background: color-mix(in srgb, var(--accent) 35%, white); }
 .page-links a:hover, .page-links a:focus-visible { background: var(--accent); }
 .site-header:has(.site-menu[open]) .page-links { visibility: hidden; pointer-events: none; }
+#portfolio[data-about-swipe] .site-header:not(:has(.site-menu[open])) .page-links { opacity: var(--about-links-opacity, 0); transform: translateY(calc(-6px * (1 - var(--about-links-opacity, 0)))); visibility: visible; pointer-events: none; transition: none; }
+#portfolio[data-about-swipe] .site-header:not(:has(.site-menu[open])) .page-links[data-about-ready="true"] { pointer-events: auto; }
 .profile-shell { --accent: var(--default-accent); --ink: var(--default-ink); --accent-hover: var(--default-accent-hover); --accent-mark: var(--default-accent-mark); color: #211b2b; }
 .about-shell { --accent: #cde9ff; --ink: #1b2b43; --accent-hover: #b5ddfc; --accent-mark: #81b9e6; }
 .profile-shell :is(a, h1, main):focus-visible { outline: 2px solid var(--ink); outline-offset: 5px; }

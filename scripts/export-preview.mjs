@@ -9,6 +9,10 @@ const routes = { home: 'index.html', about: 'about/index.html', projects: 'proje
 const pages = {};
 const assets = {};
 const embedded = new Map();
+const resumePDF = await readFile(resolve('dist', 'resume.pdf')).then(bytes => bytes.toString('base64')).catch(error => {
+  if (error.code !== 'ENOENT') throw error;
+  return null;
+});
 const mime = { webp: 'image/webp', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg' };
 for (const [route, file] of Object.entries(routes)) {
   let html = await readFile(resolve('dist', file), 'utf8');
@@ -50,7 +54,7 @@ for (const [route, file] of Object.entries(routes)) {
   pages[route] = html;
 }
 
-function initializePreview({ pages, assets }) {
+function initializePreview({ pages, assets, resumePDF }) {
   const frame = document.querySelector('iframe');
   const favicon = document.createElement('link');
   favicon.rel = 'icon'; favicon.type = 'image/svg+xml'; document.head.append(favicon);
@@ -61,7 +65,9 @@ function initializePreview({ pages, assets }) {
   };
   const escapeScript = value => JSON.stringify(value).replaceAll('<', '\\u003c');
   const home = `${location.href.split('#')[0]}#home`.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
-  const resume = expanded('resume').replace(/(<a\b[^>]*\bdata-resume-home\b[^>]*\bhref=")[^"]*(")/, `$1${home}$2`);
+  const pdfAddress = resumePDF ? URL.createObjectURL(new Blob([Uint8Array.from(atob(resumePDF), char => char.charCodeAt(0))], { type: 'application/pdf' })) : null;
+  let resume = expanded('resume').replace(/(<a\b[^>]*\bdata-resume-home\b[^>]*\bhref=")[^"]*(")/, `$1${home}$2`);
+  if (pdfAddress) resume = resume.replace(/(<a\b[^>]*\bdata-resume-pdf\b[^>]*\bhref=")[^"]*(")/, `$1${pdfAddress}$2`);
   const resumeAddress = URL.createObjectURL(new Blob([resume], { type: 'text/html' }));
   let previousRoute = null;
   let pendingHandoff = false;
@@ -113,10 +119,15 @@ function initializePreview({ pages, assets }) {
     }
   });
   window.addEventListener('hashchange', render);
-  window.addEventListener('pagehide', event => { if (!event.persisted) URL.revokeObjectURL(resumeAddress); });
+  window.addEventListener('pagehide', event => {
+    if (!event.persisted) {
+      URL.revokeObjectURL(resumeAddress);
+      if (pdfAddress) URL.revokeObjectURL(pdfAddress);
+    }
+  });
   render();
 }
-const payload = JSON.stringify({ pages, assets }).replaceAll('<', '\\u003c');
+const payload = JSON.stringify({ pages, assets, resumePDF }).replaceAll('<', '\\u003c');
 const loader = `(${initializePreview.toString()})(JSON.parse(document.getElementById('preview-data').textContent));`;
 new Script(loader, { filename: 'preview-navigation.js' });
 const output = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Derek Stone — Portfolio preview</title><style>html,body{margin:0;width:100%;height:100%;background:#fff}iframe{display:block;width:100%;height:100%;border:0}noscript{padding:24px;font:16px/1.5 Arial,sans-serif}</style></head><body><iframe title="Derek Stone’s portfolio"></iframe><noscript>Open this preview in a browser with JavaScript enabled to explore Home, About, and Projects.</noscript><script type="application/json" id="preview-data">${payload}</script><script>${loader}</script></body></html>`;

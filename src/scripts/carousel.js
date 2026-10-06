@@ -6,6 +6,7 @@ import { mountProjectFavicon } from './favicon.js';
 import { projectIndexFromHash } from './project-links.js';
 import { createAboutSwipe, galleryFrame, settleProjectSwipe } from './section-state.js';
 import { createMotionSpring } from './motion-spring.js';
+import { createAboutHeader } from './about-header.js';
 import { aboutPalette, homePalette } from '../data/section-palettes.js';
 
 export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
@@ -19,6 +20,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   const endPanel = root.querySelector('[data-gallery-end]');
   const endReturn = root.querySelector('[data-end-return]');
   const projects = JSON.parse(data.textContent);
+  const aboutHeader = createAboutHeader(projects[0].palette, aboutPalette);
   const updateFavicon = mountProjectFavicon(document.querySelector('[data-project-favicon]'));
   const slides = [...root.querySelectorAll('[data-slide]')];
   const slideImages = slides.map(slide => slide.querySelector('img'));
@@ -87,6 +89,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   let aboutFrame = 0;
   let aboutVelocity = 0;
   let aboutCommitting = false;
+  let aboutHeaderActive = false;
   let aboutWarmed = false;
   let suppressClickUntil = 0;
   let titleFrame = 0;
@@ -477,8 +480,34 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     aboutTravel = Math.max(0, Math.min(stageWidth, value));
     root.style.setProperty('--about-drag', `${aboutTravel}px`);
     aboutPreview.hidden = aboutTravel === 0;
-    if (aboutTravel) root.dataset.aboutSwipe = aboutCommitting ? 'entering' : 'preview';
-    else delete root.dataset.aboutSwipe;
+    if (aboutTravel) {
+      root.dataset.aboutSwipe = aboutCommitting ? 'entering' : 'preview';
+      const progress = aboutTravel / stageWidth;
+      const frame = aboutHeader(progress);
+      root.style.setProperty('--accent', frame.accent);
+      root.style.setProperty('--ink', frame.ink);
+      root.style.setProperty('--about-menu-opacity', String(frame.labelOpacity));
+      root.style.setProperty('--about-links-opacity', String(frame.linksOpacity));
+      const context = frame.about ? 'about' : 'home';
+      if (!aboutHeaderActive || menuContext !== context) {
+        setMenuContext(context, { immediate: true });
+        setMenuTitle(frame.about ? siteHeader.dataset.owner : projects[active].title, { immediate: true });
+      }
+      sectionLinks.previewAbout?.(progress);
+      aboutHeaderActive = true;
+    } else {
+      if (aboutHeaderActive) {
+        setMenuContext('home', { immediate: true });
+        updateGalleryIdentity({ immediate: true });
+        root.style.removeProperty('--about-menu-opacity');
+        root.style.removeProperty('--about-links-opacity');
+        sectionLinks.previewAbout?.(0);
+        // Settle the cancelled swipe before restoring ordinary palette transitions.
+        getComputedStyle(menu).backgroundColor;
+        aboutHeaderActive = false;
+      }
+      delete root.dataset.aboutSwipe;
+    }
   }
 
   function stopAbout({ reset = false } = {}) {
@@ -488,12 +517,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     aboutCommitting = false;
     if (!reset) return;
     presentAbout(0);
-    if (menuContext === 'about') {
-      setMenuContext('home', { immediate: true });
-      setMenuTitle(projects[active].title, { immediate: true });
-      root.style.setProperty('--accent', projects[active].palette.accent);
-      root.style.setProperty('--ink', projects[active].palette.ink);
-    }
   }
 
   function animateAbout(target, { commit = false, velocity = aboutVelocity } = {}) {
@@ -505,10 +528,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
       aboutVelocity = 0;
       presentAbout(target);
       if (!commit || disposed) return;
-      root.style.setProperty('--accent', aboutPalette.accent);
-      root.style.setProperty('--ink', aboutPalette.ink);
-      setMenuContext('about', { immediate: true });
-      setMenuTitle(siteHeader.dataset.owner, { immediate: true });
       document.dispatchEvent(new CustomEvent('portfolio:section-navigate', {
         detail: { route: 'about', gallerySwipe: true }
       }));

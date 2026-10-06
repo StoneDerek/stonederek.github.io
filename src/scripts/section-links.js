@@ -11,14 +11,34 @@ export function mountSectionLinks() {
   const positions = new WeakMap();
   let windowPosition = window.scrollY;
   let touch = null;
+  let aboutProgress = 0;
+  let aboutCurrent = false;
   function apply(hidden) {
-    if (hidden && links.contains(document.activeElement)) return;
+    if (hidden && !aboutProgress && links.contains(document.activeElement)) return;
+    const inert = aboutProgress ? aboutProgress < 1 : hidden;
     links.dataset.scrolled = String(hidden);
-    links.inert = hidden;
-    links.setAttribute('aria-hidden', String(hidden));
+    links.inert = inert;
+    links.setAttribute('aria-hidden', String(inert));
   }
   function move(delta) { apply(state.move(delta)); }
   function hide() { apply(state.setHidden(true)); }
+  function previewAbout(progress) {
+    if (!gallery) return;
+    const returning = aboutProgress > 0 && progress === 0;
+    aboutProgress = progress;
+    const current = progress >= .5;
+    if (current !== aboutCurrent) {
+      aboutCurrent = current;
+      links.querySelectorAll('[data-site-route]').forEach(link => {
+        if (link.dataset.siteRoute === (current ? 'about' : 'projects')) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
+      });
+    }
+    if (progress) links.dataset.aboutReady = String(progress >= 1);
+    else delete links.dataset.aboutReady;
+    if (returning && state.hidden && links.contains(document.activeElement)) header.querySelector('summary').focus({ preventScroll: true });
+    apply(state.hidden);
+  }
   listen(document, 'scroll', event => {
     const page = event.target === document;
     const article = event.target instanceof Element && event.target.matches('[data-project-view]');
@@ -54,5 +74,5 @@ export function mountSectionLinks() {
   listen(document, 'touchcancel', () => { touch = null; }, { passive: true });
   listen(links, 'focusout', () => { queueMicrotask(() => apply(state.hidden)); });
   apply(state.hidden);
-  return { hide, destroy() { controller.abort(); } };
+  return { hide, previewAbout, destroy() { controller.abort(); } };
 }
