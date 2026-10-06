@@ -113,14 +113,14 @@ button { font: inherit; cursor: pointer; border: 0; }
 .artwork-slide { position: relative; flex: 0 0 calc(100% - var(--gallery-inset, 0px)); width: calc(100% - var(--gallery-inset, 0px)); height: 100%; }
 .artwork-card { position: absolute; top: 0; left: 0; width: calc(100% + var(--gallery-inset, 0px)); height: 100%; overflow: hidden; border-radius: var(--gallery-radius, 0px); transform: scale(var(--gallery-scale, 1)); }
 .artwork-card > img { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; pointer-events: none; }
-.gallery-end { color: var(--default-ink); }
+.gallery-end { color: #000; }
 .gallery-end-card { background: #fff; }
 .gallery-end-space { position: absolute; inset: 132px 24px 100px; }
 .gallery-end-footer { position: absolute; right: max(24px, env(safe-area-inset-right)); bottom: max(28px, env(safe-area-inset-bottom)); left: max(24px, env(safe-area-inset-left)); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .gallery-end-return { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 5px; background: transparent; color: inherit; }
 .gallery-end-links { display: flex; align-items: center; justify-content: flex-end; gap: 24px; }
 .gallery-end-links a { display: grid; place-items: center; min-height: 44px; padding-inline: 4px; color: inherit; font-size: 13px; text-decoration: none; }
-.gallery-end :is(a, button):hover, .gallery-end :is(a, button):focus-visible { background: var(--default-accent); border-radius: 5px; }
+.gallery-end :is(a, button):hover, .gallery-end :is(a, button):focus-visible { background: var(--accent); color: var(--ink); border-radius: 5px; }
 .portfolio :is(.project-caption, .filmstrip, .mobile-controls) { opacity: max(0, calc(1 - var(--end-progress, 0) * 2)); }
 .project-caption { position: absolute; z-index: 1; top: 50%; left: 50%; transform: translate(calc(-50% + var(--about-drag, 0px)), -50%); width: max-content; max-width: calc(100% - 40px); text-align: center; }
 .filmstrip, .mobile-controls { translate: var(--about-drag, 0px) 0; }

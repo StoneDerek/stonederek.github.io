@@ -7,7 +7,7 @@ import { projectIndexFromHash } from './project-links.js';
 import { createAboutSwipe, galleryFrame, settleProjectSwipe } from './section-state.js';
 import { createMotionSpring } from './motion-spring.js';
 import { createAboutHeader } from './about-header.js';
-import { aboutPalette, homePalette } from '../data/section-palettes.js';
+import { aboutPalette, linksPalette } from '../data/section-palettes.js';
 
 export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
   const root = document.getElementById('portfolio');
@@ -215,7 +215,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
 
   function updateGalleryIdentity({ immediate = false } = {}) {
     const project = projects[Math.max(0, active)];
-    const palette = endOpen ? homePalette : project.palette;
+    const palette = endOpen ? linksPalette : project.palette;
     root.style.setProperty('--accent', palette.accent);
     root.style.setProperty('--ink', palette.ink);
     root.style.setProperty('--caption-color', palette.caption || palette.accent);
