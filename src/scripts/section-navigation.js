@@ -35,7 +35,7 @@ function animatePreviewEntry(direction) {
       { opacity: 1, transform: resting }], { duration: sectionTiming.enter, easing: sectionTiming.easing });
   });
   document.querySelectorAll('[data-section-fade]').forEach(element =>
-    element.animate([{ opacity: 0, transform: 'translateY(100%)' }, { opacity: 1, transform: 'translateY(0)' }],
+    element.animate([{ opacity: 0 }, { opacity: 1 }],
       { duration: sectionTiming.enter, easing: sectionTiming.easing }));
   if (!window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__) document.querySelectorAll('[data-section-art]').forEach(element =>
     element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: sectionTiming.artwork, easing: 'linear' }));

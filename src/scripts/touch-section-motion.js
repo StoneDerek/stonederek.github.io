@@ -116,13 +116,13 @@ export function captureTouchSectionMotion(direction, { projectEntry = false } = 
     labelDrawing.clone.setAttribute('aria-hidden', 'true');
     labelDrawing.clone.inert = true;
     layers.push(labelDrawing.clone);
+    // Match the desktop label's fade-through, keeping both drawings stationary.
     animations.push(labelDrawing.clone.animate([
-      { opacity: labelDrawing.opacity, transform: 'translateY(0)' },
-      { opacity: 0, transform: 'translateY(-100%)' }
+      { opacity: labelDrawing.opacity }, { opacity: 0 }
     ],
       { duration: sectionTiming.exit, easing: 'ease-in', fill: 'both' }));
     animations.push(nextLabel.animate([
-      { opacity: 0, transform: 'translateY(100%)' }, { opacity: 1, transform: 'translateY(0)' }
+      { opacity: 0 }, { opacity: 1 }
     ],
       { duration: sectionTiming.enter, delay: sectionTiming.exit, easing: sectionTiming.easing, fill: 'both' }));
 
