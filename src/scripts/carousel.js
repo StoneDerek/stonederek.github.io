@@ -656,7 +656,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
       id: event.pointerId, surface, capture, unit,
       x: event.clientX, y: event.clientY, start: position,
       lastX: event.clientX, lastTime: performance.now(), velocity: 0, moved: false,
-      about: surface === stage ? createAboutSwipe(stageWidth) : null, armed: false
+      about: surface === stage && position < .001 ? createAboutSwipe(stageWidth) : null, armed: false
     };
     capture.setPointerCapture(event.pointerId);
   }
@@ -676,7 +676,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
     drag.velocity = (drag.lastX - event.clientX) / (elapsed * drag.unit);
     drag.lastX = event.clientX;
     drag.lastTime = now;
-    let travel = -dx;
+    let travel = dx;
     if (drag.about) {
       const next = drag.about.move(travel);
       if (!drag.armed && next.armed && !reducedMotion.matches) {
@@ -688,13 +688,20 @@ export function mountPortfolio({ sectionLinks = { hide() {} } } = {}) {
       root.dataset.aboutSwipe = next.armed ? 'armed' : next.progress > 0 ? 'resisting' : '';
       if (travel > 0) travel = next.travel;
     }
-    render(drag.start + travel / drag.unit);
+    const nextPosition = drag.start - travel / drag.unit;
+    // At the first project the gallery has reached its boundary. Let the
+    // artwork still yield under the rightward pull, then spring back on release.
+    const overflow = drag.about ? Math.max(0, -nextPosition * drag.unit) : 0;
+    const pull = overflow ? 56 * (1 - Math.exp(-overflow / 180)) + (drag.armed ? 6 : 0) : 0;
+    root.style.setProperty('--about-pull', `${pull}px`);
+    render(nextPosition);
   }
   function endDrag(event, cancelled = false) {
     if (!drag || drag.id !== event.pointerId) return;
     const finished = drag;
     drag = null;
     root.classList.remove('is-dragging');
+    root.style.removeProperty('--about-pull');
     swipeCue.style.opacity = '';
     delete root.dataset.aboutSwipe;
     if (finished.capture.hasPointerCapture(event.pointerId)) finished.capture.releasePointerCapture(event.pointerId);

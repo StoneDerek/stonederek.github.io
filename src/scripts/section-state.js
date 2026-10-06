@@ -27,7 +27,7 @@ export function createScrollReveal({ hidden = false } = {}) {
   };
 }
 
-// This is the same leftward gallery drag, with a detent after an ordinary swipe.
+// The gallery uses this detent only for a rightward pull from its first project.
 // Velocity never arms it, and backing away disarms before pointer release.
 export function createAboutSwipe(width) {
   const threshold = Math.max(220, width * .86);
@@ -35,8 +35,8 @@ export function createAboutSwipe(width) {
   let armed = false;
   return {
     threshold,
-    move(leftwardDistance) {
-      const distance = Math.max(0, leftwardDistance);
+    move(rightwardDistance) {
+      const distance = Math.max(0, rightwardDistance);
       if (distance >= threshold) armed = true;
       else if (distance < threshold - 24) armed = false;
       const resisted = Math.min(distance, entry) + Math.max(0, Math.min(distance, threshold) - entry) * .18;

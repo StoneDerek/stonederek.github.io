@@ -22,9 +22,11 @@ test('upward intent reveals links, down hides them, small reversals do not flick
   assert.equal(nav.move(NaN), true);
 });
 
-test('an ordinary project swipe does not arm About; a longer drag crosses a resisted detent', () => {
+test('an ordinary rightward project swipe does not arm About; a longer drag crosses a resisted detent', () => {
   for (const width of [320, 390, 1440]) {
     const swipe = createAboutSwipe(width);
+    assert.equal(swipe.move(-swipe.threshold * 2).armed, false);
+    assert.equal(swipe.release(), false);
     const normal = swipe.move(swipe.threshold * .45);
     assert.equal(normal.armed, false);
     assert.equal(normal.travel, swipe.threshold * .45);

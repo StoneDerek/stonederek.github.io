@@ -63,7 +63,8 @@ button { font: inherit; cursor: pointer; border: 0; }
 .menu-published { white-space: nowrap; }
 .carousel { position: absolute; inset: 0; outline: none; }
 .artwork-stage { position: absolute; inset: 0; touch-action: pan-y pinch-zoom; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.artwork-visual { position: absolute; inset: 0; }
+.artwork-visual { position: absolute; inset: 0; transform: translateX(var(--about-pull, 0px)); transition: transform 180ms cubic-bezier(.22,.7,.2,1); }
+.is-dragging .artwork-visual { transition: none; }
 .artwork-track { display: flex; width: 100%; height: 100%; }
 .is-moving .artwork-track, .is-dragging .artwork-track, .is-lifting .artwork-track { will-change: transform; }
 .artwork-slide { position: relative; flex: 0 0 calc(100% - var(--gallery-inset, 0px)); width: calc(100% - var(--gallery-inset, 0px)); height: 100%; }
