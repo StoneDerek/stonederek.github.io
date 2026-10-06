@@ -246,13 +246,11 @@ dialog::backdrop { background: #050b1bc9; }
 .menu-gallery-link { font-weight: 600 !important; }
 .page-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 2px; width: min(264px, 100%); margin: 6px auto 0; padding: 4px; border-radius: 6px; background: #fff; color: #211b2b; transition: opacity 160ms ease, transform 160ms ease, visibility 160ms; }
 .page-links[data-scrolled="true"] { opacity: 0; transform: translateY(-6px); visibility: hidden; pointer-events: none; }
-.page-links a { position: relative; display: grid; place-items: center; min-width: 0; min-height: 44px; padding: 6px 10px; border-radius: 4px; color: inherit; text-decoration: none; font-size: 14px; transition: transform 140ms ease, background-color 160ms ease; }
-.page-links a::after { content: ''; position: absolute; bottom: 4px; left: 50%; width: 22px; height: 2px; border-radius: 1px; background: color-mix(in srgb, var(--accent) 45%, currentColor); opacity: 0; transform: translateX(-50%); }
-.page-links a[aria-current="page"] { font-weight: 600; }
-.page-links a[aria-current="page"]::after { opacity: 1; }
+.page-links a { display: grid; place-items: center; min-width: 0; min-height: 34px; padding: 6px 10px; border-radius: 4px; color: inherit; text-decoration: none; font-size: 14px; transition: transform 140ms ease, background-color 160ms ease; }
+.page-links a[aria-current="page"] { background: color-mix(in srgb, var(--accent) 35%, white); }
 .page-links a:active, .page-links a[data-pressed] { transform: scale(.96); }
 .site-header .page-links a:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
-@media (hover: hover) and (pointer: fine) { .page-links a:hover { background: color-mix(in srgb, var(--accent) 18%, white); } }
+@media (hover: hover) and (pointer: fine) { .page-links a:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--accent) 18%, white); } }
 .site-header:has(.site-menu[open]) .page-links { visibility: hidden; pointer-events: none; }
 #portfolio[data-about-swipe] .site-header:not(:has(.site-menu[open])) .page-links { opacity: var(--about-links-opacity, 0); transform: translateY(calc(-6px * (1 - var(--about-links-opacity, 0)))); visibility: visible; pointer-events: none; transition: none; }
 #portfolio[data-about-swipe] .site-header:not(:has(.site-menu[open])) .page-links[data-about-ready="true"] { pointer-events: auto; }
@@ -307,6 +305,7 @@ dialog::backdrop { background: #050b1bc9; }
 }
 @media (max-width: 700px) {
   .page-links { margin-top: 5px; }
+  .page-links a { min-height: 38px; }
   .profile-main, .profile-footer { width: calc(100% - 40px); }
   .profile-main { padding-top: 149px; }
   .home-introduction { display: grid; grid-template-columns: 1fr; gap: 0; padding-bottom: 52px; }
