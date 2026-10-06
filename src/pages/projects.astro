@@ -6,12 +6,13 @@ import SiteHeader from '../components/SiteHeader.astro';
 import AboutContent from '../components/AboutContent.astro';
 import { projectIcon } from '../data/project-icons.js';
 import { sectionFade, shortDrift } from '../data/section-motion.js';
+import { homePalette } from '../data/section-palettes.js';
 const base = import.meta.env.BASE_URL;
 const url = (path) => `${base}${path}`;
 const first = projects[0];
 const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon: projectIcon(project.palette) }))).replace(/</g, '\\u003c');
 ---
-<Layout title={`${site.name} — Projects`} description="Projects, experiments, and work in progress by Derek Stone.">
+<Layout title={`${site.name} — Projects`} description="Projects, experiments, and work in progress by Derek Stone." favicon={projectIcon(first.palette)}>
   <main id="portfolio" class="portfolio" style={`--accent:${first.palette.accent};--ink:${first.palette.ink};--caption-color:${first.palette.caption || first.palette.accent}`}>
     <a class="skip-link" href="#project-caption">Skip to selected project</a>
 
@@ -32,6 +33,19 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
             </div>
           </div>
         ))}
+        <div id="gallery-end" class="artwork-slide gallery-end" data-gallery-end data-favicon={projectIcon(homePalette)} role="group" aria-label="Professional links" aria-hidden="true" tabindex="-1" inert>
+          <div class="artwork-card gallery-end-card">
+            <div class="gallery-end-space" data-ascii-space aria-hidden="true"></div>
+            <footer class="gallery-end-footer">
+              <button type="button" class="gallery-end-return" data-end-return aria-label="Back to last project"><svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="m7 3-5 5 5 5M2 8h12" /></svg></button>
+              <nav class="gallery-end-links" aria-label="Professional links">
+                <a href={site.linkedin} data-end-link target="_blank" rel="noopener noreferrer">LinkedIn</a>
+                <a href={url('resume/')} data-end-link data-resume-link target="_blank" rel="noopener">Résumé</a>
+                <a href={`mailto:${site.email}`} data-end-link>Email</a>
+              </nav>
+            </footer>
+          </div>
+        </div>
         </div>
         </div>
         <div id="project-caption" class="project-caption" tabindex="-1">

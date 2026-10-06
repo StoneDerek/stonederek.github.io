@@ -2,8 +2,9 @@
 import site from '../data/site.json';
 import css from '../styles/portfolio.css?inline';
 import { ClientRouter } from 'astro:transitions';
-const base = import.meta.env.BASE_URL;
-const { title = site.title, description = site.description, favicon = `${base}favicon.svg` } = Astro.props;
+import { projectIcon } from '../data/project-icons.js';
+import { homePalette } from '../data/section-palettes.js';
+const { title = site.title, description = site.description, favicon = projectIcon(homePalette) } = Astro.props;
 ---
 <!doctype html>
 <html lang="en" transition:name="root" transition:animate="none">

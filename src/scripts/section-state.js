@@ -30,7 +30,7 @@ export function createScrollReveal({ hidden = false } = {}) {
 // A mostly one-to-one drag with a short, smooth slowdown, not a hard barrier.
 // Crossing enters About immediately; no pointer release is needed.
 export function createAboutSwipe(width) {
-  const threshold = Math.min(240, Math.max(72, width * .24));
+  const threshold = Math.min(360, Math.max(112, width * .38));
   const entry = threshold * .38;
   const span = threshold * .35;
   function travelAt(distance) {
@@ -58,6 +58,14 @@ export function createAboutSwipe(width) {
       return (low + high) / 2;
     }
   };
+}
+
+// The last frame is an open links space, never a seventh project or an article.
+export function galleryFrame(value, projectCount) {
+  const last = projectCount - 1;
+  const position = Math.max(0, Math.min(projectCount, value));
+  return { position, project: Math.min(last, Math.round(position)),
+    endProgress: Math.max(0, position - last), links: position >= last + .5 };
 }
 
 export function settleProjectSwipe({ start, position, velocity = 0, deltaX, unit, touch = false, cancelled = false }) {
