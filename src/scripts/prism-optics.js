@@ -7,9 +7,9 @@ export function unitVector(vector) {
 }
 
 export function prismVertices(center, radius) {
-  return [{ x: center.x, y: center.y - radius },
-    { x: center.x + radius * Math.sqrt(3) / 2, y: center.y + radius / 2 },
-    { x: center.x - radius * Math.sqrt(3) / 2, y: center.y + radius / 2 }];
+  return [{ x: center.x - radius, y: center.y },
+    { x: center.x + radius / 2, y: center.y - radius * Math.sqrt(3) / 2 },
+    { x: center.x + radius / 2, y: center.y + radius * Math.sqrt(3) / 2 }];
 }
 
 export function insidePrism(point, vertices) {

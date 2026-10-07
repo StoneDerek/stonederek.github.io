@@ -259,6 +259,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     // Keep a held caption's pointer capture alive until its drag ends.
     const captionInert = links && drag?.capture !== captionButton;
     if (captionButton.inert !== captionInert) captionButton.inert = captionInert;
+    if (caption.inert !== captionInert) caption.inert = captionInert;
     const surfacesHidden = links || projectOpen || projectRequests.busy;
     prism.setActive(links && !projectOpen && !projectRequests.busy);
     endSurfaces.forEach(surface => {

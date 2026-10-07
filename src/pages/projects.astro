@@ -41,7 +41,8 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
                 <canvas class="prism-canvas" aria-hidden="true"></canvas>
                 <button type="button" class="prism-control" data-prism-control="light" aria-label="Move light source" aria-describedby="prism-instructions"></button>
                 <button type="button" class="prism-control" data-prism-control="prism" aria-label="Move prism" aria-describedby="prism-instructions"></button>
-                <p class="prism-hint" id="prism-instructions">Drag the light or prism<span class="sr-only">. When focused, use arrow keys to move, or Shift and arrow keys for larger steps.</span></p>
+                <button type="button" class="prism-control" data-prism-control="aim" aria-label="Aim light beam" aria-describedby="prism-instructions"></button>
+                <p class="prism-hint" id="prism-instructions">Drag the light or prism · turn the small handle to aim<span class="sr-only">. When focused, use arrow keys to move or turn, or Shift and arrow keys for larger steps.</span></p>
               </div>
             </div>
             <footer class="gallery-end-footer">

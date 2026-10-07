@@ -23,14 +23,23 @@ test('ray/edge intersections ignore parallel and backward edges', () => {
   assert.equal(rayIntersection({ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: -1 }, { x: 2, y: 1 }).distance, 2);
 });
 test('a prism ray enters, refracts inside, exits, and disperses with index', () => {
-  const triangle = prismVertices({ x: 300, y: 240 }, 90), source = { x: 60, y: 330 };
+  const triangle = prismVertices({ x: 300, y: 240 }, 90), source = { x: 60, y: 204 };
   assert.equal(insidePrism(source, triangle), false);
   assert.equal(insidePrism({ x: 300, y: 240 }, triangle), true);
-  const trace = index => tracePrismRay(source, { x: 240, y: -90 }, triangle, index, 1500);
+  const trace = index => tracePrismRay(source, { x: 1, y: 0 }, triangle, index, 1500);
   const red = trace(1.49), violet = trace(1.56);
   assert.deepEqual(red.map(segment => segment.inside), [false, true, false]);
   const angle = segments => { const s = segments.at(-1); return Math.atan2(s.to.y - s.from.y, s.to.x - s.from.x); };
   assert.ok(angle(violet) > angle(red));
+});
+test('the prism points left with a vertical exit face, and a fixed beam can miss it', () => {
+  const triangle = prismVertices({ x: 300, y: 240 }, 90);
+  assert.deepEqual(triangle[0], { x: 210, y: 240 });
+  assert.equal(triangle[1].x, triangle[2].x);
+  assert.ok(triangle[1].y < 240 && triangle[2].y > 240);
+  const source = { x: 60, y: 100 };
+  assert.deepEqual(tracePrismRay(source, { x: 1, y: 0 }, triangle, 1.5, 1500),
+    [{ from: source, to: { x: 1560, y: 100 }, inside: false }]);
 });
 test('overlapping source/prism and internal reflection cannot produce infinite traces', () => {
   const triangle = prismVertices({ x: 100, y: 100 }, 60);

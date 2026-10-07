@@ -137,6 +137,7 @@ button { font: inherit; cursor: pointer; border: 0; }
 .prism-canvas { display: block; width: 100%; }
 .prism-control { position: absolute; left: 0; top: 0; padding: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; pointer-events: auto; cursor: grab; touch-action: none; }
 .prism-control[data-dragging] { cursor: grabbing; }
+.prism-control[data-prism-control="aim"] { cursor: crosshair; }
 .prism-control:focus-visible { outline: 1px dashed #777; outline-offset: 4px; }
 .prism-hint { position: absolute; inset: auto 0 0; margin: 0; color: #777; font-size: 11px; text-align: center; }
 @media (max-height: 500px) { .gallery-end-space { inset: 96px 24px 84px; } }
@@ -147,6 +148,7 @@ button { font: inherit; cursor: pointer; border: 0; }
 .gallery-end-footer :is(a, button):hover, .gallery-end-footer :is(a, button):focus-visible { background: var(--accent); color: var(--ink); border-radius: 5px; }
 .portfolio :is(.project-caption, .filmstrip, .mobile-controls) { opacity: max(0, calc(1 - var(--end-progress, 0) * 2)); }
 .project-caption { position: absolute; z-index: 1; top: 50%; left: 50%; transform: translate(calc(-50% + var(--about-drag, 0px)), -50%); width: max-content; max-width: calc(100% - 40px); text-align: center; }
+.project-caption[inert] { pointer-events: none; }
 .filmstrip, .mobile-controls { translate: var(--about-drag, 0px) 0; }
 h1 { margin: 0; font-size: 14px; line-height: 1.25; font-weight: 600; }
 .caption-link { position: relative; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 6px 12px; border-radius: 5px; background: transparent; color: var(--caption-color); font-size: inherit; font-weight: inherit; line-height: inherit; user-select: none; -webkit-user-select: none; transition: color 180ms ease; }

@@ -12,7 +12,7 @@ export function mountPrism(host, { onInteraction = () => {} } = {}) {
   const listen = (target, type, callback, options = {}) => target.addEventListener(type, callback, { ...options, signal: controller.signal });
   const scene = document.createElement('canvas'), sourceContext = scene.getContext('2d', { willReadFrequently: true });
   const atlas = document.createElement('canvas'), atlasContext = atlas.getContext('2d');
-  const objects = { light: { x: .12, y: .6 }, prism: { x: .46, y: .44 } };
+  const objects = { light: { x: .12, y: .4, angle: 0 }, prism: { x: .46, y: .44 } };
   let active = false, disposed = false, frame = 0, dirtySize = true, initialized = false, drag = null;
   let width = 1, height = 1, columns = 1, rows = 1, cellWidth = 1, cellHeight = 1, radius = 1, ratio = 1;
   let atlasWidth = 1, atlasHeight = 1, stencil, coverage, inks, luminance;
@@ -35,7 +35,7 @@ export function mountPrism(host, { onInteraction = () => {} } = {}) {
     luminance = new Float32Array(columns * rows);
     stencil = logoStencil(columns, rows, columns * .78, (.44 * height + width * .11) / cellHeight, width >= 600 && rows >= 18 ? 2 : 1);
     if (!initialized) {
-      objects.light.y = .44 + width * .124 / height;
+      objects.light.y = .44 - radius * .4 / height;
       initialized = true;
     }
     Object.keys(objects).forEach(clampObject);
@@ -50,13 +50,27 @@ export function mountPrism(host, { onInteraction = () => {} } = {}) {
     });
     dirtySize = false;
   }
+  function aimPosition() {
+    const light = objects.light, distance = Math.min(56, height * .3);
+    // A rotation handle beside the source leaves its outgoing beam unobstructed.
+    const point = { x: Math.max(22, Math.min(width - 22, light.x * width + Math.sin(light.angle) * distance)),
+      y: Math.max(22, Math.min(height - 22, light.y * height - Math.cos(light.angle) * distance)) };
+    // Keep the two hit targets separate when the lamp is near an edge.
+    if (Math.hypot(point.x - light.x * width, point.y - light.y * height) < 44) {
+      point.x = light.x * width;
+      point.y = Math.max(22, Math.min(height - 22, light.y * height + (light.y < .5 ? distance : -distance)));
+    }
+    return point;
+  }
   function positionControls() {
     controls.forEach(control => {
-      const name = control.dataset.prismControl, object = objects[name];
-      const w = name === 'prism' ? Math.max(44, radius * Math.sqrt(3)) : 44;
-      const h = name === 'prism' ? Math.max(44, radius * 1.5) : 44;
+      const name = control.dataset.prismControl, object = name === 'aim' ? objects.light : objects[name];
+      const w = name === 'prism' ? Math.max(44, radius * 1.5) : 44;
+      const h = name === 'prism' ? Math.max(44, radius * Math.sqrt(3)) : 44;
+      const point = name === 'aim' ? aimPosition() : { x: object.x * width, y: object.y * height };
+      const left = name === 'prism' ? point.x - radius - (w - radius * 1.5) / 2 : point.x - w / 2;
       control.style.width = `${w}px`; control.style.height = `${h}px`;
-      control.style.transform = `translate(${object.x * width - w / 2}px, ${object.y * height - (name === 'prism' ? radius : h / 2)}px)`;
+      control.style.transform = `translate(${left}px, ${point.y - h / 2}px)`;
     });
   }
   function stroke(segment, color, thickness, alpha = 1) {
@@ -69,7 +83,8 @@ export function mountPrism(host, { onInteraction = () => {} } = {}) {
     sourceContext.setTransform(scene.width / width, 0, 0, scene.height / height, 0, 0);
     const light = { x: objects.light.x * width, y: objects.light.y * height };
     const center = { x: objects.prism.x * width, y: objects.prism.y * height };
-    const vertices = prismVertices(center, radius), direction = { x: center.x - light.x, y: center.y - light.y };
+    const vertices = prismVertices(center, radius);
+    const direction = { x: Math.cos(objects.light.angle), y: Math.sin(objects.light.angle) };
     const reach = Math.hypot(width, height) * 3, beamWidth = Math.max(8, cellHeight * .8);
     const wavelengths = [.70, .63, .58, .53, .49, .45, .40];
     wavelengths.forEach((wavelength, i) => {
@@ -85,6 +100,10 @@ export function mountPrism(host, { onInteraction = () => {} } = {}) {
     sourceContext.beginPath(); vertices.forEach((vertex, i) => i ? sourceContext.lineTo(vertex.x, vertex.y) : sourceContext.moveTo(vertex.x, vertex.y));
     sourceContext.closePath(); sourceContext.fill();
     sourceContext.globalAlpha = 1; sourceContext.strokeStyle = PRISM_COLORS[0]; sourceContext.lineWidth = Math.max(3, cellWidth * .5); sourceContext.stroke();
+    const aim = aimPosition();
+    sourceContext.setLineDash([2, 5]); stroke({ from: light, to: aim }, PRISM_COLORS[1], 2, .5); sourceContext.setLineDash([]);
+    sourceContext.globalAlpha = 1; sourceContext.strokeStyle = PRISM_COLORS[0]; sourceContext.lineWidth = Math.max(3, cellWidth * .5);
+    sourceContext.beginPath(); sourceContext.arc(aim.x, aim.y, Math.max(5, cellWidth * .8), 0, Math.PI * 2); sourceContext.stroke();
     sourceContext.beginPath(); sourceContext.arc(light.x, light.y, Math.max(9, cellWidth * 1.5), 0, Math.PI * 2);
     sourceContext.globalCompositeOperation = 'destination-out'; sourceContext.fill();
     sourceContext.globalCompositeOperation = 'source-over'; sourceContext.stroke();
@@ -130,7 +149,7 @@ export function mountPrism(host, { onInteraction = () => {} } = {}) {
     }
     host.dataset.rendered = 'true';
     if (window.__PORTFOLIO_PRISM_PROFILE__) document.dispatchEvent(new CustomEvent('portfolio:prism-frame', {
-      detail: { milliseconds: performance.now() - start, columns, rows, drawn }
+      detail: { milliseconds: performance.now() - start, columns, rows, drawn, angle: objects.light.angle }
     }));
   }
   function requestDraw() {
@@ -147,8 +166,9 @@ export function mountPrism(host, { onInteraction = () => {} } = {}) {
       if (!active || !event.isPrimary || event.button !== 0 || drag) return;
       event.preventDefault(); event.stopPropagation(); onInteraction();
       if (dirtySize) measure();
-      const rect = host.getBoundingClientRect(), object = objects[control.dataset.prismControl];
+      const name = control.dataset.prismControl, rect = host.getBoundingClientRect(), object = name === 'aim' ? objects.light : objects[name];
       drag = { control, id: event.pointerId, rect,
+        angleOffset: name === 'aim' ? object.angle - Math.atan2(event.clientY - rect.top - object.y * height, event.clientX - rect.left - object.x * width) : 0,
         offsetX: (event.clientX - rect.left) / width - object.x,
         offsetY: (event.clientY - rect.top) / height - object.y };
       control.focus({ preventScroll: true }); control.setPointerCapture(event.pointerId); control.dataset.dragging = '';
@@ -156,10 +176,18 @@ export function mountPrism(host, { onInteraction = () => {} } = {}) {
     listen(control, 'pointermove', event => {
       if (!drag || drag.id !== event.pointerId) return;
       event.preventDefault(); event.stopPropagation();
-      const object = objects[control.dataset.prismControl];
-      object.x = (event.clientX - drag.rect.left) / width - drag.offsetX;
-      object.y = (event.clientY - drag.rect.top) / height - drag.offsetY;
-      clampObject(control.dataset.prismControl); requestDraw();
+      const name = control.dataset.prismControl;
+      if (name === 'aim') {
+        const dx = event.clientX - drag.rect.left - objects.light.x * width;
+        const dy = event.clientY - drag.rect.top - objects.light.y * height;
+        if (Math.hypot(dx, dy) > 4) objects.light.angle = Math.atan2(dy, dx) + drag.angleOffset;
+      } else {
+        const object = objects[name];
+        object.x = (event.clientX - drag.rect.left) / width - drag.offsetX;
+        object.y = (event.clientY - drag.rect.top) / height - drag.offsetY;
+        clampObject(name);
+      }
+      requestDraw();
     });
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type => listen(control, type, event => {
       if (drag?.id === event.pointerId) { event.stopPropagation(); finishDrag(); }
@@ -169,9 +197,14 @@ export function mountPrism(host, { onInteraction = () => {} } = {}) {
       const direction = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
       if (!direction || !active) return;
       event.preventDefault(); event.stopPropagation(); onInteraction();
-      const object = objects[control.dataset.prismControl], distance = event.shiftKey ? 24 : 8;
-      object.x += direction[0] * distance / width; object.y += direction[1] * distance / height;
-      clampObject(control.dataset.prismControl); requestDraw();
+      const name = control.dataset.prismControl;
+      if (name === 'aim') objects.light.angle += (direction[0] || direction[1]) * (event.shiftKey ? 6 : 2) * Math.PI / 180;
+      else {
+        const object = objects[name], distance = event.shiftKey ? 24 : 8;
+        object.x += direction[0] * distance / width; object.y += direction[1] * distance / height;
+        clampObject(name);
+      }
+      requestDraw();
     });
   });
   const resize = new ResizeObserver(() => { finishDrag(); dirtySize = true; requestDraw(); });
