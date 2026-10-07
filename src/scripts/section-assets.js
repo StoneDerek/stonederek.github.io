@@ -8,13 +8,18 @@ export function prepareGalleryImages(doc, base, signal) {
   const projects = data ? JSON.parse(data.textContent) : [];
   const index = projectIndexFromHash(base.hash, projects);
   const images = doc?.querySelectorAll(`#portfolio [data-slide="${Math.max(0, index)}"] img, #portfolio [data-thumbnail] img`) || [];
-  const assets = [...images].map(node => ({ src: node.getAttribute('src'), priority: node.closest('[data-slide]') ? 'high' : 'low' }));
+  const assets = [...images].map(node => ({ src: node.getAttribute('src'),
+    priority: node.closest('[data-slide]') ? 'high' : 'low',
+    critical: Boolean(node.closest('[data-slide]'))
+      || Number(node.closest('[data-thumbnail]')?.dataset.thumbnail) === Math.max(0, index) }));
   const firstMedia = projects[index]?.articleMedia?.find(item => item.src);
   if (firstMedia) {
     const assetBase = doc.querySelector('[data-detail-media]').dataset.assetBase;
-    assets.push({ src: /^(https?:\/\/|\/)/.test(firstMedia.src) ? firstMedia.src : `${assetBase}${firstMedia.src}`, priority: 'high' });
+    assets.push({ src: /^(https?:\/\/|\/)/.test(firstMedia.src) ? firstMedia.src : `${assetBase}${firstMedia.src}`, priority: 'high', critical: true });
   }
-  return Promise.all(assets.map(asset => new Promise(resolve => {
+  // Warm the whole strip, but wait only for the cover, centered thumbnail, and
+  // first article image. A stalled neighboring thumbnail must not hold the route.
+  const pending = assets.map(asset => new Promise(resolve => {
     if (signal?.aborted) { resolve(); return; }
     const image = new Image();
     let done = false;
@@ -34,5 +39,6 @@ export function prepareGalleryImages(doc, base, signal) {
     signal?.addEventListener('abort', abort, { once: true });
     image.fetchPriority = asset.priority;
     image.src = new URL(asset.src, base).href;
-  })));
+  }));
+  return Promise.all(pending.filter((_, index) => assets[index].critical));
 }

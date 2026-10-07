@@ -30,7 +30,8 @@ export function mountTrophy(canvas) {
     face([base(side, .82, -1), base(side, .82, 1), base(side, 1.05, 1), base(side, 1.05, -1)]);
     face([base(-1, .82, side), base(1, .82, side), base(1, 1.05, side), base(-1, 1.05, side)]);
   }
-  let active = false, frame = 0, started = 0, dirtySize = true;
+  let active = false, frame = 0, started = 0, dirtySize = true, nextDrawAt = 0;
+  const frameInterval = 1000 / 60;
   let width = 1, height = 1, columns = 1, rows = 1, cellWidth = 1, cellHeight = 1, ratio = 1;
   function measure() {
     width = Math.max(1, canvas.clientWidth); height = Math.max(1, canvas.clientHeight);
@@ -43,6 +44,13 @@ export function mountTrophy(canvas) {
   function render(now) {
     frame = 0;
     if (!active || document.hidden) return;
+    const elapsed = now - started;
+    // Keep the short spin at 60 draws/sec on high-refresh screens, while using
+    // wall-clock progress so skipped draws never prolong the animation.
+    if (!dirtySize && !reducedMotion.matches && elapsed < 2400 && elapsed + .5 < nextDrawAt) {
+      requestDraw(); return;
+    }
+    nextDrawAt = (Math.floor((elapsed + .5) / frameInterval) + 1) * frameInterval;
     const begin = performance.now();
     if (dirtySize) measure();
     const progress = reducedMotion.matches ? 1 : Math.min(1, (now - started) / 2400);
@@ -94,7 +102,7 @@ export function mountTrophy(canvas) {
     if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else requestDraw();
   }, { signal: controller.signal });
   return {
-    start() { active = true; dirtySize = true; started = performance.now(); requestDraw(); },
+    start() { active = true; dirtySize = true; started = performance.now(); nextDrawAt = 0; requestDraw(); },
     stop,
     destroy() { stop(); controller.abort(); resize.disconnect(); }
   };

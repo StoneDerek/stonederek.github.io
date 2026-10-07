@@ -10,6 +10,12 @@ const pages = {};
 const assets = {};
 const projectSlugs = JSON.parse(await readFile(resolve('src/data/projects.json'), 'utf8')).map(project => project.slug);
 const embedded = new Map();
+const resources = new Map();
+const embedResource = (path, content) => {
+  const token = `__PORTFOLIO_RESOURCE_${resources.size}__`;
+  resources.set(path, token); assets[token] = content;
+  return token;
+};
 const resumePDF = await readFile(resolve('dist', 'resume.pdf')).then(bytes => bytes.toString('base64')).catch(error => {
   if (error.code !== 'ENOENT') throw error;
   return null;
@@ -35,22 +41,26 @@ for (const [route, file] of Object.entries(routes)) {
   for (const match of [...html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"[^>]*>/g)]) {
     const relative = match[1].match(/\/_astro\/.+$/)?.[0].slice(1);
     if (!relative) throw new Error(`Cannot locate preview stylesheet: ${match[1]}`);
-    html = html.replace(match[0], `<style>${await readFile(resolve('dist', relative), 'utf8')}</style>`);
+    const token = resources.get(relative) || embedResource(relative, await readFile(resolve('dist', relative), 'utf8'));
+    html = html.replace(match[0], () => `<style>${token}</style>`);
   }
   for (const match of [...html.matchAll(/<script\b([^>]*?)\bsrc="([^"]+)"([^>]*?)><\/script>/g)]) {
     const relative = match[2].match(/\/_astro\/.+$/)?.[0].slice(1);
     if (!relative) throw new Error(`Cannot locate preview script: ${match[2]}`);
-    const result = await build({ entryPoints: [resolve('dist', relative)], bundle: true, write: false, format: 'iife', platform: 'browser', minify: true, logLevel: 'silent' });
-    const script = result.outputFiles[0].text;
-    const classic = `(function(){function start(){${script}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',start,{once:true})}else{start()}})();`;
-    new Script(classic, { filename: `preview-${route}.js` });
-    // A function replacement keeps minified $&, $` and $' sequences literal.
-    html = html.replace(match[0], () => `<script>${classic.replaceAll('</script', '<\\/script')}</script>`);
+    let token = resources.get(relative);
+    if (!token) {
+      const result = await build({ entryPoints: [resolve('dist', relative)], bundle: true, write: false, format: 'iife', platform: 'browser', minify: true, logLevel: 'silent' });
+      const script = result.outputFiles[0].text;
+      const classic = `(function(){function start(){${script}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',start,{once:true})}else{start()}})();`;
+      new Script(classic, { filename: `preview-${route}.js` });
+      token = embedResource(relative, classic.replaceAll('</script', '<\\/script'));
+    }
+    html = html.replace(match[0], () => `<script>${token}</script>`);
   }
   // Validate the inserted bytes too, not only the bundle before substitution.
   for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
     if (match[1].includes('application/json')) continue;
-    new Script(match[2], { filename: `embedded-preview-${route}.js` });
+    new Script(assets[match[2]] ?? match[2], { filename: `embedded-preview-${route}.js` });
   }
   pages[route] = html;
 }
@@ -61,7 +71,7 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
   favicon.rel = 'icon'; favicon.type = 'image/svg+xml'; document.head.append(favicon);
   const expanded = route => {
     let html = pages[route];
-    for (const [token, value] of Object.entries(assets)) html = html.replaceAll(token, value);
+    for (const [token, value] of Object.entries(assets)) html = html.replaceAll(token, () => value);
     return html;
   };
   const escapeScript = value => JSON.stringify(value).replaceAll('<', '\\u003c');

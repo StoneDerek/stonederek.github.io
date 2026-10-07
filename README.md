@@ -6,7 +6,7 @@ An identity-led homepage, an expanded About page, and a dedicated full-screen pr
 
 - `/`: an introduction-only layout with Explore projects and More about me links below the prose. All prose uses Latin filler text; there are no gallery previews or project overview rows.
 - `/about/`: five expanded sections with obvious filler headings and paragraphs. Derek will write the actual copy. Edit `src/components/AboutContent.astro` and `src/pages/index.astro` to replace the filler. The shared About component also supplies the inert preview uncovered by the gallery's edge gesture.
-- `/projects/`: the existing draggable gallery, project-specific palettes, thumbnail strip, title scramble, and tile-settle articles. All six gallery entries and their abstract artwork are still fictional placeholders, clearly identified as such.
+- `/projects/`: the existing draggable gallery, project-specific palettes, thumbnail strip, title scramble, and tile-settle articles. All five gallery entries and their abstract artwork are still fictional placeholders, clearly identified as such.
 - `/projects/#project=signal-studies`: a direct article link. Menu project links on Home and About open the corresponding article. Unknown slugs leave the gallery available.
 - Swiping beyond the final project reveals the hidden Links page, with an ASCII laser puzzle, professional links, and Credits. It has no dropdown entry or extra project thumbnail.
 - `/resume/`: the permanent résumé route.
@@ -37,6 +37,8 @@ The separately supplied `portfolio-preview.html` contains all three main product
 npm run build
 npm run export:preview
 ```
+
+The live pages share one minified, cacheable stylesheet. Section navigation warms the thumbnail strip in parallel but waits only for the selected cover, its centered thumbnail, and the first article image when present. Slow neighboring thumbnails do not delay the route. The short trophy spin caps its expensive rendering at 60 draws per second while preserving its 2.4-second duration on faster displays. The offline exporter embeds each shared stylesheet and script only once, then expands them into each fresh route frame.
 
 ## Replace the placeholders
 
