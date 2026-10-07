@@ -71,7 +71,8 @@ export function galleryFrame(value, projectCount) {
 export function settleProjectSwipe({ start, position, velocity = 0, deltaX, unit, touch = false, cancelled = false }) {
   const momentum = cancelled ? 0 : Math.max(-.55, Math.min(.55, velocity * 180));
   const target = Math.round(position + momentum);
-  if (!touch || cancelled || Math.abs(deltaX) < Math.max(24, Math.min(56, unit * .15))) return target;
+  const threshold = touch ? Math.max(24, Math.min(56, unit * .15)) : Math.max(32, Math.min(72, unit * .12));
+  if (cancelled || Math.abs(deltaX) < threshold) return target;
   const direction = -Math.sign(deltaX);
   const next = Math.round(start) + direction;
   return direction > 0 ? Math.max(target, next) : Math.min(target, next);

@@ -2,7 +2,31 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mountProjectMenu } from '../src/scripts/project-menu.js';
 
-function scene({ reduced = false, supported = true } = {}) {
+test('page-exit cleanup closes the old DOM without erasing the shared expansion preference', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: {
+    sessionStorage: { getItem() { return null; }, setItem() {} }
+  } });
+  const first = scene({ persist: true });
+  try {
+    first.navigation.set(true, { immediate: true });
+    first.navigation.set(false, { immediate: true, remember: false });
+    first.events.get('toggle')();
+    assert.equal(window.__PORTFOLIO_PROJECTS_EXPANDED__, true);
+  } finally { first.restore(); }
+  const next = scene({ persist: true });
+  try {
+    assert.equal(next.navigation.expanded, true);
+    assert.equal(next.details.open, true);
+    assert.equal(next.panel.inert, false);
+  } finally {
+    next.restore();
+    if (descriptor) Object.defineProperty(globalThis, 'window', descriptor);
+    else delete globalThis.window;
+  }
+});
+
+function scene({ reduced = false, supported = true, persist = false } = {}) {
   const documentDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'document');
   const styleDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'getComputedStyle');
   const animations = [];
@@ -25,7 +49,7 @@ function scene({ reduced = false, supported = true } = {}) {
     addEventListener: (name, callback) => events.set(name, callback) };
   Object.assign(globalThis, { document: { activeElement: null }, getComputedStyle: node => ({ opacity: node.opacity }) });
   const preference = { matches: reduced };
-  const navigation = mountProjectMenu(details, preference);
+  const navigation = mountProjectMenu(details, preference, { persist });
   return { details, toggle, panel, item, navigation, animations, events, preference,
     restore() {
       if (documentDescriptor) Object.defineProperty(globalThis, 'document', documentDescriptor);
