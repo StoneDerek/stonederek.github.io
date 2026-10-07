@@ -84,23 +84,5 @@
       "accent": "#ffc46b",
       "ink": "#352110"
     }
-  },
-  {
-    "slug": "parallel-lines",
-    "title": "Parallel lines",
-    "category": "Study",
-    "year": "2026",
-    "caption": "A little order. A little room for something else.",
-    "description": "Six shapes, no particular destination. An imaginary study in getting the pieces to sit together without asking them to be the same.",
-    "note": "A real case study can be as simple as a clear problem, a few decisions, and an honest result. This one is a geometric placeholder.",
-    "image": "art/parallel-lines.webp",
-    "thumbnail": "thumbnails/parallel-lines.webp",
-    "imageAlt": "A dark ribbed disk with offset cream geometric forms on a warm sand background.",
-    "position": "65% 50%",
-    "palette": {
-      "accent": "#f3ecd8",
-      "ink": "#29291e",
-      "caption": "#1c241e"
-    }
   }
 ]
