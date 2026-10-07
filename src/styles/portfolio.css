@@ -155,6 +155,7 @@ button { font: inherit; cursor: pointer; border: 0; }
 .credits-intro { margin: 8px 0 24px; color: #666; }
 .credits-panel dl, .credits-panel dd { margin: 0; }
 .credits-panel dt { margin-bottom: 6px; color: #666; font-size: 11px; }
+.credits-panel dd + dt { margin-top: 22px; }
 .credits-panel a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .credits-panel dd p { margin: 6px 0 0; color: #666; }
 @media (max-width: 600px) {
