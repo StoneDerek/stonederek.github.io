@@ -34,19 +34,29 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
             </div>
           </div>
         ))}
-        <div id="gallery-end" class="artwork-slide gallery-end" data-gallery-end data-favicon={projectIcon(linksPalette)} role="group" aria-label="Professional links" aria-hidden="true" tabindex="-1" inert>
+        <div id="gallery-end" class="artwork-slide gallery-end" data-gallery-end data-favicon={projectIcon(linksPalette)} role="group" aria-label="Links and credits" aria-hidden="true" tabindex="-1" inert>
           <div class="artwork-card gallery-end-card">
             <div class="gallery-end-space" data-ascii-space>
-              <div class="prism-experiment" data-prism-experiment role="group" aria-label="Interactive ASCII prism">
-                <canvas class="prism-canvas" aria-hidden="true"></canvas>
-                <button type="button" class="prism-control" data-prism-control="light" aria-label="Move light source" aria-describedby="prism-instructions"></button>
-                <button type="button" class="prism-control" data-prism-control="prism" aria-label="Move prism" aria-describedby="prism-instructions"></button>
-                <button type="button" class="prism-control" data-prism-control="aim" aria-label="Aim light beam" aria-describedby="prism-instructions"></button>
-                <p class="prism-hint" id="prism-instructions">Drag the light or prism · turn the small handle to aim<span class="sr-only">. When focused, use arrow keys to move or turn, or Shift and arrow keys for larger steps.</span></p>
+              <div class="laser-experiment" data-laser-experiment role="group" aria-label="ASCII laser puzzle: turn two mirrors to reach the target at the right">
+                <canvas class="laser-canvas" aria-hidden="true"></canvas>
+                <button type="button" class="laser-control" data-laser-control="mirror" data-mirror="0" aria-label="Rotate first mirror" aria-describedby="laser-instructions"></button>
+                <button type="button" class="laser-control" data-laser-control="mirror" data-mirror="1" aria-label="Rotate second mirror" aria-describedby="laser-instructions"></button>
+                <div class="laser-hint" id="laser-instructions"><span data-laser-status role="status" aria-live="polite">Drag the mirrors to reach the target.</span><span class="sr-only"> Drag sideways or vertically to turn a mirror, or click to turn it by five degrees. Arrow keys turn it by one degree; Shift and arrow keys turn it by five degrees; Alt and arrow keys make a quarter-degree adjustment.</span><button type="button" data-laser-control="reset">Reset</button></div>
               </div>
             </div>
             <footer class="gallery-end-footer">
               <button type="button" class="gallery-end-return" data-end-return aria-label="Back to last project"><svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="m7 3-5 5 5 5M2 8h12" /></svg></button>
+              <details class="credits" data-credits data-end-link>
+                <summary aria-controls="credits-panel">Credits</summary>
+                <section class="credits-panel" id="credits-panel" aria-labelledby="credits-heading" tabindex="0">
+                  <h2 id="credits-heading">Credits</h2>
+                  <p class="credits-intro">References and inspiration behind this site.</p>
+                  <dl>
+                    <dt>ASCII rendering inspiration</dt>
+                    <dd><a href="https://asciigenerators.com/" target="_blank" rel="noopener noreferrer">ASCII Generator <span aria-hidden="true">↗</span></a><p>Brightness mapping, colour, and directional edge characters.</p></dd>
+                  </dl>
+                </section>
+              </details>
               <nav class="gallery-end-links" aria-label="Professional links">
                 <a href={site.linkedin} data-end-link target="_blank" rel="noopener noreferrer">LinkedIn</a>
                 <a href={resumeURL(base)} data-end-link data-resume-link target="_blank" rel="noopener" aria-label="Resume PDF (opens in a new tab)" title="Resume PDF — opens in a new tab">Resume</a>

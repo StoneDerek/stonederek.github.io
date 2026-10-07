@@ -1,76 +1,56 @@
-import { prismVertices, tracePrismRay } from './prism-optics.js';
-import { ASCII_GLYPHS, PRISM_COLORS, asciiCell, nearestInk, logoStencil } from './prism-ascii.js';
+import { laserPuzzle, mirrorEndpoints, traceLaser } from './laser-optics.js';
+import { ASCII_GLYPHS, ASCII_COLORS, asciiCell, nearestInk, logoStencil } from './ascii-grid.js';
 
 // A small scene is sampled on a character grid. Glyphs are cached once per
-// size; pointer updates are coalesced into a frame, with no idle animation loop.
-export function mountPrism(host, { onInteraction = () => {} } = {}) {
+// size; pointer updates are coalesced into a frame. Only the short victory spin
+// requests continuous frames; the scene is idle once the trophy settles.
+export function mountLaser(host, { onInteraction = () => {} } = {}) {
   if (!host) return { setActive() {}, destroy() {} };
   const output = host.querySelector('canvas'), context = output.getContext('2d', { alpha: false });
   if (!context) return { setActive() {}, destroy() {} };
-  const controls = [...host.querySelectorAll('[data-prism-control]')];
+  const controls = [...host.querySelectorAll('[data-laser-control="mirror"]')];
+  const status = host.querySelector('[data-laser-status]'), reset = host.querySelector('[data-laser-control="reset"]');
   const controller = new AbortController();
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const listen = (target, type, callback, options = {}) => target.addEventListener(type, callback, { ...options, signal: controller.signal });
   const scene = document.createElement('canvas'), sourceContext = scene.getContext('2d', { willReadFrequently: true });
   const atlas = document.createElement('canvas'), atlasContext = atlas.getContext('2d');
-  const objects = { light: { x: .12, y: .4, angle: 0 }, prism: { x: .46, y: .44 } };
-  let active = false, disposed = false, frame = 0, dirtySize = true, initialized = false, drag = null;
-  let width = 1, height = 1, columns = 1, rows = 1, cellWidth = 1, cellHeight = 1, radius = 1, ratio = 1;
+  const initialAngles = [Math.PI / 2, Math.PI / 6];
+  let angles = [...initialAngles], won = false, trophyStarted = 0;
+  let active = false, disposed = false, frame = 0, dirtySize = true, drag = null;
+  let width = 1, height = 1, columns = 1, rows = 1, cellWidth = 1, cellHeight = 1, ratio = 1;
   let atlasWidth = 1, atlasHeight = 1, stencil, coverage, inks, luminance;
 
-  function clampObject(name) {
-    const object = objects[name], padding = name === 'prism' ? radius + 8 : 22;
-    object.x = Math.max(padding / width, Math.min(1 - padding / width, object.x));
-    object.y = Math.max(padding / height, Math.min(1 - padding / height, object.y));
-  }
   function measure() {
-    width = Math.max(1, host.clientWidth); height = Math.max(1, host.clientHeight - 28);
+    width = Math.max(1, host.clientWidth); height = Math.max(1, host.clientHeight - 44);
     columns = Math.max(28, Math.min(144, Math.floor(width / 6.2)));
     cellWidth = width / columns; rows = Math.max(8, Math.floor(height / (cellWidth * 2)));
-    cellHeight = height / rows; radius = Math.min(width * .17, height * .18, 112);
+    cellHeight = height / rows;
     ratio = Math.min(2, window.devicePixelRatio || 1);
     output.width = Math.round(width * ratio); output.height = Math.round(height * ratio);
     output.style.height = `${height}px`;
     scene.width = columns * 3; scene.height = rows * 3;
     coverage = new Float32Array(columns * rows); inks = new Uint8Array(columns * rows);
     luminance = new Float32Array(columns * rows);
-    stencil = logoStencil(columns, rows, columns * .78, (.44 * height + width * .11) / cellHeight, width >= 600 && rows >= 18 ? 2 : 1);
-    if (!initialized) {
-      objects.light.y = .44 - radius * .4 / height;
-      initialized = true;
-    }
-    Object.keys(objects).forEach(clampObject);
+    stencil = logoStencil(columns, rows, columns * .2, rows * .2, width >= 600 && rows >= 18 ? 2 : 1);
     atlasWidth = Math.ceil(cellWidth * ratio); atlasHeight = Math.ceil(cellHeight * ratio);
-    atlas.width = atlasWidth * ASCII_GLYPHS.length; atlas.height = atlasHeight * PRISM_COLORS.length;
+    atlas.width = atlasWidth * ASCII_GLYPHS.length; atlas.height = atlasHeight * ASCII_COLORS.length;
     atlasContext.font = `${cellWidth / .6 * ratio}px ui-monospace, SFMono-Regular, Consolas, monospace`;
     atlasContext.textAlign = 'center'; atlasContext.textBaseline = 'middle';
-    PRISM_COLORS.forEach((color, colorIndex) => {
+    ASCII_COLORS.forEach((color, colorIndex) => {
       atlasContext.fillStyle = color;
       [...ASCII_GLYPHS].forEach((glyph, glyphIndex) => atlasContext.fillText(glyph,
         (glyphIndex + .5) * atlasWidth, (colorIndex + .5) * atlasHeight));
     });
     dirtySize = false;
   }
-  function aimPosition() {
-    const light = objects.light, distance = Math.min(56, height * .3);
-    // A rotation handle beside the source leaves its outgoing beam unobstructed.
-    const point = { x: Math.max(22, Math.min(width - 22, light.x * width + Math.sin(light.angle) * distance)),
-      y: Math.max(22, Math.min(height - 22, light.y * height - Math.cos(light.angle) * distance)) };
-    // Keep the two hit targets separate when the lamp is near an edge.
-    if (Math.hypot(point.x - light.x * width, point.y - light.y * height) < 44) {
-      point.x = light.x * width;
-      point.y = Math.max(22, Math.min(height - 22, light.y * height + (light.y < .5 ? distance : -distance)));
-    }
-    return point;
-  }
-  function positionControls() {
-    controls.forEach(control => {
-      const name = control.dataset.prismControl, object = name === 'aim' ? objects.light : objects[name];
-      const w = name === 'prism' ? Math.max(44, radius * 1.5) : 44;
-      const h = name === 'prism' ? Math.max(44, radius * Math.sqrt(3)) : 44;
-      const point = name === 'aim' ? aimPosition() : { x: object.x * width, y: object.y * height };
-      const left = name === 'prism' ? point.x - radius - (w - radius * 1.5) / 2 : point.x - w / 2;
-      control.style.width = `${w}px`; control.style.height = `${h}px`;
-      control.style.transform = `translate(${left}px, ${point.y - h / 2}px)`;
+  function positionControls(puzzle) {
+    controls.forEach((control, index) => {
+      const mirror = puzzle.mirrors[index], size = Math.max(44, mirror.radius * 2 + 8);
+      control.style.width = `${size}px`; control.style.height = `${size}px`;
+      control.style.transform = `translate(${mirror.x - size / 2}px, ${mirror.y - size / 2}px)`;
+      const angle = Math.round(((mirror.angle * 180 / Math.PI) % 180 + 180) % 180);
+      control.setAttribute('aria-label', `Rotate ${index === 0 ? 'first' : 'second'} mirror, ${angle} degrees`);
     });
   }
   function stroke(segment, color, thickness, alpha = 1) {
@@ -78,37 +58,50 @@ export function mountPrism(host, { onInteraction = () => {} } = {}) {
     sourceContext.beginPath(); sourceContext.moveTo(segment.from.x, segment.from.y);
     sourceContext.lineTo(segment.to.x, segment.to.y); sourceContext.stroke();
   }
-  function drawScene() {
+  function drawTrophy(now) {
+    const progress = reducedMotion.matches ? 1 : Math.min(1, (now - trophyStarted) / 2400);
+    const turn = Math.PI * 6 * (1 - (1 - progress) ** 3), c = Math.cos(turn), s = Math.sin(turn);
+    const scale = Math.min(32, width * .1, height * .13);
+    const project = ([x, y, z]) => ({ x: width * .86 + (x * c + z * s) * scale,
+      y: height * .2 + (y + (z * c - x * s) * .28) * scale });
+    const line = (a, b) => stroke({ from: project(a), to: project(b) }, ASCII_COLORS[5], Math.max(3, cellWidth * .5));
+    for (let i = 0; i < 16; i++) {
+      const a = i * Math.PI / 8, b = (i + 1) * Math.PI / 8;
+      line([Math.cos(a) * .65, -.65, Math.sin(a) * .65], [Math.cos(b) * .65, -.65, Math.sin(b) * .65]);
+      if (i % 4 === 0) line([Math.cos(a) * .65, -.65, Math.sin(a) * .65], [Math.cos(a) * .25, .25, Math.sin(a) * .25]);
+    }
+    for (const side of [-1, 1]) {
+      line([side * .6, -.5, 0], [side, -.45, 0]);
+      line([side, -.45, 0], [side * .9, .05, 0]);
+      line([side * .9, .05, 0], [side * .35, .2, 0]);
+    }
+    line([-.25, .25, 0], [.25, .25, 0]); line([0, .25, 0], [0, .9, 0]);
+    const base = [[-.6, .9, -.3], [.6, .9, -.3], [.6, .9, .3], [-.6, .9, .3]];
+    base.forEach((point, i) => line(point, base[(i + 1) % 4]));
+  }
+  function drawScene(puzzle, trace, now) {
     sourceContext.setTransform(1, 0, 0, 1, 0, 0); sourceContext.clearRect(0, 0, scene.width, scene.height);
     sourceContext.setTransform(scene.width / width, 0, 0, scene.height / height, 0, 0);
-    const light = { x: objects.light.x * width, y: objects.light.y * height };
-    const center = { x: objects.prism.x * width, y: objects.prism.y * height };
-    const vertices = prismVertices(center, radius);
-    const direction = { x: Math.cos(objects.light.angle), y: Math.sin(objects.light.angle) };
-    const reach = Math.hypot(width, height) * 3, beamWidth = Math.max(8, cellHeight * .8);
-    const wavelengths = [.70, .63, .58, .53, .49, .45, .40];
-    wavelengths.forEach((wavelength, i) => {
-      // Illustrative Cauchy dispersion, not a calibrated material model.
-      const segments = tracePrismRay(light, direction, vertices, 1.46 + .016 / wavelength ** 2, reach);
-      segments.forEach((segment, j) => {
-        if (!j) { if (i === 3) stroke(segment, PRISM_COLORS[1], beamWidth, .6); }
-        else stroke(segment, segment.inside ? PRISM_COLORS[2] : PRISM_COLORS[i + 3],
-          segment.inside ? beamWidth * .4 : beamWidth, segment.inside ? .4 : .8);
-      });
+    trace.segments.forEach(segment => stroke(segment, ASCII_COLORS[9], Math.max(4, cellWidth * .8), .85));
+    puzzle.walls.forEach(wall => stroke(wall, ASCII_COLORS[1], Math.max(8, cellWidth * 1.2)));
+    puzzle.mirrors.forEach(mirror => {
+      const [from, to] = mirrorEndpoints(mirror);
+      stroke({ from, to }, ASCII_COLORS[0], Math.max(4, cellWidth * .6));
+      sourceContext.beginPath(); sourceContext.arc(mirror.x, mirror.y, Math.max(2, cellWidth * .3), 0, Math.PI * 2);
+      sourceContext.fillStyle = ASCII_COLORS[0]; sourceContext.fill();
     });
-    sourceContext.globalAlpha = .075; sourceContext.fillStyle = '#77777e';
-    sourceContext.beginPath(); vertices.forEach((vertex, i) => i ? sourceContext.lineTo(vertex.x, vertex.y) : sourceContext.moveTo(vertex.x, vertex.y));
-    sourceContext.closePath(); sourceContext.fill();
-    sourceContext.globalAlpha = 1; sourceContext.strokeStyle = PRISM_COLORS[0]; sourceContext.lineWidth = Math.max(3, cellWidth * .5); sourceContext.stroke();
-    const aim = aimPosition();
-    sourceContext.setLineDash([2, 5]); stroke({ from: light, to: aim }, PRISM_COLORS[1], 2, .5); sourceContext.setLineDash([]);
-    sourceContext.globalAlpha = 1; sourceContext.strokeStyle = PRISM_COLORS[0]; sourceContext.lineWidth = Math.max(3, cellWidth * .5);
-    sourceContext.beginPath(); sourceContext.arc(aim.x, aim.y, Math.max(5, cellWidth * .8), 0, Math.PI * 2); sourceContext.stroke();
+    const light = puzzle.source;
+    sourceContext.globalAlpha = 1; sourceContext.strokeStyle = ASCII_COLORS[0]; sourceContext.lineWidth = Math.max(3, cellWidth * .5);
     sourceContext.beginPath(); sourceContext.arc(light.x, light.y, Math.max(9, cellWidth * 1.5), 0, Math.PI * 2);
     sourceContext.globalCompositeOperation = 'destination-out'; sourceContext.fill();
     sourceContext.globalCompositeOperation = 'source-over'; sourceContext.stroke();
     sourceContext.beginPath(); sourceContext.arc(light.x, light.y, Math.max(2.5, cellWidth * .4), 0, Math.PI * 2);
-    sourceContext.fillStyle = PRISM_COLORS[0]; sourceContext.fill();
+    sourceContext.fillStyle = ASCII_COLORS[0]; sourceContext.fill();
+    sourceContext.strokeStyle = trace.hit ? ASCII_COLORS[9] : ASCII_COLORS[1];
+    for (const radius of [puzzle.target.radius, puzzle.target.radius * .5]) {
+      sourceContext.beginPath(); sourceContext.arc(puzzle.target.x, puzzle.target.y, radius, 0, Math.PI * 2); sourceContext.stroke();
+    }
+    if (won) drawTrophy(now);
   }
   function sample() {
     const pixels = sourceContext.getImageData(0, 0, scene.width, scene.height).data;
@@ -132,7 +125,13 @@ export function mountPrism(host, { onInteraction = () => {} } = {}) {
     if (!active || disposed || document.hidden) return;
     const start = performance.now();
     if (dirtySize) measure();
-    drawScene(); sample(); positionControls();
+    const puzzle = laserPuzzle(width, height, angles), trace = traceLaser(puzzle);
+    if (trace.hit && !won) { won = true; trophyStarted = start; }
+    drawScene(puzzle, trace, start); sample(); positionControls(puzzle);
+    if (host.dataset.solved !== String(won)) {
+      host.dataset.solved = String(won);
+      status.textContent = won ? 'You got a trophy!' : 'Drag the mirrors to reach the target.';
+    }
     context.setTransform(ratio, 0, 0, ratio, 0, 0); context.fillStyle = '#fff'; context.fillRect(0, 0, width, height);
     let drawn = 0;
     for (let y = 0; y < rows; y++) for (let x = 0; x < columns; x++) {
@@ -148,65 +147,70 @@ export function mountPrism(host, { onInteraction = () => {} } = {}) {
       drawn++;
     }
     host.dataset.rendered = 'true';
-    if (window.__PORTFOLIO_PRISM_PROFILE__) document.dispatchEvent(new CustomEvent('portfolio:prism-frame', {
-      detail: { milliseconds: performance.now() - start, columns, rows, drawn, angle: objects.light.angle }
+    if (window.__PORTFOLIO_LASER_PROFILE__) document.dispatchEvent(new CustomEvent('portfolio:laser-frame', {
+      detail: { milliseconds: performance.now() - start, columns, rows, drawn, angles: [...angles], hit: trace.hit, won }
     }));
+    if (won && !reducedMotion.matches && start - trophyStarted < 2400) requestDraw();
   }
   function requestDraw() {
     if (active && !disposed && !document.hidden && !frame) frame = requestAnimationFrame(render);
   }
-  function finishDrag() {
+  function finishDrag({ cancelled = true } = {}) {
     if (!drag) return;
     const finished = drag; drag = null;
+    finished.control.dataset.skipClick = String(finished.moved || cancelled);
     finished.control.removeAttribute('data-dragging');
     if (finished.control.hasPointerCapture(finished.id)) finished.control.releasePointerCapture(finished.id);
   }
-  controls.forEach(control => {
+  controls.forEach((control, index) => {
+    let touchClickUntil = 0;
     listen(control, 'pointerdown', event => {
       if (!active || !event.isPrimary || event.button !== 0 || drag) return;
       event.preventDefault(); event.stopPropagation(); onInteraction();
       if (dirtySize) measure();
-      const name = control.dataset.prismControl, rect = host.getBoundingClientRect(), object = name === 'aim' ? objects.light : objects[name];
-      drag = { control, id: event.pointerId, rect,
-        angleOffset: name === 'aim' ? object.angle - Math.atan2(event.clientY - rect.top - object.y * height, event.clientX - rect.left - object.x * width) : 0,
-        offsetX: (event.clientX - rect.left) / width - object.x,
-        offsetY: (event.clientY - rect.top) / height - object.y };
+      control.dataset.skipClick = 'false';
+      drag = { control, id: event.pointerId, index, angle: angles[index], x: event.clientX, y: event.clientY, moved: false };
       control.focus({ preventScroll: true }); control.setPointerCapture(event.pointerId); control.dataset.dragging = '';
     });
     listen(control, 'pointermove', event => {
       if (!drag || drag.id !== event.pointerId) return;
       event.preventDefault(); event.stopPropagation();
-      const name = control.dataset.prismControl;
-      if (name === 'aim') {
-        const dx = event.clientX - drag.rect.left - objects.light.x * width;
-        const dy = event.clientY - drag.rect.top - objects.light.y * height;
-        if (Math.hypot(dx, dy) > 4) objects.light.angle = Math.atan2(dy, dx) + drag.angleOffset;
-      } else {
-        const object = objects[name];
-        object.x = (event.clientX - drag.rect.left) / width - drag.offsetX;
-        object.y = (event.clientY - drag.rect.top) / height - drag.offsetY;
-        clampObject(name);
-      }
+      drag.moved ||= Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > 2;
+      angles[drag.index] = drag.angle + (event.clientX - drag.x - event.clientY + drag.y) * Math.PI / 360;
       requestDraw();
     });
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type => listen(control, type, event => {
-      if (drag?.id === event.pointerId) { event.stopPropagation(); finishDrag(); }
+      if (drag?.id !== event.pointerId) return;
+      event.stopPropagation();
+      const tap = type === 'pointerup' && event.pointerType === 'touch' && !drag.moved;
+      finishDrag({ cancelled: type !== 'pointerup' });
+      if (tap) {
+        // Safari suppresses click after the captured pointerdown is cancelled.
+        // Handle touch release and ignore a compatibility click on other engines.
+        touchClickUntil = performance.now() + 600;
+        angles[index] += 5 * Math.PI / 180; requestDraw();
+      }
     }));
+    listen(control, 'click', event => {
+      if (!active || performance.now() < touchClickUntil || (event.detail && control.dataset.skipClick === 'true')) return;
+      event.preventDefault(); event.stopPropagation(); onInteraction();
+      angles[index] += 5 * Math.PI / 180; requestDraw();
+    });
     listen(control, 'keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') touchClickUntil = 0;
       if (event.key === 'Escape' && drag) { event.preventDefault(); event.stopPropagation(); finishDrag(); return; }
       const direction = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
       if (!direction || !active) return;
       event.preventDefault(); event.stopPropagation(); onInteraction();
-      const name = control.dataset.prismControl;
-      if (name === 'aim') objects.light.angle += (direction[0] || direction[1]) * (event.shiftKey ? 6 : 2) * Math.PI / 180;
-      else {
-        const object = objects[name], distance = event.shiftKey ? 24 : 8;
-        object.x += direction[0] * distance / width; object.y += direction[1] * distance / height;
-        clampObject(name);
-      }
+      angles[index] += (direction[0] || direction[1]) * (event.altKey ? .25 : event.shiftKey ? 5 : 1) * Math.PI / 180;
       requestDraw();
     });
   });
+  listen(reset, 'click', () => {
+    if (!active) return;
+    onInteraction(); finishDrag(); angles = [...initialAngles]; won = false; trophyStarted = 0; requestDraw();
+  });
+  listen(reducedMotion, 'change', requestDraw);
   const resize = new ResizeObserver(() => { finishDrag(); dirtySize = true; requestDraw(); });
   resize.observe(host);
   // A capped-width scene can move without resizing when the viewport changes.

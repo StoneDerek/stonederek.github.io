@@ -1,7 +1,7 @@
 export const ASCII_GLYPHS = ' .:-=+*#%@/\\|';
-export const PRISM_COLORS = ['#151515', '#77777e', '#b4b4ba', '#d65062', '#dc8b48', '#b8a329',
+export const ASCII_COLORS = ['#151515', '#77777e', '#b4b4ba', '#d65062', '#dc8b48', '#b8a329',
   '#62a271', '#4f9eac', '#5f86cc', '#8b65c2'];
-const rgb = PRISM_COLORS.map(hex => [1, 3, 5].map(start => parseInt(hex.slice(start, start + 2), 16)));
+const rgb = ASCII_COLORS.map(hex => [1, 3, 5].map(start => parseInt(hex.slice(start, start + 2), 16)));
 
 export function nearestInk(red, green, blue) {
   let selected = 0, distance = Infinity;

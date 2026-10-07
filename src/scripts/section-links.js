@@ -74,7 +74,7 @@ export function mountSectionLinks() {
   }, { capture: true, passive: true });
   // The full-screen gallery has no vertical document scroll. Read its vertical
   // wheel/touch intent while leaving normal gallery and thumbnail gestures alone.
-  const onGallery = target => gallery && !target.closest('.site-header, .thumbnail-rail, [data-project-view], [data-prism-control]');
+  const onGallery = target => gallery && !target.closest('.site-header, .thumbnail-rail, [data-project-view], [data-laser-control], [data-credits]');
   listen(document, 'wheel', event => {
     if (!onGallery(event.target) || event.ctrlKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
