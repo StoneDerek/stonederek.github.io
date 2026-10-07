@@ -283,10 +283,11 @@ dialog::backdrop { background: #050b1bc9; }
 .page-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 2px; width: min(264px, 100%); margin: 6px auto 0; padding: 4px; border-radius: 6px; background: #fff; color: #211b2b; transition: opacity 160ms ease, transform 160ms ease, visibility 160ms; }
 .page-links[data-scrolled="true"] { opacity: 0; transform: translateY(-6px); visibility: hidden; pointer-events: none; }
 .page-links a { display: grid; place-items: center; min-width: 0; min-height: 34px; padding: 6px 10px; border-radius: 4px; color: inherit; text-decoration: none; font-size: 14px; transition: transform 140ms ease; }
-.page-links a[aria-current="page"] { background: #211b2b; color: #fff; }
+.page-links a[aria-current="page"] { background: color-mix(in srgb, var(--accent) 80%, white); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 30%, var(--accent)); }
+.portfolio[data-at-gallery-end="true"] .page-links a[aria-current="page"] { background: #e4e4e7; box-shadow: inset 0 0 0 1px #b1b1b9; }
 .page-links a:active, .page-links a[data-pressed] { transform: scale(.96); }
 .site-header .page-links a:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
-@media (hover: hover) and (pointer: fine) { .page-links a:not([aria-current="page"]):hover { background: #efedf1; } }
+@media (hover: hover) and (pointer: fine) { .page-links a:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--accent) 28%, white); } }
 .site-header:has(.site-menu[open]) .page-links { visibility: hidden; pointer-events: none; }
 #portfolio[data-about-swipe] .site-header:not(:has(.site-menu[open])) .page-links { opacity: var(--about-links-opacity, 0); transform: translateY(calc(-6px * (1 - var(--about-links-opacity, 0)))); visibility: visible; pointer-events: none; transition: none; }
 #portfolio[data-about-swipe] .site-header:not(:has(.site-menu[open])) .page-links[data-about-ready="true"] { pointer-events: auto; }
