@@ -132,6 +132,7 @@ button { font: inherit; cursor: pointer; border: 0; }
 .laser-canvas { display: block; width: 100%; }
 .laser-control { position: absolute; left: 0; top: 0; padding: 0; border: 1px solid transparent; border-radius: 50%; background: transparent; pointer-events: auto; cursor: grab; touch-action: none; }
 .laser-control[data-dragging] { cursor: grabbing; }
+.laser-control[aria-disabled="true"] { cursor: default; }
 .laser-control:focus-visible { outline: 1px dashed #777; outline-offset: 4px; }
 .laser-hint { position: absolute; inset: auto 0 0; display: flex; align-items: center; justify-content: center; gap: 12px; color: #777; font-size: 11px; text-align: center; }
 .laser-logo { position: absolute; top: calc((100% - 44px) * .2); left: 20%; transform: translate(-50%, -50%); margin: 0; color: #151515; font: clamp(9px, 1.2vw, 14px)/1 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre; pointer-events: none; }
@@ -140,6 +141,9 @@ button { font: inherit; cursor: pointer; border: 0; }
 .laser-hint button:focus-visible { outline: 1px dashed currentColor; outline-offset: -3px; }
 dialog.victory-dialog { width: min(320px, calc(100vw - 48px)); max-height: calc(100svh - 48px); padding: 28px 24px 20px; border-radius: 8px; background: #080808; color: #fff; text-align: center; overflow: auto; pointer-events: auto; }
 .victory-dialog::backdrop { background: rgb(0 0 0 / .22); }
+@keyframes victory-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+.victory-dialog[open]::backdrop { animation: victory-backdrop-in 180ms ease-out both; }
+@media (prefers-reduced-motion: reduce) { .victory-dialog::backdrop { animation: none !important; } }
 .victory-dialog h2 { margin: 0; font-size: 22px; font-weight: 500; line-height: 1.2; }
 .trophy-canvas { display: block; width: min(240px, 100%); height: 184px; margin: 18px auto 8px; }
 .victory-close { min-height: 44px; padding: 8px 12px; background: transparent; color: #fff; font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
@@ -149,21 +153,24 @@ dialog.victory-dialog { width: min(320px, calc(100vw - 48px)); max-height: calc(
 .gallery-end-footer { position: absolute; right: max(24px, env(safe-area-inset-right)); bottom: max(28px, env(safe-area-inset-bottom)); left: max(24px, env(safe-area-inset-left)); display: grid; grid-template-columns: 44px auto minmax(0, 1fr); align-items: center; gap: 16px; }
 .gallery-end-return { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 5px; background: transparent; color: inherit; }
 .gallery-end-links { display: flex; align-items: center; justify-content: flex-end; gap: 24px; }
-.gallery-end-links a { display: grid; place-items: center; min-height: 44px; padding-inline: 4px; color: inherit; font-size: 13px; text-decoration: none; }
+.gallery-end-links a { display: inline-flex; align-items: center; min-height: 44px; padding: 0; color: inherit; font-size: 13px; text-decoration: none; }
+.gallery-end-links a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.gallery-end-links a:focus-visible { outline: 1px dashed currentColor; outline-offset: 3px; }
 .credits { position: relative; }
-.credits > summary { display: grid; place-items: center; min-height: 44px; padding-inline: 8px; border-radius: 5px; color: #666; font-size: 12px; cursor: pointer; list-style: none; }
+.credits > summary { display: inline-flex; align-items: center; min-height: 44px; padding: 0; color: #666; font-size: 12px; cursor: pointer; list-style: none; }
 .credits > summary::-webkit-details-marker { display: none; }
-.credits > summary:hover, .credits > summary:focus-visible { color: #000; text-decoration: underline; }
+.credits > summary:hover, .credits > summary:focus-visible { color: #000; }
+.credits > summary:focus-visible { outline: 1px dashed currentColor; outline-offset: 3px; }
 .credits-panel { position: absolute; bottom: calc(100% + 12px); left: 0; z-index: 3; width: min(360px, calc(100vw - 48px)); max-height: calc(100svh - 160px); overflow: auto; padding: 24px; border: 1px solid #dedede; border-radius: 8px; background: #fff; color: #151515; font-size: 13px; line-height: 1.5; overscroll-behavior: contain; }
 .credits-panel h2 { margin: 0; font-size: 18px; font-weight: 500; }
 .credits-panel dl, .credits-panel dd { margin: 0; }
 .credits-panel dl { margin-top: 24px; }
 .credits-panel dt { margin-bottom: 6px; color: #666; font-size: 11px; }
 .credits-panel dd + dt { margin-top: 22px; }
-.credits-panel a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
-.credits-panel a:hover { text-decoration-thickness: 2px; }
+.credits-panel a { color: inherit; text-decoration: none; overflow-wrap: anywhere; }
 .credits-panel a:focus-visible { outline: 1px solid currentColor; outline-offset: 3px; }
-.credits-link-arrow { width: 10px; height: 10px; margin-left: 4px; vertical-align: baseline; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.credits-link-arrow { width: 10px; height: 10px; margin-left: 4px; vertical-align: baseline; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity 120ms ease; }
+.credits-panel a:is(:hover, :focus-visible) .credits-link-arrow { opacity: 1; }
 .credits-panel dd p { margin: 6px 0 0; color: #666; }
 @media (max-width: 600px) {
   .gallery-end-space { bottom: 144px; }
@@ -172,7 +179,9 @@ dialog.victory-dialog { width: min(320px, calc(100vw - 48px)); max-height: calc(
   .credits { grid-column: 2; grid-row: 2; justify-self: end; }
   .credits-panel { left: auto; right: 0; }
 }
-.gallery-end-links a:is(:hover, :focus-visible), .gallery-end-return:is(:hover, :focus-visible) { background: var(--accent); color: var(--ink); border-radius: 5px; }
+.gallery-end-return .control-arrow { transition: transform 120ms ease; }
+.gallery-end-return:hover .control-arrow { transform: translateX(-2px); }
+.gallery-end-return:focus-visible { outline: 1px dashed currentColor; outline-offset: -5px; }
 .portfolio :is(.project-caption, .filmstrip, .mobile-controls) { opacity: max(0, calc(1 - var(--end-progress, 0) * 2)); }
 .project-caption { position: absolute; z-index: 1; top: 50%; left: 50%; transform: translate(calc(-50% + var(--about-drag, 0px)), -50%); width: max-content; max-width: calc(100% - 40px); text-align: center; }
 .project-caption[inert] { pointer-events: none; }
@@ -283,8 +292,8 @@ dialog::backdrop { background: #050b1bc9; }
 .page-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 2px; width: min(264px, 100%); margin: 6px auto 0; padding: 4px; border-radius: 6px; background: #fff; color: #211b2b; transition: opacity 160ms ease, transform 160ms ease, visibility 160ms; }
 .page-links[data-scrolled="true"] { opacity: 0; transform: translateY(-6px); visibility: hidden; pointer-events: none; }
 .page-links a { display: grid; place-items: center; min-width: 0; min-height: 34px; padding: 6px 10px; border-radius: 4px; color: inherit; text-decoration: none; font-size: 14px; transition: transform 140ms ease; }
-.page-links a[aria-current="page"] { background: color-mix(in srgb, var(--accent) 80%, white); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 30%, var(--accent)); }
-.portfolio[data-at-gallery-end="true"] .page-links a[aria-current="page"] { background: #e4e4e7; box-shadow: inset 0 0 0 1px #b1b1b9; }
+.page-links a[aria-current="page"] { background: color-mix(in srgb, var(--accent) 80%, white); }
+.portfolio[data-at-gallery-end="true"] .page-links a[aria-current="page"] { background: #e4e4e7; }
 .page-links a:active, .page-links a[data-pressed] { transform: scale(.96); }
 .site-header .page-links a:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
 @media (hover: hover) and (pointer: fine) { .page-links a:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--accent) 28%, white); } }
