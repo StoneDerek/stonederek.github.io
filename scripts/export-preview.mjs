@@ -83,14 +83,11 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
     const direction = previousRoute && !pendingHandoff ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
     const projectEntry = direction && route === 'projects' && projectSlugs.includes(new URLSearchParams(fragment).get('project'));
     pendingHandoff = false;
-    const menu = frame.contentDocument?.querySelector('.site-menu');
-    const style = menu && frame.contentWindow.getComputedStyle(menu);
-    const navigationPalette = style ? { backgroundColor: style.backgroundColor, color: style.color } : null;
     if (direction) await frame.contentWindow?.__PORTFOLIO_PREVIEW_EXIT__?.();
     if (generation !== renderGeneration) return;
     previousRoute = route;
     if (projectEntry) html = html.replace(/<main\b([^>]*\bid="portfolio"[^>]*)>/, '<main$1 data-section-project-entry>');
-    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_NAVIGATION__=${escapeScript(navigationPalette)};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
+    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
     html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
     html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*(")/, `$1${resumeAddress}$2`);
     // Attributes can appear in either order in compiler output.

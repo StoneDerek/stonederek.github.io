@@ -954,6 +954,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
 
   listen(document, 'keydown', event => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (root.querySelector('dialog[open]')) return;
     if (event.target.closest('input, textarea, select, [contenteditable="true"], [data-laser-control], [data-credits]')) return;
     if (menuNavigation.expanded) {
       if ((event.key === 'Escape' || event.key === 'ArrowLeft') && projectNavigation.expanded && projectsMenu.contains(event.target)) {

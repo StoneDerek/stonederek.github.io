@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import projects from '../data/projects.json';
 import site from '../data/site.json';
 import SiteHeader from '../components/SiteHeader.astro';
+import ExternalLinkIcon from '../components/ExternalLinkIcon.astro';
 import AboutContent from '../components/AboutContent.astro';
 import { projectIcon } from '../data/project-icons.js';
 import { sectionFade, shortDrift, artworkFade } from '../data/section-motion.js';
@@ -11,6 +12,7 @@ import { aboutPalette, linksPalette } from '../data/section-palettes.js';
 const base = import.meta.env.BASE_URL;
 const url = (path) => `${base}${path}`;
 const first = projects[0];
+const linksLogo = ['      _', '   __| |___', '  / _` / __|', ' | (_| \\__ \\_', '  \\__,_|___(_)'].join('\n');
 const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon: projectIcon(project.palette) }))).replace(/</g, '\\u003c');
 ---
 <Layout title={`${site.name} — Projects`} description="Projects, experiments, and work in progress by Derek Stone." favicon={projectIcon(first.palette)}>
@@ -39,9 +41,15 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
             <div class="gallery-end-space" data-ascii-space>
               <div class="laser-experiment" data-laser-experiment role="group" aria-label="ASCII laser puzzle: turn two mirrors to reach the target at the right">
                 <canvas class="laser-canvas" aria-hidden="true"></canvas>
+                <pre class="laser-logo" aria-hidden="true">{linksLogo}</pre>
                 <button type="button" class="laser-control" data-laser-control="mirror" data-mirror="0" aria-label="Rotate first mirror" aria-describedby="laser-instructions"></button>
                 <button type="button" class="laser-control" data-laser-control="mirror" data-mirror="1" aria-label="Rotate second mirror" aria-describedby="laser-instructions"></button>
-                <div class="laser-hint" id="laser-instructions"><span data-laser-status role="status" aria-live="polite">Drag the mirrors to reach the target.</span><span class="sr-only"> Drag sideways or vertically to turn a mirror, or click to turn it by five degrees. Arrow keys turn it by one degree; Shift and arrow keys turn it by five degrees; Alt and arrow keys make a quarter-degree adjustment.</span><button type="button" data-laser-control="reset">Reset</button></div>
+                <div class="laser-hint" id="laser-instructions"><span data-laser-status role="status" aria-live="polite">Drag the mirrors to reach the target.</span><span class="sr-only"> Drag sideways or vertically to turn a mirror, or click to turn it by five degrees. Arrow keys turn it by one degree; Shift and arrow keys turn it by five degrees; Alt and arrow keys make a quarter-degree adjustment.</span><button type="button" data-laser-control="trophy" hidden>View trophy</button><button type="button" data-laser-control="reset">Reset</button></div>
+                <dialog class="victory-dialog" data-laser-victory data-laser-control="victory" aria-labelledby="laser-victory-title">
+                  <h2 id="laser-victory-title">You got a trophy!</h2>
+                  <canvas class="trophy-canvas" data-trophy-canvas aria-hidden="true"></canvas>
+                  <button type="button" class="victory-close" data-victory-close autofocus>Back to puzzle</button>
+                </dialog>
               </div>
             </div>
             <footer class="gallery-end-footer">
@@ -50,14 +58,13 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
                 <summary aria-controls="credits-panel">Credits</summary>
                 <section class="credits-panel" id="credits-panel" aria-labelledby="credits-heading" tabindex="0">
                   <h2 id="credits-heading">Credits</h2>
-                  <p class="credits-intro">References and inspiration behind this site.</p>
                   <dl>
                     <dt>Initial design inspiration</dt>
-                    <dd><a href="https://bd85bd85.com/" target="_blank" rel="noopener noreferrer">BD85BD85 <span aria-hidden="true">↗</span></a><p>Primary reference for the Projects section.</p><p>Original site: design by Ben Lee; development by <a href="https://geminiservic.es/" target="_blank" rel="noopener noreferrer">Gemini Services <span aria-hidden="true">↗</span></a>.</p></dd>
+                    <dd><a href="https://bd85bd85.com/" target="_blank" rel="noopener noreferrer">BD85BD85<ExternalLinkIcon /></a><p>Primary reference for the Projects section.</p><p>Original site: design by Ben Lee; development by <a href="https://geminiservic.es/" target="_blank" rel="noopener noreferrer">Gemini Services<ExternalLinkIcon /></a>.</p></dd>
                     <dt>Cat kaomoji</dt>
-                    <dd><a href="https://emojicombos.com/cat" target="_blank" rel="noopener noreferrer">EmojiCombos cat collection <span aria-hidden="true">↗</span></a><p>Source of the cat kaomoji. Original author unknown.</p></dd>
+                    <dd><a href="https://emojicombos.com/cat" target="_blank" rel="noopener noreferrer">EmojiCombos cat collection<ExternalLinkIcon /></a><p>Source of the cat kaomoji. Original author unknown.</p></dd>
                     <dt>ASCII rendering inspiration</dt>
-                    <dd><a href="https://asciigenerators.com/" target="_blank" rel="noopener noreferrer">ASCII Generator <span aria-hidden="true">↗</span></a><p>Brightness mapping, colour, and directional edge characters.</p></dd>
+                    <dd><a href="https://asciigenerators.com/" target="_blank" rel="noopener noreferrer">ASCII Generator<ExternalLinkIcon /></a><p>Brightness mapping, colour, and directional edge characters.</p></dd>
                   </dl>
                 </section>
               </details>

@@ -59,10 +59,7 @@ export function captureTouchSectionMotion(direction, { projectEntry = false } = 
     const rect = element.getBoundingClientRect();
     return { ...copyDrawing(element), rect, artwork: element.matches('[data-section-art]') };
   });
-  const menu = document.querySelector('.site-menu');
-  const menuStyle = getComputedStyle(menu);
   const label = document.querySelector('.menu-location');
-  const previous = { backgroundColor: menuStyle.backgroundColor, color: menuStyle.color };
   // A label copy loses its page-scoped selectors when its routing attributes
   // are removed. Freeze those hidden rows as well as any running animation.
   const labelDrawing = copyDrawing(label, { freeze: true });
@@ -106,11 +103,8 @@ export function captureTouchSectionMotion(direction, { projectEntry = false } = 
         easing: artwork ? 'linear' : sectionTiming.easing, fill: 'both'
       }));
     });
-    const nextMenu = document.querySelector('.site-menu');
-    const nextStyle = getComputedStyle(nextMenu);
-    animations.push(nextMenu.animate([previous, { backgroundColor: nextStyle.backgroundColor, color: nextStyle.color }],
-      { duration: sectionTiming.header, easing: 'linear' }));
     const nextLabel = document.querySelector('.menu-location');
+    labelDrawing.clone.style.color = 'inherit';
     nextLabel.parentElement.append(labelDrawing.clone);
     labelDrawing.clone.classList.add('section-outgoing-location');
     labelDrawing.clone.setAttribute('aria-hidden', 'true');
@@ -136,7 +130,7 @@ export function captureTouchSectionMotion(direction, { projectEntry = false } = 
     } };
     activeMotion = motion;
     // A direct project entry keeps the original section behind the tile reveal.
-    // Only its anchored header uses the short section-label/palette transition.
+    // Only its anchored header uses the short section-label transition.
     Promise.allSettled([...animations.map(animation => animation.finished), projectFinished]).then(() => {
       if (activeMotion === motion) motion.finish();
     });

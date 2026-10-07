@@ -39,16 +39,6 @@ function animatePreviewEntry(direction) {
       { duration: sectionTiming.enter, easing: sectionTiming.easing }));
   if (!window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__) document.querySelectorAll('[data-section-art]').forEach(element =>
     element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: sectionTiming.artwork, easing: 'linear' }));
-  const menu = document.querySelector('.site-menu');
-  const previous = window.__PORTFOLIO_PREVIEW_NAVIGATION__;
-  if (menu && previous) {
-    const transition = menu.style.transition;
-    menu.style.transition = 'none';
-    const next = getComputedStyle(menu);
-    const palette = menu.animate([previous, { backgroundColor: next.backgroundColor, color: next.color }],
-      { duration: sectionTiming.header, easing: 'linear' });
-    palette.finished.catch(() => {}).then(() => { menu.style.transition = transition; });
-  }
 }
 
 // The offline preview swaps frames instead of using Astro's document router.
@@ -103,14 +93,6 @@ document.addEventListener('astro:before-swap', event => {
       const cleanup = projectEntry ? mount({ fragment: event.to.hash, sectionEntry: true }) : null;
       startMotion?.({ projectFinished: cleanup?.entryDone });
     };
-  }
-  // The fallback keeps the header anchored and blends its actual drawn colors.
-  const menu = document.querySelector('.site-menu');
-  const nextMenu = event.newDocument.querySelector('.site-menu');
-  if (menu && nextMenu) {
-    const style = getComputedStyle(menu);
-    nextMenu.style.setProperty('--navigation-from-accent', style.backgroundColor);
-    nextMenu.style.setProperty('--navigation-from-ink', style.color);
   }
   event.newDocument.documentElement.toggleAttribute('data-gallery-handoff', Boolean(event.info?.gallerySwipe));
   event.newDocument.documentElement.style.setProperty('--section-drift', `${direction * sectionTiming.distance}px`);

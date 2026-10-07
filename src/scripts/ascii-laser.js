@@ -1,25 +1,26 @@
 import { laserPuzzle, mirrorEndpoints, traceLaser } from './laser-optics.js';
-import { ASCII_GLYPHS, ASCII_COLORS, asciiCell, nearestInk, logoStencil } from './ascii-grid.js';
+import { ASCII_GLYPHS, ASCII_COLORS, asciiCell, nearestInk } from './ascii-grid.js';
+import { mountTrophy } from './trophy-ascii.js';
 
 // A small scene is sampled on a character grid. Glyphs are cached once per
-// size; pointer updates are coalesced into a frame. Only the short victory spin
-// requests continuous frames; the scene is idle once the trophy settles.
+// size; pointer updates are coalesced into a frame. The puzzle is idle between inputs.
 export function mountLaser(host, { onInteraction = () => {} } = {}) {
   if (!host) return { setActive() {}, destroy() {} };
   const output = host.querySelector('canvas'), context = output.getContext('2d', { alpha: false });
   if (!context) return { setActive() {}, destroy() {} };
   const controls = [...host.querySelectorAll('[data-laser-control="mirror"]')];
   const status = host.querySelector('[data-laser-status]'), reset = host.querySelector('[data-laser-control="reset"]');
+  const victory = host.querySelector('[data-laser-victory]'), viewTrophy = host.querySelector('[data-laser-control="trophy"]');
+  const trophy = mountTrophy(host.querySelector('[data-trophy-canvas]'));
   const controller = new AbortController();
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const listen = (target, type, callback, options = {}) => target.addEventListener(type, callback, { ...options, signal: controller.signal });
   const scene = document.createElement('canvas'), sourceContext = scene.getContext('2d', { willReadFrequently: true });
   const atlas = document.createElement('canvas'), atlasContext = atlas.getContext('2d');
   const initialAngles = [Math.PI / 2, Math.PI / 6];
-  let angles = [...initialAngles], won = false, trophyStarted = 0;
+  let angles = [...initialAngles], won = false, backdropPress = false;
   let active = false, disposed = false, frame = 0, dirtySize = true, drag = null;
   let width = 1, height = 1, columns = 1, rows = 1, cellWidth = 1, cellHeight = 1, ratio = 1;
-  let atlasWidth = 1, atlasHeight = 1, stencil, coverage, inks, luminance;
+  let atlasWidth = 1, atlasHeight = 1, coverage, inks, luminance;
 
   function measure() {
     width = Math.max(1, host.clientWidth); height = Math.max(1, host.clientHeight - 44);
@@ -32,7 +33,6 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
     scene.width = columns * 3; scene.height = rows * 3;
     coverage = new Float32Array(columns * rows); inks = new Uint8Array(columns * rows);
     luminance = new Float32Array(columns * rows);
-    stencil = logoStencil(columns, rows, columns * .2, rows * .2, width >= 600 && rows >= 18 ? 2 : 1);
     atlasWidth = Math.ceil(cellWidth * ratio); atlasHeight = Math.ceil(cellHeight * ratio);
     atlas.width = atlasWidth * ASCII_GLYPHS.length; atlas.height = atlasHeight * ASCII_COLORS.length;
     atlasContext.font = `${cellWidth / .6 * ratio}px ui-monospace, SFMono-Regular, Consolas, monospace`;
@@ -58,28 +58,7 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
     sourceContext.beginPath(); sourceContext.moveTo(segment.from.x, segment.from.y);
     sourceContext.lineTo(segment.to.x, segment.to.y); sourceContext.stroke();
   }
-  function drawTrophy(now) {
-    const progress = reducedMotion.matches ? 1 : Math.min(1, (now - trophyStarted) / 2400);
-    const turn = Math.PI * 6 * (1 - (1 - progress) ** 3), c = Math.cos(turn), s = Math.sin(turn);
-    const scale = Math.min(32, width * .1, height * .13);
-    const project = ([x, y, z]) => ({ x: width * .86 + (x * c + z * s) * scale,
-      y: height * .2 + (y + (z * c - x * s) * .28) * scale });
-    const line = (a, b) => stroke({ from: project(a), to: project(b) }, ASCII_COLORS[5], Math.max(3, cellWidth * .5));
-    for (let i = 0; i < 16; i++) {
-      const a = i * Math.PI / 8, b = (i + 1) * Math.PI / 8;
-      line([Math.cos(a) * .65, -.65, Math.sin(a) * .65], [Math.cos(b) * .65, -.65, Math.sin(b) * .65]);
-      if (i % 4 === 0) line([Math.cos(a) * .65, -.65, Math.sin(a) * .65], [Math.cos(a) * .25, .25, Math.sin(a) * .25]);
-    }
-    for (const side of [-1, 1]) {
-      line([side * .6, -.5, 0], [side, -.45, 0]);
-      line([side, -.45, 0], [side * .9, .05, 0]);
-      line([side * .9, .05, 0], [side * .35, .2, 0]);
-    }
-    line([-.25, .25, 0], [.25, .25, 0]); line([0, .25, 0], [0, .9, 0]);
-    const base = [[-.6, .9, -.3], [.6, .9, -.3], [.6, .9, .3], [-.6, .9, .3]];
-    base.forEach((point, i) => line(point, base[(i + 1) % 4]));
-  }
-  function drawScene(puzzle, trace, now) {
+  function drawScene(puzzle, trace) {
     sourceContext.setTransform(1, 0, 0, 1, 0, 0); sourceContext.clearRect(0, 0, scene.width, scene.height);
     sourceContext.setTransform(scene.width / width, 0, 0, scene.height / height, 0, 0);
     trace.segments.forEach(segment => stroke(segment, ASCII_COLORS[9], Math.max(4, cellWidth * .8), .85));
@@ -101,7 +80,6 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
     for (const radius of [puzzle.target.radius, puzzle.target.radius * .5]) {
       sourceContext.beginPath(); sourceContext.arc(puzzle.target.x, puzzle.target.y, radius, 0, Math.PI * 2); sourceContext.stroke();
     }
-    if (won) drawTrophy(now);
   }
   function sample() {
     const pixels = sourceContext.getImageData(0, 0, scene.width, scene.height).data;
@@ -126,21 +104,23 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
     const start = performance.now();
     if (dirtySize) measure();
     const puzzle = laserPuzzle(width, height, angles), trace = traceLaser(puzzle);
-    if (trace.hit && !won) { won = true; trophyStarted = start; }
-    drawScene(puzzle, trace, start); sample(); positionControls(puzzle);
+    const newlyWon = trace.hit && !won;
+    if (newlyWon) won = true;
+    drawScene(puzzle, trace); sample(); positionControls(puzzle);
     if (host.dataset.solved !== String(won)) {
       host.dataset.solved = String(won);
-      status.textContent = won ? 'You got a trophy!' : 'Drag the mirrors to reach the target.';
+      status.textContent = won ? 'Target reached.' : 'Drag the mirrors to reach the target.';
+      viewTrophy.hidden = !won;
     }
     context.setTransform(ratio, 0, 0, ratio, 0, 0); context.fillStyle = '#fff'; context.fillRect(0, 0, width, height);
     let drawn = 0;
     for (let y = 0; y < rows; y++) for (let x = 0; x < columns; x++) {
       const index = y * columns + x;
-      if (!stencil[index] && coverage[index] < .045) continue;
+      if (coverage[index] < .045) continue;
       const at = (dx, dy) => coverage[Math.max(0, Math.min(rows - 1, y + dy)) * columns + Math.max(0, Math.min(columns - 1, x + dx))];
       const gx = at(1, -1) + 2 * at(1, 0) + at(1, 1) - at(-1, -1) - 2 * at(-1, 0) - at(-1, 1);
       const gy = at(-1, 1) + 2 * at(0, 1) + at(1, 1) - at(-1, -1) - 2 * at(0, -1) - at(1, -1);
-      const cell = asciiCell(coverage[index], luminance[index], gx, gy, Boolean(stencil[index]));
+      const cell = asciiCell(coverage[index], luminance[index], gx, gy);
       if (cell.glyph === ' ') continue;
       context.drawImage(atlas, ASCII_GLYPHS.indexOf(cell.glyph) * atlasWidth, (cell.ink ?? inks[index]) * atlasHeight,
         atlasWidth, atlasHeight, x * cellWidth, y * cellHeight, cellWidth, cellHeight);
@@ -150,7 +130,7 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
     if (window.__PORTFOLIO_LASER_PROFILE__) document.dispatchEvent(new CustomEvent('portfolio:laser-frame', {
       detail: { milliseconds: performance.now() - start, columns, rows, drawn, angles: [...angles], hit: trace.hit, won }
     }));
-    if (won && !reducedMotion.matches && start - trophyStarted < 2400) requestDraw();
+    if (newlyWon) showVictory();
   }
   function requestDraw() {
     if (active && !disposed && !document.hidden && !frame) frame = requestAnimationFrame(render);
@@ -162,6 +142,26 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
     finished.control.removeAttribute('data-dragging');
     if (finished.control.hasPointerCapture(finished.id)) finished.control.releasePointerCapture(finished.id);
   }
+  function showVictory() {
+    if (!active || !won || victory.open) return;
+    onInteraction(); finishDrag(); backdropPress = false;
+    victory.showModal(); trophy.start();
+  }
+  function closeVictory() { if (victory.open) victory.close(); trophy.stop(); backdropPress = false; }
+  const outsideVictory = event => {
+    const bounds = victory.getBoundingClientRect();
+    return event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom;
+  };
+  listen(viewTrophy, 'click', showVictory);
+  listen(host.querySelector('[data-victory-close]'), 'click', closeVictory);
+  listen(victory, 'close', () => { trophy.stop(); backdropPress = false; });
+  listen(victory, 'pointerdown', event => { backdropPress = event.target === victory && outsideVictory(event); });
+  listen(victory, 'pointercancel', () => { backdropPress = false; });
+  listen(victory, 'click', event => {
+    // Releasing the mirror drag that won the puzzle must not dismiss its reward.
+    if (backdropPress && event.target === victory && outsideVictory(event)) closeVictory();
+    backdropPress = false;
+  });
   controls.forEach((control, index) => {
     let touchClickUntil = 0;
     listen(control, 'pointerdown', event => {
@@ -208,9 +208,8 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
   });
   listen(reset, 'click', () => {
     if (!active) return;
-    onInteraction(); finishDrag(); angles = [...initialAngles]; won = false; trophyStarted = 0; requestDraw();
+    onInteraction(); finishDrag(); closeVictory(); angles = [...initialAngles]; won = false; requestDraw();
   });
-  listen(reducedMotion, 'change', requestDraw);
   const resize = new ResizeObserver(() => { finishDrag(); dirtySize = true; requestDraw(); });
   resize.observe(host);
   // A capped-width scene can move without resizing when the viewport changes.
@@ -224,8 +223,8 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
       if (active === value) return;
       active = value;
       if (active) requestDraw();
-      else { finishDrag(); cancelAnimationFrame(frame); frame = 0; }
+      else { finishDrag(); closeVictory(); cancelAnimationFrame(frame); frame = 0; }
     },
-    destroy() { disposed = true; finishDrag(); controller.abort(); resize.disconnect(); cancelAnimationFrame(frame); }
+    destroy() { disposed = true; finishDrag(); closeVictory(); trophy.destroy(); controller.abort(); resize.disconnect(); cancelAnimationFrame(frame); }
   };
 }
