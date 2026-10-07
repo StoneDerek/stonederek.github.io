@@ -1,9 +1,12 @@
+import { projectMenuPreference } from './project-menu-state.js';
+
 // Native details keeps the project list usable without JavaScript. With scripts,
 // animate its height and preserve the currently drawn frame on rapid reversals.
-export function mountProjectMenu(details, reducedMotion, { signal } = {}) {
+export function mountProjectMenu(details, reducedMotion, { signal, persist = false } = {}) {
   const toggle = details.querySelector('[data-projects-toggle]');
   const panel = details.querySelector('[data-projects-panel]');
-  let expanded = details.open;
+  const preference = persist ? projectMenuPreference() : null;
+  let expanded = preference ? preference.read(details.open) : details.open;
   let animation = null;
   let generation = 0;
   const sync = () => {
@@ -11,13 +14,14 @@ export function mountProjectMenu(details, reducedMotion, { signal } = {}) {
     toggle.setAttribute('aria-expanded', String(expanded));
     panel.inert = !expanded;
   };
-  function set(open, { immediate = false, focus = false } = {}) {
+  function set(open, { immediate = false, focus = false, remember = true } = {}) {
     const current = ++generation;
     const from = details.open ? panel.getBoundingClientRect().height : 0;
     const opacity = details.open ? getComputedStyle(panel).opacity : '0';
     if (animation) { animation.onfinish = null; animation.cancel(); animation = null; }
     if (focus || (!open && panel.contains(document.activeElement))) toggle.focus({ preventScroll: true });
     expanded = open;
+    if (remember) preference?.write(expanded);
     sync();
     if (!open && !details.open) return;
     details.open = true;
@@ -46,6 +50,7 @@ export function mountProjectMenu(details, reducedMotion, { signal } = {}) {
     expanded = details.open;
     sync();
   }, { signal });
+  if (preference) { preference.write(expanded); details.open = expanded; }
   sync();
   return { get expanded() { return expanded; }, set };
 }

@@ -12,7 +12,7 @@ export function mountProfileNavigation() {
   const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
   const controller = new AbortController();
   const listen = (target, type, handler, options = {}) => target.addEventListener(type, handler, { ...options, signal: controller.signal });
-  const nested = mountProjectMenu(projects, preference, { signal: controller.signal });
+  const nested = mountProjectMenu(projects, preference, { signal: controller.signal, persist: true });
   const navigation = mountSiteMenu(menu, preference, { signal: controller.signal, onChange: () => {
     toggle.setAttribute('aria-label', `${navigation.expanded ? 'Close' : 'Open'} navigation. ${header.dataset.page === 'about' ? 'About' : 'Home'}: ${header.dataset.owner}`);
   } });
@@ -53,7 +53,7 @@ export function mountProfileNavigation() {
   listen(window, 'resize', () => { if (navigation.animating) navigation.set(navigation.expanded, { immediate: true }); });
   const prepareExit = () => {
     navigation.set(false, { immediate: true });
-    nested.set(false, { immediate: true });
+    nested.set(false, { immediate: true, remember: false });
   };
   listen(document, 'astro:before-preparation', prepareExit);
   listen(document, 'portfolio:preview-exit', prepareExit);
@@ -63,6 +63,6 @@ export function mountProfileNavigation() {
   return () => {
     controller.abort();
     navigation.set(false, { immediate: true });
-    nested.set(false, { immediate: true });
+    nested.set(false, { immediate: true, remember: false });
   };
 }
