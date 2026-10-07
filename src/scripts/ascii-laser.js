@@ -49,6 +49,8 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
       const mirror = puzzle.mirrors[index], size = Math.max(44, mirror.radius * 2 + 8);
       control.style.width = `${size}px`; control.style.height = `${size}px`;
       control.style.transform = `translate(${mirror.x - size / 2}px, ${mirror.y - size / 2}px)`;
+      const angle = Math.round(((mirror.angle * 180 / Math.PI) % 180 + 180) % 180);
+      control.setAttribute('aria-label', `Rotate ${index === 0 ? 'first' : 'second'} mirror, ${angle} degrees`);
     });
   }
   function stroke(segment, color, thickness, alpha = 1) {
@@ -153,39 +155,50 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
   function requestDraw() {
     if (active && !disposed && !document.hidden && !frame) frame = requestAnimationFrame(render);
   }
-  function finishDrag() {
+  function finishDrag({ cancelled = true } = {}) {
     if (!drag) return;
     const finished = drag; drag = null;
+    finished.control.dataset.skipClick = String(finished.moved || cancelled);
     finished.control.removeAttribute('data-dragging');
     if (finished.control.hasPointerCapture(finished.id)) finished.control.releasePointerCapture(finished.id);
   }
   controls.forEach((control, index) => {
-    let pointerMoved = false;
+    let touchClickUntil = 0;
     listen(control, 'pointerdown', event => {
       if (!active || !event.isPrimary || event.button !== 0 || drag) return;
       event.preventDefault(); event.stopPropagation(); onInteraction();
       if (dirtySize) measure();
-      pointerMoved = false;
-      drag = { control, id: event.pointerId, index, angle: angles[index], x: event.clientX, y: event.clientY };
+      control.dataset.skipClick = 'false';
+      drag = { control, id: event.pointerId, index, angle: angles[index], x: event.clientX, y: event.clientY, moved: false };
       control.focus({ preventScroll: true }); control.setPointerCapture(event.pointerId); control.dataset.dragging = '';
     });
     listen(control, 'pointermove', event => {
       if (!drag || drag.id !== event.pointerId) return;
       event.preventDefault(); event.stopPropagation();
-      pointerMoved ||= Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > 2;
+      drag.moved ||= Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > 2;
       angles[drag.index] = drag.angle + (event.clientX - drag.x - event.clientY + drag.y) * Math.PI / 360;
       requestDraw();
     });
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type => listen(control, type, event => {
-      if (drag?.id === event.pointerId) { event.stopPropagation(); finishDrag(); }
+      if (drag?.id !== event.pointerId) return;
+      event.stopPropagation();
+      const tap = type === 'pointerup' && event.pointerType === 'touch' && !drag.moved;
+      finishDrag({ cancelled: type !== 'pointerup' });
+      if (tap) {
+        // Safari suppresses click after the captured pointerdown is cancelled.
+        // Handle touch release and ignore a compatibility click on other engines.
+        touchClickUntil = performance.now() + 600;
+        angles[index] += 5 * Math.PI / 180; requestDraw();
+      }
     }));
     listen(control, 'click', event => {
-      if (!active || (event.detail && pointerMoved)) return;
+      if (!active || performance.now() < touchClickUntil || (event.detail && control.dataset.skipClick === 'true')) return;
       event.preventDefault(); event.stopPropagation(); onInteraction();
       angles[index] += 5 * Math.PI / 180; requestDraw();
     });
     listen(control, 'keydown', event => {
-      if (event.key === 'Escape' && drag) { event.preventDefault(); event.stopPropagation(); pointerMoved = true; finishDrag(); return; }
+      if (event.key === 'Enter' || event.key === ' ') touchClickUntil = 0;
+      if (event.key === 'Escape' && drag) { event.preventDefault(); event.stopPropagation(); finishDrag(); return; }
       const direction = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
       if (!direction || !active) return;
       event.preventDefault(); event.stopPropagation(); onInteraction();
