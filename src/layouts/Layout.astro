@@ -5,6 +5,7 @@ import { ClientRouter } from 'astro:transitions';
 import { projectIcon } from '../data/project-icons.js';
 import { homePalette } from '../data/section-palettes.js';
 import { sectionTiming } from '../data/section-motion.js';
+import { themeBootstrap } from '../scripts/theme.js';
 const { title = site.title, description = site.description, favicon = projectIcon(homePalette) } = Astro.props;
 ---
 <!doctype html>
@@ -13,6 +14,8 @@ const { title = site.title, description = site.description, favicon = projectIco
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#ffffff" />
+    <meta name="color-scheme" content="light dark" />
+    <script is:inline set:html={`(${themeBootstrap.toString()})();`}></script>
     <meta name="description" content={description} />
     <title>{title}</title>
     <link rel="icon" href={favicon} type="image/svg+xml" data-project-favicon />

@@ -9,12 +9,20 @@ import { captureTouchSectionMotion, finishTouchSectionMotion, usesTouchSectionMo
 import { projectSectionEntry } from './project-links.js';
 import { readHeaderPalette, blendHeaderPalette } from './header-palette.js';
 import { mountPublicationLabel } from './publication-label.js';
+import { initializeTheme } from './theme.js';
+
+initializeTheme();
 
 let mountedHeader = null;
 let dispose = () => {};
 const projectEntryHandoffs = new WeakSet();
 let paletteHeader = null;
 let stopPalette = () => {};
+let activeTransition;
+document.addEventListener('portfolio:theme-change', () => {
+  finishTouchSectionMotion();
+  activeTransition?.skipTransition();
+});
 function startPalette(header, from) {
   stopPalette(); paletteHeader = header;
   stopPalette = blendHeaderPalette(header, from, { duration: sectionTiming.header });
@@ -88,6 +96,11 @@ document.addEventListener('astro:before-preparation', event => {
   document.documentElement.style.setProperty('--section-drift', `${direction * sectionTiming.distance}px`);
 });
 document.addEventListener('astro:before-swap', event => {
+  activeTransition = event.viewTransition;
+  const clearTransition = () => {
+    if (activeTransition === event.viewTransition) activeTransition = null;
+  };
+  event.viewTransition.finished.then(clearTransition, clearTransition);
   const direction = sectionDirection(sectionFromPath(event.from.pathname), sectionFromPath(event.to.pathname));
   const data = event.newDocument.getElementById('portfolio-data');
   const projectEntry = data && projectSectionEntry(event.from, event.to, JSON.parse(data.textContent)) >= 0;

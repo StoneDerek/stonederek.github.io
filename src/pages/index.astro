@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import ProfileFooter from '../components/ProfileFooter.astro';
+import AppearanceControl from '../components/AppearanceControl.astro';
 import site from '../data/site.json';
 import { shortDrift } from '../data/section-motion.js';
 const base = import.meta.env.BASE_URL;
@@ -24,6 +25,7 @@ const base = import.meta.env.BASE_URL;
           </div>
           <div class="profile-actions"><a class="profile-button" href={`${base}projects/`} data-site-route="projects">Explore projects</a><a class="profile-text-link" href={`${base}about/`} data-site-route="about">More about me</a></div>
         </div>
+        <AppearanceControl />
       </section>
 
     </main>

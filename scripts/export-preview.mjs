@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { Script } from 'node:vm';
 import { build } from 'esbuild';
+import { themeBootstrap } from '../src/scripts/theme.js';
 
 // Bundle the actual production pages into one offline, navigable review file.
 // Each route runs in a fresh frame, so gallery event listeners never accumulate.
@@ -69,6 +70,19 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
   let frame = document.querySelector('iframe');
   let cancelHandoff = () => {};
   const favicon = document.createElement('link');
+  let themeMedia = null;
+  try { themeMedia = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null; } catch {}
+  const syncTheme = preference => {
+    if (!['light', 'dark', 'system'].includes(preference)) preference = 'system';
+    const theme = preference === 'system' ? (themeMedia?.matches ? 'dark' : 'light') : preference;
+    document.documentElement.dataset.themePreference = preference;
+    document.documentElement.dataset.theme = theme;
+    document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#17151b' : '#ffffff';
+  };
+  themeMedia?.addEventListener?.('change', () => syncTheme(document.documentElement.dataset.themePreference));
+  window.addEventListener('storage', event => {
+    if (event.key === 'portfolio-color-theme' || event.key === null) syncTheme(event.newValue);
+  });
   favicon.rel = 'icon'; favicon.type = 'image/svg+xml'; document.head.append(favicon);
   const expanded = route => {
     let html = pages[route];
@@ -101,7 +115,7 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
     const fromPalette = direction ? frame.contentWindow?.__PORTFOLIO_PREVIEW_PALETTE__?.() : null;
     previousRoute = route;
     if (projectEntry) html = html.replace(/<main\b([^>]*\bid="portfolio"[^>]*)>/, '<main$1 data-section-project-entry>');
-    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_FROM_PALETTE__=${escapeScript(fromPalette)};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
+    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_THEME_PREFERENCE__=${escapeScript(document.documentElement.dataset.themePreference || 'system')};window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_FROM_PALETTE__=${escapeScript(fromPalette)};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
     html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
     html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*(")/, `$1${resumeAddress}$2`);
     // Attributes can appear in either order in compiler output.
@@ -162,6 +176,7 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
     if (event.data?.type === 'portfolio-preview-fragment') {
       history.replaceState(null, '', `#projects${event.data.fragment ? `?${event.data.fragment.slice(1)}` : ''}`);
     }
+    if (event.data?.type === 'portfolio-preview-theme') syncTheme(event.data.preference);
   });
   window.addEventListener('hashchange', render);
   window.addEventListener('pagehide', event => {
@@ -175,6 +190,6 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
 const payload = JSON.stringify({ pages, assets, resumePDF, projectSlugs }).replaceAll('<', '\\u003c');
 const loader = `(${initializePreview.toString()})(JSON.parse(document.getElementById('preview-data').textContent));`;
 new Script(loader, { filename: 'preview-navigation.js' });
-const output = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Derek Stone — Portfolio preview</title><style>html,body{margin:0;width:100%;height:100%;background:#fff}iframe{display:block;width:100%;height:100%;border:0}noscript{padding:24px;font:16px/1.5 Arial,sans-serif}</style></head><body><iframe title="Derek Stone’s portfolio"></iframe><noscript>Open this preview in a browser with JavaScript enabled to explore Home, About, and Projects.</noscript><script type="application/json" id="preview-data">${payload}</script><script>${loader}</script></body></html>`;
+const output = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff"><meta name="color-scheme" content="light dark"><script>(${themeBootstrap.toString()})();</script><title>Derek Stone — Portfolio preview</title><style>html,body{margin:0;width:100%;height:100%;background:#fff}html[data-theme=dark],html[data-theme=dark] body{background:#17151b;color-scheme:dark}iframe{display:block;width:100%;height:100%;border:0}noscript{padding:24px;font:16px/1.5 Arial,sans-serif}</style></head><body><iframe title="Derek Stone’s portfolio"></iframe><noscript>Open this preview in a browser with JavaScript enabled to explore Home, About, and Projects.</noscript><script type="application/json" id="preview-data">${payload}</script><script>${loader}</script></body></html>`;
 await writeFile('portfolio-preview.html', output);
 console.log(`Exported all three portfolio pages (${Math.round(Buffer.byteLength(output) / 1024)} KB).`);
