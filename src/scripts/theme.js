@@ -1,15 +1,18 @@
 export const themeStorageKey = 'derek-stone-theme';
+// Appearance modes are deferred while the light site and its content take shape.
+export const appearanceEnabled = false;
 
 // This function also runs inline in <head>, before the first page can paint.
 // Keep it self-contained so the static and offline pages use the same startup.
-export function initializeTheme(key = 'derek-stone-theme') {
+export function initializeTheme(key = 'derek-stone-theme', enabled = true) {
   const valid = value => ['system', 'light', 'dark'].includes(value);
   let choice = window.__PORTFOLIO_THEME_STATE__?.choice || 'system';
   try {
     const saved = window.localStorage.getItem(key);
-    if (valid(saved)) choice = saved;
+    if (enabled && valid(saved)) choice = saved;
   } catch { /* Private/file contexts still retain this document's choice. */ }
-  if (valid(window.__PORTFOLIO_PREVIEW_THEME_CHOICE__)) choice = window.__PORTFOLIO_PREVIEW_THEME_CHOICE__;
+  if (enabled && valid(window.__PORTFOLIO_PREVIEW_THEME_CHOICE__)) choice = window.__PORTFOLIO_PREVIEW_THEME_CHOICE__;
+  if (!enabled) choice = 'light';
   let systemDark = false;
   try { systemDark = Boolean(window.matchMedia?.('(prefers-color-scheme: dark)').matches); } catch {}
   if (typeof window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__ === 'boolean') systemDark = window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__;
@@ -26,7 +29,11 @@ export function initializeTheme(key = 'derek-stone-theme') {
   return window.__PORTFOLIO_THEME_STATE__;
 }
 
-export function mountTheme() {
+export function mountTheme({ enabled = true } = {}) {
+  if (!enabled) {
+    initializeTheme(themeStorageKey, false);
+    return { refresh: () => initializeTheme(themeStorageKey, false) };
+  }
   let state = window.__PORTFOLIO_THEME_STATE__ || initializeTheme(themeStorageKey);
   let media;
   try { media = window.matchMedia?.('(prefers-color-scheme: dark)'); } catch {}

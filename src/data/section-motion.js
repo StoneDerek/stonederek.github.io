@@ -1,15 +1,15 @@
-export const sectionTiming = { exit: 90, enter: 180, header: 180, artwork: 180, distance: 8, easing: 'cubic-bezier(.2,0,0,1)' };
+export const sectionTiming = { exit: 180, enter: 180, header: 180, artwork: 180, feedback: 90, distance: 8, easing: 'cubic-bezier(.2,0,0,1)' };
 
-// Clear the outgoing text before revealing a differently arranged page.
-const old = { name: 'section-fade-out', duration: `${sectionTiming.exit}ms`, easing: 'ease-in' };
-const entry = { duration: `${sectionTiming.enter}ms`, delay: `${sectionTiming.exit}ms`, easing: sectionTiming.easing };
+// Both drawings share one clock and easing, so their opacity stays complementary.
+const old = { name: 'section-fade-out', duration: `${sectionTiming.exit}ms`, easing: sectionTiming.easing };
+const entry = { duration: `${sectionTiming.enter}ms`, delay: '0ms', easing: sectionTiming.easing };
 const drift = { old, new: { name: 'section-drift-in', ...entry } };
 const fade = { old, new: { name: 'section-fade-in', ...entry } };
 
 export const shortDrift = { forwards: drift, backwards: drift };
 export const sectionFade = { forwards: fade, backwards: fade };
 
-// The canvas changes continuously while differently arranged text clears.
+// Artwork uses the same interval without a directional drift.
 const artwork = {
   old: { name: 'section-fade-out', duration: `${sectionTiming.artwork}ms`, easing: 'linear' },
   new: { name: 'section-fade-in', duration: `${sectionTiming.artwork}ms`, easing: 'linear' }

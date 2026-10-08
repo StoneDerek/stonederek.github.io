@@ -780,7 +780,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     const backdrop = replacing && canAnimateTiles({ reducedMotion: reducedMotion.matches })
       ? captureProjectBackdrop(root, projectPage, { scrollTop: projectView.scrollTop }) : null;
     const outgoing = backdrop?.animate?.([{ opacity: 1 }, { opacity: 0 }], {
-      duration: sectionTiming.exit, easing: 'ease-in', fill: 'both'
+      duration: sectionTiming.feedback, easing: 'ease-in', fill: 'both'
     });
     try {
       projectOrigin = request.origin || projectOrigin;

@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { initializeTheme, mountTheme, themeStorageKey } from '../src/scripts/theme.js';
 
-function bootstrap({ saved = null, dark = false, blocked = false, preview, previewSystem, mediaMissing = false } = {}) {
+function bootstrap({ saved = null, dark = false, blocked = false, preview, previewSystem, mediaMissing = false, enabled = true } = {}) {
   const meta = {}, icon = { dataset: { themeLightFavicon: 'light-icon', themeDarkFavicon: 'dark-icon' } };
   const document = { documentElement: { dataset: {} }, querySelector: selector => selector.includes('meta') ? meta : icon };
   const window = { localStorage: { getItem() { if (blocked) throw new Error('blocked'); return saved; } },
     ...(mediaMissing ? {} : { matchMedia: () => ({ matches: dark }) }), __PORTFOLIO_PREVIEW_THEME_CHOICE__: preview, __PORTFOLIO_PREVIEW_SYSTEM_DARK__: previewSystem };
   const context = vm.createContext({ window, document });
-  vm.runInContext(`(${initializeTheme.toString()})();`, context);
+  vm.runInContext(`(${initializeTheme.toString()})(undefined,${enabled});`, context);
   return { window, document, meta, icon, context };
 }
 
@@ -20,6 +20,16 @@ test('the inline startup resolves system and saved preferences before painting',
     assert.equal(s.document.documentElement.dataset.theme, expected);
     assert.equal(s.meta.content, expected === 'dark' ? '#17171b' : '#ffffff');
     assert.equal(s.icon.href, `${expected}-icon`);
+  }
+});
+
+test('deferred appearance stays light despite saved, system, or preview dark preferences', () => {
+  for (const blocked of [false, true]) {
+    const s = bootstrap({ saved: 'dark', dark: true, preview: 'dark', previewSystem: true, blocked, enabled: false });
+    assert.equal(s.document.documentElement.dataset.theme, 'light');
+    assert.equal(s.document.documentElement.dataset.themePreference, 'light');
+    assert.equal(s.meta.content, '#ffffff');
+    assert.equal(s.icon.href, 'light-icon');
   }
 });
 
