@@ -30,13 +30,13 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
         <div class="artwork-visual" data-section-art transition:name="gallery-art" transition:animate={artworkFade}>
         <div class="artwork-track" data-gallery-track>
         {projects.map((project, index) => (
-          <div class:list={['artwork-slide', { 'is-active': index === 0 }]} data-slide={index} aria-hidden={index !== 0}>
+          <div class:list={['artwork-slide', { 'is-active': index === 0 }]} data-slide={index} aria-hidden={index !== 0} style={`--gallery-order:${index}`}>
             <div class="artwork-card">
             <img src={url(project.image)} alt={project.imageAlt} width="1920" height="1200" style={`object-position:${project.position}`} loading={index < 2 ? 'eager' : 'lazy'} fetchpriority={index === 0 ? 'high' : 'auto'} decoding="async" draggable="false" />
             </div>
           </div>
         ))}
-        <div id="gallery-end" class="artwork-slide gallery-end" data-gallery-end data-favicon={projectIcon(linksPalette)} role="group" aria-label="Links and credits" aria-hidden="true" tabindex="-1" inert>
+        <div id="gallery-end" class="artwork-slide gallery-end" data-gallery-end data-favicon={projectIcon(linksPalette)} role="group" aria-label="Links and credits" aria-hidden="true" tabindex="-1" style={`--gallery-order:${projects.length}`} inert>
           <div class="artwork-card gallery-end-card">
             <div class="gallery-end-space" data-ascii-space>
               <div class="laser-experiment" data-laser-experiment role="group" aria-label="ASCII laser puzzle: turn two mirrors to reach the target at the right">

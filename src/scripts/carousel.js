@@ -91,6 +91,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   let wheelTimer = 0;
   let wheelPosition = null;
   let drag = null;
+  let dragFrame = 0;
+  let pendingDrag = null;
   let aboutTravel = 0;
   let aboutFrame = 0;
   let aboutVelocity = 0;
@@ -477,7 +479,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       galleryTrack.style.setProperty('--gallery-radius', `${radius}px`);
       renderedRadius = radius;
     }
-    render(position);
+    // A pending pointer sample will render with the new lift in this frame.
+    if (!dragFrame) render(position);
   }
 
   function animateLift(target, { duration = 220 } = {}) {
@@ -588,6 +591,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   }
 
   function cancelDrag() {
+    stopDragFrame();
     if (drag?.capture.hasPointerCapture(drag.id)) drag.capture.releasePointerCapture(drag.id);
     drag = null;
     root.classList.remove('is-dragging');
@@ -848,6 +852,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     suppressClickUntil = 0;
     if (event.target.closest('[data-end-link], [data-laser-control]')) return;
     const aboutEligible = surface === stage && position < .001 && !animationFrame;
+    stopDragFrame();
     stopWheel();
     stopAnimation();
     stopAbout({ reset: !aboutEligible });
@@ -870,6 +875,24 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       void fetch(aboutMenuButton.href, { signal: controller.signal }).catch(() => {});
     }
   }
+  function stopDragFrame() {
+    cancelAnimationFrame(dragFrame);
+    dragFrame = 0;
+    pendingDrag = null;
+  }
+  function flushDragFrame() {
+    const latest = pendingDrag;
+    stopDragFrame();
+    if (latest) moveDrag(latest);
+  }
+  function queueDrag(event) {
+    if (!drag || drag.id !== event.pointerId || aboutCommitting) return;
+    // Mouse input can arrive several times per paint. Follow its latest sample
+    // directly, retaining input time for velocity instead of adding smoothing.
+    pendingDrag = { pointerId: event.pointerId, clientX: event.clientX,
+      clientY: event.clientY, time: performance.now() };
+    if (!dragFrame) dragFrame = requestAnimationFrame(flushDragFrame);
+  }
   function moveDrag(event) {
     if (!drag || drag.id !== event.pointerId || aboutCommitting) return;
     const dx = event.clientX - drag.x;
@@ -881,7 +904,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       sectionLinks.hide();
       animateLift(1);
     }
-    const now = performance.now();
+    const now = event.time;
     const elapsed = Math.max(1, now - drag.lastTime);
     drag.velocity = (drag.lastX - event.clientX) / (elapsed * drag.unit);
     drag.lastX = event.clientX;
@@ -907,6 +930,9 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     render(drag.surface === rail ? clamp(nextPosition) : nextPosition);
   }
   function endDrag(event, cancelled = false) {
+    if (!drag || drag.id !== event.pointerId) return;
+    if (cancelled) stopDragFrame();
+    else flushDragFrame();
     if (!drag || drag.id !== event.pointerId) return;
     const finished = drag;
     drag = null;
@@ -934,7 +960,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   listen(rail, 'pointerdown', event => beginDrag(event, rail, stride));
   [stage, rail].forEach(surface => {
     listen(surface, 'selectstart', event => event.preventDefault());
-    listen(surface, 'pointermove', moveDrag);
+    listen(surface, 'pointermove', queueDrag);
     listen(surface, 'pointerup', event => endDrag(event));
     listen(surface, 'pointercancel', event => endDrag(event, true));
     listen(surface, 'lostpointercapture', event => endDrag(event, true));
@@ -1062,6 +1088,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     stopWheel();
     stopAnimation();
     stopAbout();
+    stopDragFrame();
     [liftFrame, titleFrame, resizeFrame].forEach(cancelAnimationFrame);
     contextGeneration += 1;
     menuTitleGeneration += 1;

@@ -93,7 +93,7 @@ test('re-grabbing a returning page preserves its exact visible position and bump
 
 test('short, slow mobile swipes advance a project in either direction', () => {
   for (const unit of [320, 390, 430]) {
-    const delta = Math.max(24, Math.min(56, unit * .15));
+    const delta = Math.max(18, Math.min(42, unit * .1125));
     for (const direction of [-1, 1]) {
       const input = { start: 2, position: 2 + direction * delta / unit,
         deltaX: -direction * delta, unit, touch: true };
@@ -107,7 +107,7 @@ test('short, slow mobile swipes advance a project in either direction', () => {
 
 test('slow desktop swipes commit without travelling halfway across the screen', () => {
   for (const unit of [800, 1440, 1920]) for (const direction of [-1, 1]) {
-    const input = { start: 2, position: 2 + direction * 80 / unit, deltaX: -direction * 80, unit };
+    const input = { start: 2, position: 2 + direction * 54 / unit, deltaX: -direction * 54, unit };
     assert.equal(settleProjectSwipe(input), 2 + direction);
     assert.equal(settleProjectSwipe({ ...input, deltaX: -direction * 20, position: 2 + direction * 20 / unit }), 2);
     assert.equal(settleProjectSwipe({ ...input, cancelled: true }), 2);
