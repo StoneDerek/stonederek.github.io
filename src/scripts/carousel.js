@@ -9,6 +9,7 @@ import { createMotionSpring } from './motion-spring.js';
 import { createAboutHeader } from './about-header.js';
 import { mountLaser } from './ascii-laser.js';
 import { aboutPalette, linksPalette } from '../data/section-palettes.js';
+import { readHeaderPalette, blendHeaderPalette, stopHeaderPalette } from './header-palette.js';
 
 export function mountPortfolio({ sectionLinks = { hide() {} },
   fragment = window.__PORTFOLIO_PREVIEW_FRAGMENT__ ?? window.location.hash, sectionEntry = false } = {}) {
@@ -233,11 +234,13 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   }
 
   function updateGalleryIdentity({ immediate = false } = {}) {
+    const from = readHeaderPalette(siteHeader);
     const project = projects[Math.max(0, active)];
     const palette = endOpen ? linksPalette : project.palette;
     root.style.setProperty('--accent', palette.accent);
     root.style.setProperty('--ink', palette.ink);
     root.style.setProperty('--caption-color', palette.caption || palette.accent);
+    if (!immediate && !aboutTravel) blendHeaderPalette(siteHeader, from, { duration: 320 });
     menuProjects.forEach(button => {
       if (!endOpen && Number(button.dataset.menuProject) === active) button.setAttribute('aria-current', 'true');
       else button.removeAttribute('aria-current');
@@ -515,6 +518,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     root.style.setProperty('--about-drag', `${aboutTravel}px`);
     aboutPreview.hidden = aboutTravel === 0;
     if (aboutTravel) {
+      stopHeaderPalette(siteHeader);
       root.dataset.aboutSwipe = aboutCommitting ? 'entering' : 'preview';
       const progress = aboutTravel / stageWidth;
       const frame = aboutHeader(progress);
@@ -1049,6 +1053,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   });
   const cleanup = () => {
     disposed = true;
+    stopHeaderPalette(siteHeader);
     laser.destroy();
     credits.open = false;
     controller.abort();
