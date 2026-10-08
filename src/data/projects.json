@@ -14,6 +14,76 @@
     "palette": {
       "accent": "#dcff67",
       "ink": "#17220b"
+    },
+    "caseStudy": {
+      "facts": [
+        {
+          "label": "Role",
+          "value": "Lorem ipsum"
+        },
+        {
+          "label": "Timeline",
+          "value": "Dolor sit amet"
+        },
+        {
+          "label": "Team",
+          "value": "Consectetur adipiscing"
+        },
+        {
+          "label": "Tools",
+          "value": "Elit, sed do eiusmod"
+        }
+      ],
+      "sections": [
+        {
+          "title": "Problem",
+          "paragraphs": [
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+          ]
+        },
+        {
+          "title": "My contribution",
+          "paragraphs": [
+            "Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum. Maecenas faucibus mollis interdum. Donec ullamcorper nulla non metus auctor fringilla. Cras mattis consectetur purus sit amet fermentum."
+          ]
+        },
+        {
+          "title": "Approach",
+          "paragraphs": [
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+          ],
+          "media": [
+            {
+              "src": "art/parallel-lines.webp",
+              "alt": "Abstract cream and charcoal shapes with fine vertical lines.",
+              "caption": "Placeholder illustration.",
+              "width": 1920,
+              "height": 1200
+            }
+          ]
+        },
+        {
+          "title": "Implementation",
+          "paragraphs": [
+            "Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum. Maecenas faucibus mollis interdum. Donec ullamcorper nulla non metus auctor fringilla. Cras mattis consectetur purus sit amet fermentum.",
+            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+          ]
+        },
+        {
+          "title": "Results",
+          "paragraphs": [
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+          ]
+        },
+        {
+          "title": "Reflection",
+          "paragraphs": [
+            "Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum. Maecenas faucibus mollis interdum. Donec ullamcorper nulla non metus auctor fringilla. Cras mattis consectetur purus sit amet fermentum."
+          ]
+        }
+      ]
     }
   },
   {

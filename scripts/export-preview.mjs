@@ -23,6 +23,23 @@ const resumePDF = await readFile(resolve('dist', 'resume.pdf')).then(bytes => by
   return null;
 });
 const mime = { webp: 'image/webp', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg' };
+const imageTokens = new Map();
+async function embedImage(path, publicPath) {
+  if (embedded.has(path)) return embedded.get(path);
+  let token = imageTokens.get(publicPath);
+  if (!token) {
+    const filename = resolve('public', publicPath);
+    if (!filename.startsWith(resolve('public') + '/')) throw new Error(`Preview image is outside public/: ${publicPath}`);
+    const type = mime[publicPath.split('.').pop().toLowerCase()];
+    if (!type) throw new Error(`Unsupported preview image: ${publicPath}`);
+    const bytes = await readFile(filename);
+    token = `__PORTFOLIO_ASSET_${imageTokens.size}__`;
+    assets[token] = `data:${type};base64,${bytes.toString('base64')}`;
+    imageTokens.set(publicPath, token);
+  }
+  embedded.set(path, token);
+  return token;
+}
 for (const [route, file] of Object.entries(routes)) {
   let html = await readFile(resolve('dist', file), 'utf8');
   // srcdoc routes use the preview's message bridge instead of network fetching.
@@ -32,14 +49,23 @@ for (const [route, file] of Object.entries(routes)) {
     const path = match[1];
     const publicPath = path.match(/\/(art|thumbnails)\/.+$/)?.[0].slice(1) || path.match(/favicon\.svg$/)?.[0];
     if (!publicPath) throw new Error(`Cannot locate preview asset: ${path}`);
-    if (!embedded.has(path)) {
-      const token = `__PORTFOLIO_ASSET_${embedded.size}__`;
-      const bytes = await readFile(resolve('public', publicPath));
-      assets[token] = `data:${mime[publicPath.split('.').pop()]};base64,${bytes.toString('base64')}`;
-      embedded.set(path, token);
-    }
+    await embedImage(path, publicPath);
   }
   for (const [path, token] of embedded) html = html.replaceAll(`="${path}"`, `="${token}"`);
+  if (route === 'projects') {
+    const data = html.match(/<script\b[^>]*\bid="portfolio-data"[^>]*>([\s\S]*?)<\/script>/);
+    const projects = JSON.parse(data[1]);
+    const base = html.match(/\bdata-asset-base="([^"]*)"/)?.[1] || '/';
+    for (const project of projects) {
+      const media = [...(project.articleMedia || []), ...(project.caseStudy?.sections || []).flatMap(section => section.media || [])];
+      for (const item of media) {
+        if (!item.src || /^(https?:\/\/|\/\/|data:)/.test(item.src)) continue;
+        const publicPath = item.src.startsWith(base) ? item.src.slice(base.length) : item.src.replace(/^\//, '');
+        item.src = await embedImage(`${base}${publicPath}`, publicPath);
+      }
+    }
+    html = html.replace(data[0], () => data[0].replace(data[1], () => JSON.stringify(projects).replace(/</g, '\\u003c')));
+  }
   for (const match of [...html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"[^>]*>/g)]) {
     const relative = match[1].match(/\/_astro\/.+$/)?.[0].slice(1);
     if (!relative) throw new Error(`Cannot locate preview stylesheet: ${match[1]}`);
