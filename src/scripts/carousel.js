@@ -260,6 +260,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   }
 
   function updateEnd(progress, links) {
+    if (progress > 0) laser.prepare();
     const focused = document.activeElement;
     if (progress !== renderedEndProgress) {
       root.style.setProperty('--end-progress', String(progress));

@@ -66,7 +66,8 @@ for (const [route, file] of Object.entries(routes)) {
 }
 
 function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
-  const frame = document.querySelector('iframe');
+  let frame = document.querySelector('iframe');
+  let cancelHandoff = () => {};
   const favicon = document.createElement('link');
   favicon.rel = 'icon'; favicon.type = 'image/svg+xml'; document.head.append(favicon);
   const expanded = route => {
@@ -85,12 +86,14 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
   let renderGeneration = 0;
   const render = async () => {
     const generation = ++renderGeneration;
+    cancelHandoff();
     const [requested, fragment = ''] = location.hash.slice(1).split('?');
     const route = ['home', 'about', 'projects'].includes(requested) ? requested : 'home';
     document.title = route === 'home' ? 'Derek Stone — Portfolio preview' : `Derek Stone — ${route === 'about' ? 'About' : 'Projects'} preview`;
     let html = expanded(route);
     const order = ['home', 'about', 'projects'];
-    const direction = previousRoute && !pendingHandoff ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
+    const handoff = pendingHandoff;
+    const direction = previousRoute && !handoff ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
     const projectEntry = direction && route === 'projects' && projectSlugs.includes(new URLSearchParams(fragment).get('project'));
     pendingHandoff = false;
     if (direction) await frame.contentWindow?.__PORTFOLIO_PREVIEW_EXIT__?.();
@@ -115,7 +118,35 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
       const id=window.__PORTFOLIO_PREVIEW_FRAGMENT__.slice(1);
       if(id&&!id.startsWith('project='))document.getElementById(decodeURIComponent(id))?.scrollIntoView();
     });<\/script>`;
-    frame.srcdoc = html.replace('</body>', `${navigation}</body>`);
+    html = html.replace('</body>', `${navigation}</body>`);
+    if (!handoff) { frame.srcdoc = html; return; }
+    // The gesture has already revealed About. Keep that painted page on top
+    // until its replacement document is ready, rather than emptying the frame.
+    const outgoing = frame, incoming = document.createElement('iframe');
+    incoming.title = outgoing.title; incoming.dataset.staging = 'true';
+    incoming.inert = true; incoming.setAttribute('aria-hidden', 'true');
+    Object.assign(outgoing.style, { position: 'relative', zIndex: '1' });
+    Object.assign(incoming.style, { position: 'absolute', inset: '0', zIndex: '0' });
+    let paintFrame = 0;
+    const cleanup = () => {
+      incoming.remove(); cancelAnimationFrame(paintFrame); outgoing.removeAttribute('style'); cancelHandoff = () => {};
+    };
+    cancelHandoff = cleanup;
+    incoming.addEventListener('load', () => {
+      if (generation !== renderGeneration) return;
+      paintFrame = requestAnimationFrame(() => {
+        paintFrame = requestAnimationFrame(() => {
+          if (generation !== renderGeneration) return;
+          frame = incoming;
+          delete incoming.dataset.staging; incoming.inert = false; incoming.removeAttribute('aria-hidden');
+          incoming.removeAttribute('style'); outgoing.remove(); cancelHandoff = () => {};
+          const icon = incoming.contentDocument?.querySelector('[data-project-favicon]');
+          if (icon) favicon.href = icon.href;
+          incoming.contentWindow.focus();
+        });
+      });
+    }, { once: true });
+    incoming.srcdoc = html; document.body.append(incoming);
   };
   window.addEventListener('message', event => {
     if (event.source !== frame.contentWindow) return;

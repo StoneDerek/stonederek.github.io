@@ -89,7 +89,9 @@ document.addEventListener('astro:before-swap', event => {
   if (projectEntry) event.newDocument.getElementById('portfolio').setAttribute('data-section-project-entry', '');
   let startMotion;
   const darkHeader = document.querySelector('#portfolio')?.dataset.atGalleryEnd === 'true';
-  if (usesTouchSectionMotion() || projectEntry || projectEntryHandoffs.has(event.signal) || darkHeader) {
+  if (event.info?.gallerySwipe || usesTouchSectionMotion() || projectEntry || projectEntryHandoffs.has(event.signal) || darkHeader) {
+    // A completed edge swipe already shows About. Skip the browser snapshot
+    // handoff as well as the entry animation, so it cannot flash on completion.
     // Keep the short drift on live elements, without relying on an incoming
     // browser snapshot being available to paint on touch devices.
     event.viewTransition.ready.catch(() => {});

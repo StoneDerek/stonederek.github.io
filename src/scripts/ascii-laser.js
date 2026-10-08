@@ -7,9 +7,9 @@ import { canAnimateTiles, createTileCells, createTileMask } from './project-tran
 // size; pointer updates are coalesced into a frame. Only the brief target reaction
 // requests continuous scene frames; the reward has its own small renderer.
 export function mountLaser(host, { onInteraction = () => {} } = {}) {
-  if (!host) return { setActive() {}, destroy() {} };
+  if (!host) return { prepare() {}, setActive() {}, destroy() {} };
   const output = host.querySelector('canvas'), context = output.getContext('2d', { alpha: false });
-  if (!context) return { setActive() {}, destroy() {} };
+  if (!context) return { prepare() {}, setActive() {}, destroy() {} };
   const controls = [...host.querySelectorAll('[data-laser-control="mirror"]')];
   const status = host.querySelector('[data-laser-status]'), reset = host.querySelector('[data-laser-control="reset"]');
   const victory = host.querySelector('[data-laser-victory]'), viewTrophy = host.querySelector('[data-laser-control="trophy"]');
@@ -130,10 +130,13 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
   function render() {
     frame = 0;
     if (!active || disposed || document.hidden) return;
+    draw();
+  }
+  function draw() {
     const start = performance.now();
     if (dirtySize) measure();
     const puzzle = laserPuzzle(width, height, angles), trace = traceLaser(puzzle);
-    const newlyWon = trace.hit && !won;
+    const newlyWon = active && trace.hit && !won;
     if (newlyWon) { won = true; beginVictory(start); }
     drawScene(puzzle, trace, start); sample(); positionControls(puzzle);
     if (host.dataset.solved !== String(won)) {
@@ -159,7 +162,7 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
     if (window.__PORTFOLIO_LASER_PROFILE__) document.dispatchEvent(new CustomEvent('portfolio:laser-frame', {
       detail: { milliseconds: performance.now() - start, timestamp: start, columns, rows, drawn, angles: [...angles], hit: trace.hit, won, celebrating: winPending }
     }));
-    if (winPending && !reducedMotion.matches) requestDraw();
+    if (active && winPending && !reducedMotion.matches) requestDraw();
   }
   function requestDraw() {
     if (active && !disposed && !document.hidden && !frame) frame = requestAnimationFrame(render);
@@ -299,6 +302,11 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
     else requestDraw();
   });
   return {
+    prepare() {
+      // Paint the first scene while it is still offscreen. An opaque canvas
+      // otherwise exposes its initial black buffer during the entering slide.
+      if (!disposed && !document.hidden && (dirtySize || host.dataset.rendered !== 'true')) draw();
+    },
     setActive(value) {
       if (active === value) return;
       active = value;
