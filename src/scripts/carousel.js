@@ -10,6 +10,7 @@ import { createAboutHeader } from './about-header.js';
 import { mountLaser } from './ascii-laser.js';
 import { aboutPalette, linksPalette } from '../data/section-palettes.js';
 import { readHeaderPalette, blendHeaderPalette, stopHeaderPalette } from './header-palette.js';
+import { sectionTiming } from '../data/section-motion.js';
 
 export function mountPortfolio({ sectionLinks = { hide() {} },
   fragment = window.__PORTFOLIO_PREVIEW_FRAGMENT__ ?? window.location.hash, sectionEntry = false } = {}) {
@@ -744,7 +745,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     document.body.classList.add('dialog-open');
     try {
       await settleTiles(root, projectPage, {
-        opening, origin: projectOrigin, scrollTop: opening ? 0 : scrollTop,
+        opening, replacing, origin: projectOrigin, scrollTop: opening ? 0 : scrollTop,
         signal: projectAbort.signal, reducedMotion: reducedMotion.matches
       });
     } finally {
@@ -770,12 +771,18 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (disposed) return;
     const backdrop = replacing && canAnimateTiles({ reducedMotion: reducedMotion.matches })
       ? captureProjectBackdrop(root, projectPage, { scrollTop: projectView.scrollTop }) : null;
+    // A dropdown's first tiles are behind the closing menu or on white space.
+    // Fade the old article immediately so the choice has visible feedback.
+    const outgoing = backdrop?.animate?.([{ opacity: 1 }, { opacity: 0 }], {
+      duration: sectionTiming.exit, easing: 'ease-in', fill: 'both'
+    });
     try {
       projectOrigin = request.origin || projectOrigin;
       projectReturnFocus = request.returnFocus || projectReturnFocus;
       fillProject(request.index);
       await transitionProject(true, { replacing, sectionEntry: request.sectionEntry });
     } finally {
+      outgoing?.cancel();
       backdrop?.remove();
     }
   }

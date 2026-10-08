@@ -96,7 +96,7 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
     const direction = previousRoute && !handoff ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
     const projectEntry = direction && route === 'projects' && projectSlugs.includes(new URLSearchParams(fragment).get('project'));
     pendingHandoff = false;
-    if (direction) await frame.contentWindow?.__PORTFOLIO_PREVIEW_EXIT__?.();
+    if (direction) await frame.contentWindow?.__PORTFOLIO_PREVIEW_EXIT__?.({ route });
     if (generation !== renderGeneration) return;
     const fromPalette = direction ? frame.contentWindow?.__PORTFOLIO_PREVIEW_PALETTE__?.() : null;
     previousRoute = route;

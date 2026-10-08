@@ -47,11 +47,11 @@ const location = gallery ? projects[0].title : page === 'about' ? site.name : 'I
           <a href={site.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn (opens in a new tab)">LinkedIn <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
           <a href={resumeURL(base)} data-resume-link target="_blank" rel="noopener" aria-label="Resume PDF (opens in a new tab)" title="Resume PDF — opens in a new tab">Resume <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
         </div>
-        <div class="menu-colophon"><p class="menu-signature"><span aria-hidden="true">.✦ ݁˖ </span>{site.name}</p><time class="menu-published" datetime={published.iso} aria-label={`Version published ${published.label}`}>{published.label}</time></div>
+        <div class="menu-colophon"><p class="menu-signature"><span aria-hidden="true">.✦ ݁˖ </span>{site.name}</p><time class="menu-published" data-last-updated datetime={published.iso} title={`Last updated ${published.label}`} aria-label={`Last updated ${published.label}`}>Updated {published.label}</time></div>
       </footer>
     </div>
   </details>
-  <nav class="page-links" aria-label="Page navigation" data-scrolled={String(gallery)} inert={gallery} aria-hidden={String(gallery)}>
+  <nav class="page-links" aria-label="Page navigation" data-scrolled={String(gallery)} inert={gallery} aria-hidden={String(gallery)} transition:name="section-links" transition:animate="none">
     <a href={url()} data-site-route="home" aria-current={page === 'home' ? 'page' : undefined}>Home</a>
     <a href={url('about/')} data-site-route="about" aria-current={page === 'about' ? 'page' : undefined}>About</a>
     <a href={url('projects/')} data-site-route="projects" data-action={gallery ? 'gallery' : undefined} aria-current={gallery ? 'page' : undefined}>Projects</a>

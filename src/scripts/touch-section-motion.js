@@ -50,7 +50,7 @@ window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',
   if (event.matches) finishTouchSectionMotion();
 });
 
-export function captureTouchSectionMotion(direction, { projectEntry = false } = {}) {
+export function captureTouchSectionMotion(direction, { projectEntry = false, hideSectionLinks = false } = {}) {
   finishTouchSectionMotion();
   const drawings = [...document.querySelectorAll(contentSelector)].filter(element => {
     const style = getComputedStyle(element);
@@ -63,6 +63,11 @@ export function captureTouchSectionMotion(direction, { projectEntry = false } = 
   // A label copy loses its page-scoped selectors when its routing attributes
   // are removed. Freeze those hidden rows as well as any running animation.
   const labelDrawing = copyDrawing(label, { freeze: true });
+  const sectionLinks = hideSectionLinks && document.querySelector('.page-links');
+  const linksStyle = sectionLinks && getComputedStyle(sectionLinks);
+  const linksDrawing = linksStyle?.visibility === 'visible' && Number(linksStyle.opacity) > 0
+    ? { ...copyDrawing(sectionLinks, { freeze: true }), rect: sectionLinks.getBoundingClientRect(),
+      background: linksStyle.backgroundColor } : null;
 
   return ({ projectFinished = Promise.resolve() } = {}) => {
     const host = document.querySelector('#portfolio, .profile-shell');
@@ -90,6 +95,22 @@ export function captureTouchSectionMotion(direction, { projectEntry = false } = 
       }
     }
     drawings.forEach(drawing => drawing.restoreScroll());
+    if (linksDrawing) {
+      const layer = document.createElement('div');
+      layer.className = 'section-outgoing section-outgoing-navigation';
+      layer.setAttribute('aria-hidden', 'true');
+      layer.inert = true;
+      Object.assign(linksDrawing.clone.style, {
+        left: `${linksDrawing.rect.left}px`, top: `${linksDrawing.rect.top}px`,
+        backgroundColor: linksDrawing.background, transition: 'none'
+      });
+      layer.append(linksDrawing.clone);
+      host.append(layer);
+      layers.push(layer);
+      animations.push(linksDrawing.clone.animate([{ opacity: linksDrawing.opacity }, { opacity: 0 }], {
+        duration: sectionTiming.exit, easing: 'ease-in', fill: 'both'
+      }));
+    }
     if (!projectEntry) incoming.forEach(element => {
       const artwork = element.matches('[data-section-art]');
       const resting = getComputedStyle(element).transform;

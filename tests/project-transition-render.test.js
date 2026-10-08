@@ -135,6 +135,27 @@ test('interrupting a direct article switch releases its mask while the outgoing 
   } finally { controller.abort(); s.restore(); }
 });
 
+test('replacing an article reveals its tiles sooner and completes without the full gallery-opening wait', async () => {
+  const s = scene();
+  const controller = new AbortController();
+  try {
+    const finished = settleTiles(s.root, s.page, {
+      opening: true, replacing: true, origin: { x: .5, y: .5 }, signal: controller.signal
+    });
+    assert.equal(s.root.children[0].hidden, true, 'the initial copy must remain concealed');
+    s.advance(80);
+    assert.equal(s.root.children[0].hidden, false);
+    s.advance(480);
+    assert.equal(s.page.style.visibility, 'hidden', 'keep the original concealed until the last tiles finish');
+    s.advance(490);
+    await finished;
+    assert.equal(s.root.children.length, 0);
+    assert.equal(s.frames.size, 0);
+    assert.equal(s.page.style.opacity, '');
+    assert.equal(s.page.style.visibility, '');
+  } finally { controller.abort(); s.restore(); }
+});
+
 test('interrupting an opening restores the article and removes every pending tile frame', async () => {
   const s = scene();
   const controller = new AbortController();

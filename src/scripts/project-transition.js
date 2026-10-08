@@ -117,9 +117,9 @@ export function captureProjectBackdrop(root, page, { scrollTop = 0 } = {}) {
   return element;
 }
 
-export function settleTiles(root, page, { opening, origin, scrollTop = 0, signal, reducedMotion = false } = {}) {
+export function settleTiles(root, page, { opening, replacing = false, origin, scrollTop = 0, signal, reducedMotion = false } = {}) {
   if (!canAnimateTiles({ signal, reducedMotion })) return Promise.resolve();
-  const travel = opening ? 420 : 240;
+  const travel = opening && !replacing ? 420 : 240;
   const duration = opening ? 250 : 180;
   const total = travel + duration;
   const originalOpacity = page.style.opacity;

@@ -14,7 +14,7 @@ html { background: #fff; }
 ::view-transition-group(gallery-caption), ::view-transition-group(gallery-filmstrip),
 ::view-transition-group(gallery-controls), ::view-transition-group(gallery-article) { z-index: 2; }
 ::view-transition-group(site-navigation) { z-index: 3; }
-::view-transition-group(navigation-location) { z-index: 4; }
+::view-transition-group(navigation-location), ::view-transition-group(section-links) { z-index: 4; }
 /* Keep outgoing rules available after Astro swaps to a different page's head. */
 ::view-transition-old(navigation-location), ::view-transition-old(home-content), ::view-transition-old(about-content),
 ::view-transition-old(home-footer), ::view-transition-old(about-footer),
@@ -35,9 +35,13 @@ html { background: #fff; }
 ::view-transition-old(gallery-art) { animation: section-fade-out var(--section-artwork) linear both !important; mix-blend-mode: normal; }
 ::view-transition-new(gallery-art) { animation: section-fade-in var(--section-artwork) linear both !important; mix-blend-mode: normal; }
 /* Add complementary snapshot colors in an isolated pair, retaining opacity. */
-::view-transition-image-pair(site-navigation) { isolation: isolate; }
-::view-transition-old(site-navigation) { animation: section-fade-out var(--section-header) var(--section-ease) both !important; mix-blend-mode: plus-lighter; }
-::view-transition-new(site-navigation) { animation: section-fade-in var(--section-header) var(--section-ease) both !important; mix-blend-mode: plus-lighter; }
+::view-transition-image-pair(site-navigation), ::view-transition-image-pair(section-links) { isolation: isolate; }
+::view-transition-old(site-navigation), ::view-transition-old(section-links) { animation: section-fade-out var(--section-header) var(--section-ease) both !important; mix-blend-mode: plus-lighter; }
+::view-transition-new(site-navigation), ::view-transition-new(section-links) { animation: section-fade-in var(--section-header) var(--section-ease) both !important; mix-blend-mode: plus-lighter; }
+/* The links disappear with the outgoing text when Projects hides the strip. */
+html[data-section-links-exit]::view-transition-old(section-links) { animation: section-fade-out var(--section-exit) ease-in both !important; mix-blend-mode: normal; }
+html[data-section-links-exit]::view-transition-new(section-links) { animation: none !important; opacity: 0; }
+html[data-section-links-exit][data-astro-transition-fallback="old"] .page-links { animation: section-fade-out var(--section-exit) ease-in both !important; }
 ::view-transition-old(navigation-location) { animation: none !important; opacity: 0; }
 /* Astro's fallback already waits for the exit before swapping documents. */
 html[data-astro-transition-fallback="new"] :is([data-section-motion], [data-section-fade], .artwork-visual) { animation-delay: 0ms !important; }
@@ -52,6 +56,7 @@ html[data-gallery-handoff] [data-astro-transition-scope] { animation: none !impo
 .section-outgoing { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
 .section-outgoing-art { z-index: 1; }
 .section-outgoing-text { z-index: 2; }
+.section-outgoing-navigation { z-index: 60; }
 html[data-touch-section-motion] :is(.profile-main, .profile-footer) { position: relative; z-index: 2; }
 html[data-touch-section-motion] .carousel { z-index: auto; }
 html[data-touch-section-motion] .project-caption { z-index: 2; }
@@ -296,6 +301,8 @@ dialog::backdrop { background: #050b1bc9; }
 .site-menu a.menu-section, .site-menu a.menu-project { color: inherit; text-decoration: none; }
 .menu-gallery-link { font-weight: 600 !important; }
 .page-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 2px; width: min(264px, 100%); margin: 6px auto 0; padding: 4px; border-radius: 6px; background: #fff; color: #211b2b; transition: opacity 160ms ease, transform 160ms ease, visibility 160ms; }
+.site-header:is([data-page="home"], [data-page="about"]) .page-links,
+#portfolio[data-about-swipe] .page-links { background: rgb(255 255 255 / .8); }
 .page-links[data-scrolled="true"] { opacity: 0; transform: translateY(-6px); visibility: hidden; pointer-events: none; }
 .page-links a { display: grid; place-items: center; min-width: 0; min-height: 34px; padding: 6px 10px; border-radius: 4px; color: inherit; text-decoration: none; font-size: 14px; transition: transform 140ms ease, background-color 320ms ease; }
 .page-links a[aria-current="page"] { background: var(--nav-selection, color-mix(in srgb, var(--accent) 80%, white)); }
