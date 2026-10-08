@@ -3,9 +3,11 @@ import site from '../data/site.json';
 import '../styles/portfolio.css';
 import { ClientRouter } from 'astro:transitions';
 import { projectIcon } from '../data/project-icons.js';
-import { homePalette } from '../data/section-palettes.js';
+import { homePalette, darkHomePalette } from '../data/section-palettes.js';
 import { sectionTiming } from '../data/section-motion.js';
-const { title = site.title, description = site.description, favicon = projectIcon(homePalette) } = Astro.props;
+import { initializeTheme, themeStorageKey } from '../scripts/theme.js';
+const { title = site.title, description = site.description, favicon = projectIcon(homePalette), darkFavicon = Astro.props.favicon ? favicon : projectIcon(darkHomePalette) } = Astro.props;
+const themeStartup = `(${initializeTheme.toString()})(${JSON.stringify(themeStorageKey)});`;
 ---
 <!doctype html>
 <html lang="en" transition:name="root" transition:animate="none" style={`--section-exit:${sectionTiming.exit}ms;--section-enter:${sectionTiming.enter}ms;--section-header:${sectionTiming.header}ms;--section-artwork:${sectionTiming.artwork}ms;--section-ease:${sectionTiming.easing}`}>
@@ -15,7 +17,8 @@ const { title = site.title, description = site.description, favicon = projectIco
     <meta name="theme-color" content="#ffffff" />
     <meta name="description" content={description} />
     <title>{title}</title>
-    <link rel="icon" href={favicon} type="image/svg+xml" data-project-favicon />
+    <link rel="icon" href={favicon} type="image/svg+xml" data-project-favicon data-theme-light-favicon={favicon} data-theme-dark-favicon={darkFavicon} />
+    <script is:inline set:html={themeStartup} />
     <ClientRouter />
   </head>
   <body>

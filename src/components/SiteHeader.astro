@@ -12,11 +12,11 @@ const published = publicationDate();
 const cat = ['  ╱|、', '(˚ˎ 。7', ' |、˜〵', 'じしˍ,)ノ'].join('\n');
 const location = gallery ? projects[0].title : page === 'about' ? site.name : 'Introduction';
 ---
-<header class="site-header" data-owner={site.name} data-page={page} transition:name="site-navigation" transition:animate="none">
+<header class="site-header" data-owner={site.name} data-page={page} data-section-fade transition:name="site-navigation" transition:animate={sectionFade}>
   <details class="site-menu" data-menu>
     <summary aria-label={`Open navigation. ${page === 'home' ? 'Home' : gallery ? 'Projects' : 'About'}: ${location}`} aria-controls="project-navigation">
       <span class="menu-name">{site.header}</span>
-      <span class="menu-status-row"><span class="menu-status"><span class="menu-location" data-section-fade transition:name="navigation-location" transition:animate={sectionFade}><span class="menu-context">
+      <span class="menu-status-row"><span class="menu-status"><span class="menu-location"><span class="menu-context">
         <span class="menu-context-row" data-menu-context="work" aria-hidden={page === 'about'}>{gallery ? 'Projects:' : 'Home:'}</span>
         <span class="menu-context-row menu-context-project" data-menu-context="project" aria-hidden="true">Project:</span>
         <span class:list={['menu-context-row', 'menu-context-about', { 'is-page-context': page === 'about' }]} data-menu-context="about" aria-hidden={page !== 'about'}>About:</span>
@@ -47,7 +47,7 @@ const location = gallery ? projects[0].title : page === 'about' ? site.name : 'I
           <a href={site.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn (opens in a new tab)">LinkedIn <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
           <a href={resumeURL(base)} data-resume-link target="_blank" rel="noopener" aria-label="Resume PDF (opens in a new tab)" title="Resume PDF — opens in a new tab">Resume <svg class="menu-link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></a>
         </div>
-        <div class="menu-colophon"><p class="menu-signature"><span aria-hidden="true">.✦ ݁˖ </span>{site.name}</p><time class="menu-published" datetime={published.iso} aria-label={`Version published ${published.label}`}>{published.label}</time></div>
+        <div class="menu-colophon"><p class="menu-signature"><span aria-hidden="true">.✦ ݁˖ </span>{site.name}</p><span class="publication"><time class="menu-published" data-publication-date datetime={published.iso} tabindex="0" aria-describedby="publication-tooltip">Updated {published.label}</time><span class="publication-tooltip" id="publication-tooltip" role="tooltip">Last updated {published.label}</span></span></div>
       </footer>
     </div>
   </details>

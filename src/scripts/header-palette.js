@@ -17,6 +17,7 @@ export function stopHeaderPalette(header) { blends.get(header)?.(); }
 export function interpolatePalette(from, to, progress) {
   const t = Math.max(0, Math.min(1, progress));
   const keys = from.selection && to.selection ? ['accent', 'ink', 'selection'] : ['accent', 'ink'];
+  if (from.selectionInk && to.selectionInk) keys.push('selectionInk');
   const palette = Object.fromEntries(keys.map(key => {
     if (t === 0 || t === 1) return [key, (t ? to : from)[key]];
     const a = channels(from[key]), b = channels(to[key]);
@@ -28,6 +29,12 @@ export function interpolatePalette(from, to, progress) {
   if (t > 0 && t < 1 && (Math.max(background, ink) + .05) / (Math.min(background, ink) + .05) < 4.5) {
     palette.ink = background > .179 ? '#000' : '#fff';
   }
+  if (palette.selection && palette.selectionInk && t > 0 && t < 1) {
+    const selected = luminance(palette.selection), selectedInk = luminance(palette.selectionInk);
+    if ((Math.max(selected, selectedInk) + .05) / (Math.min(selected, selectedInk) + .05) < 4.5) {
+      palette.selectionInk = selected > .179 ? '#000' : '#fff';
+    }
+  }
   return palette;
 }
 
@@ -36,7 +43,7 @@ export function readHeaderPalette(header = document.querySelector('.site-header'
   if (!menu) return null;
   const selected = header.querySelector('.page-links a[aria-current="page"]');
   return { accent: getComputedStyle(menu).backgroundColor, ink: getComputedStyle(header).color,
-    ...(selected ? { selection: getComputedStyle(selected).backgroundColor } : {}) };
+    ...(selected ? { selection: getComputedStyle(selected).backgroundColor, selectionInk: getComputedStyle(selected).color } : {}) };
 }
 
 // Blend opaque colors on the incoming live header. Fading the entire header
@@ -49,15 +56,19 @@ export function blendHeaderPalette(header, from, { duration = 180 } = {}) {
   // the first cover's displayed colors toward a directly requested project.
   const to = style ? { accent: style.getPropertyValue('--accent').trim(), ink: style.getPropertyValue('--ink').trim() } : null;
   if (!from || !to?.accent || !to.ink || reducedMotion.matches || document.hidden) return () => {};
-  if (from.selection) to.selection = header.closest?.('#portfolio')?.dataset.atGalleryEnd === 'true'
-    ? '#e4e4e7' : `rgb(${channels(to.accent).map(value => Math.round(value * .8 + 255 * .2)).join(', ')})`;
+  const selected = header.querySelector('.page-links a[aria-current="page"]');
+  if (from.selection && selected) {
+    to.selection = getComputedStyle(selected).backgroundColor;
+    to.selectionInk = getComputedStyle(selected).color;
+  }
   const controller = new AbortController();
-  const saved = ['--accent', '--ink', '--nav-selection'].map(name => [name, header.style.getPropertyValue(name), header.style.getPropertyPriority(name)]);
+  const saved = ['--accent', '--ink', '--nav-selection', '--nav-selection-ink'].map(name => [name, header.style.getPropertyValue(name), header.style.getPropertyPriority(name)]);
   let frame = 0, finished = false;
   const apply = palette => {
     header.style.setProperty('--accent', palette.accent);
     header.style.setProperty('--ink', palette.ink);
     if (palette.selection) header.style.setProperty('--nav-selection', palette.selection);
+    if (palette.selectionInk) header.style.setProperty('--nav-selection-ink', palette.selectionInk);
   };
   const finish = () => {
     if (finished) return;
