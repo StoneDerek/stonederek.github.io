@@ -61,9 +61,9 @@ button { font: inherit; cursor: pointer; border: 0; }
 .portfolio { --thumb-width: 80px; --strip-inset: 16px; position: relative; height: 100svh; min-height: 260px; overflow: hidden; isolation: isolate; color: var(--accent); background: var(--canvas); transition: color 320ms ease; }
 .skip-link { position: absolute; top: 12px; left: 12px; z-index: 70; padding: 12px; border-radius: 6px; background: var(--accent); color: var(--ink); transform: translateY(-200%); font-size: 12px; }
 .skip-link:focus { transform: translateY(0); }
-.site-header { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 60; width: min(300px, calc(100% - 32px)); color: var(--ink); pointer-events: none; transition: color 320ms ease; }
+.site-header { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 60; width: min(300px, calc(100% - 32px)); color: var(--ink); font-size: 13px; line-height: 18px; pointer-events: none; transition: color 320ms ease; }
 .site-menu, .page-links { pointer-events: auto; }
-.site-menu { --menu-type-size: 13px; --menu-rule: 1px solid color-mix(in srgb, var(--ink) 70%, transparent); --menu-row-rule: .5px solid color-mix(in srgb, var(--ink) 38%, transparent); --menu-height: calc(100svh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom))); position: relative; background: var(--accent); border-radius: 8px; overflow: hidden; contain: paint; font-size: var(--menu-type-size); font-weight: 400; line-height: 1.35; }
+.site-menu { --menu-rule: 1px solid color-mix(in srgb, var(--ink) 70%, transparent); --menu-row-rule: .5px solid color-mix(in srgb, var(--ink) 38%, transparent); --menu-height: calc(100svh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom))); position: relative; background: var(--accent); border-radius: 8px; overflow: hidden; contain: paint; font-size: inherit; font-weight: 400; line-height: inherit; }
 .site-menu[open] { height: var(--menu-height); }
 .site-menu { transition: background-color 320ms ease; }
 .site-header[data-palette-motion], .site-header[data-palette-motion] .site-menu { transition: none; }
@@ -293,13 +293,13 @@ dialog::backdrop { background: #050b1bc9; }
 .menu-gallery-link { font-weight: 600 !important; }
 .page-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 2px; width: min(264px, 100%); margin: 6px auto 0; padding: 4px; border-radius: 6px; background: var(--canvas); color: var(--page-text); transition: opacity 160ms ease, transform 160ms ease, visibility 160ms; }
 .page-links[data-scrolled="true"] { opacity: 0; transform: translateY(-6px); visibility: hidden; pointer-events: none; }
-.profile-shell .page-links { background: color-mix(in srgb, var(--nav-surface) 72%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
-.page-links a { display: grid; place-items: center; min-width: 0; min-height: 34px; padding: 6px 10px; border-radius: 4px; color: inherit; text-decoration: none; font-size: 14px; transition: transform 140ms ease, background-color 320ms ease; }
+.profile-shell .page-links { background: color-mix(in srgb, var(--nav-surface) 96%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.page-links a { display: grid; place-items: center; min-width: 0; min-height: 34px; padding: 6px 10px; border-radius: 4px; color: inherit; text-decoration: none; font-size: inherit; transition: transform 140ms ease, background-color 320ms ease; }
 .page-links a[aria-current="page"] { background: var(--nav-selection, color-mix(in srgb, var(--accent) 80%, var(--nav-surface))); color: var(--nav-selection-ink, var(--ink)); }
 .portfolio[data-at-gallery-end="true"] .page-links a[aria-current="page"] { background: var(--nav-selection, var(--nav-links-selection)); color: var(--nav-selection-ink, var(--page-text)); }
 .page-links a:active, .page-links a[data-pressed] { transform: scale(.96); }
 .site-header .page-links a:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
-@media (hover: hover) and (pointer: fine) { .page-links a:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--page-text) 9%, var(--nav-surface)); } }
+@media (hover: hover) and (pointer: fine) { .page-links a:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--accent) 40%, var(--nav-surface)); } }
 .site-header:has(.site-menu[open]) .page-links { visibility: hidden; pointer-events: none; }
 #portfolio[data-about-swipe] .site-header:not(:has(.site-menu[open])) .page-links { opacity: var(--about-links-opacity, 0); transform: translateY(calc(-6px * (1 - var(--about-links-opacity, 0)))); visibility: visible; pointer-events: none; transition: none; }
 #portfolio[data-about-swipe] .site-header:not(:has(.site-menu[open])) .page-links[data-about-ready="true"] { pointer-events: auto; }
