@@ -143,7 +143,7 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
     drawScene(puzzle, trace, start); sample(); positionControls(puzzle);
     if (host.dataset.solved !== String(won)) {
       host.dataset.solved = String(won);
-      status.textContent = won ? 'Target reached.' : 'Drag the mirrors to reach the target.';
+      status.hidden = won;
     }
     viewTrophy.hidden = !won || winPending;
     context.setTransform(ratio, 0, 0, ratio, 0, 0); context.fillStyle = getComputedStyle(host).getPropertyValue('--canvas').trim() || '#fff'; context.fillRect(0, 0, width, height);
