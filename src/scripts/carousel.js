@@ -1,4 +1,4 @@
-import { settleTiles, canAnimateTiles, captureProjectBackdrop } from './project-transition.js';
+import { settleTiles, canAnimateTiles, captureProjectBackdrop, articleRevealOrigin } from './project-transition.js';
 import { mountProjectMenu } from './project-menu.js';
 import { mountSiteMenu } from './site-menu.js';
 import { createProjectRequests } from './project-navigation.js';
@@ -8,7 +8,7 @@ import { createAboutSwipe, galleryFrame, settleProjectSwipe } from './section-st
 import { createMotionSpring } from './motion-spring.js';
 import { createAboutHeader } from './about-header.js';
 import { mountLaser } from './ascii-laser.js';
-import { aboutPalette, linksPalette } from '../data/section-palettes.js';
+import { aboutPalette, darkAboutPalette, linksPalette } from '../data/section-palettes.js';
 import { readHeaderPalette, blendHeaderPalette, stopHeaderPalette } from './header-palette.js';
 
 export function mountPortfolio({ sectionLinks = { hide() {} },
@@ -25,7 +25,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   const credits = root.querySelector('[data-credits]');
   const projects = JSON.parse(data.textContent);
   const requestedIndex = projectIndexFromHash(fragment, projects);
-  const aboutHeader = createAboutHeader(projects[0].palette, aboutPalette);
+  const aboutTarget = () => document.documentElement.dataset.theme === 'dark' ? darkAboutPalette : aboutPalette;
+  let aboutHeader = createAboutHeader(projects[0].palette, aboutTarget());
   const updateFavicon = mountProjectFavicon(document.querySelector('[data-project-favicon]'));
   const slides = [...root.querySelectorAll('[data-slide]')];
   const slideImages = slides.map(slide => slide.querySelector('img'));
@@ -562,10 +563,16 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     presentAbout(0);
   }
 
+  listen(document, 'portfolio:theme-change', () => {
+    stopHeaderPalette(siteHeader);
+    aboutHeader = createAboutHeader(projects[0].palette, aboutTarget());
+    if (aboutTravel) presentAbout(aboutTravel);
+  });
+
   function animateAbout(target, { commit = false, velocity = aboutVelocity } = {}) {
     stopAbout();
     aboutCommitting = commit;
-    if (commit) updateFavicon(aboutPreview.dataset.favicon);
+    if (commit) updateFavicon(document.documentElement.dataset.theme === 'dark' ? aboutPreview.dataset.darkFavicon : aboutPreview.dataset.favicon);
     const from = aboutTravel;
     const finish = () => {
       aboutFrame = 0;
@@ -774,6 +781,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       projectOrigin = request.origin || projectOrigin;
       projectReturnFocus = request.returnFocus || projectReturnFocus;
       fillProject(request.index);
+      if (replacing) projectOrigin = articleRevealOrigin(projectPage.querySelector('[data-detail-title]').getBoundingClientRect(),
+        document.documentElement.clientWidth, projectView.clientHeight);
       await transitionProject(true, { replacing, sectionEntry: request.sectionEntry });
     } finally {
       backdrop?.remove();

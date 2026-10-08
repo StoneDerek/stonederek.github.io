@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { Script } from 'node:vm';
 import { build } from 'esbuild';
+import { initializeTheme } from '../src/scripts/theme.js';
 
 // Bundle the actual production pages into one offline, navigable review file.
 // Each route runs in a fresh frame, so gallery event listeners never accumulate.
@@ -66,6 +67,13 @@ for (const [route, file] of Object.entries(routes)) {
 }
 
 function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
+  let themeChoice = window.__PORTFOLIO_THEME_STATE__?.choice || 'system';
+  const systemPreference = window.matchMedia('(prefers-color-scheme: dark)');
+  systemPreference.addEventListener('change', () => {
+    document.querySelectorAll('iframe').forEach(element => element.contentWindow?.postMessage({
+      type: 'portfolio-preview-system-theme', dark: systemPreference.matches
+    }, '*'));
+  });
   let frame = document.querySelector('iframe');
   let cancelHandoff = () => {};
   const favicon = document.createElement('link');
@@ -101,7 +109,7 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
     const fromPalette = direction ? frame.contentWindow?.__PORTFOLIO_PREVIEW_PALETTE__?.() : null;
     previousRoute = route;
     if (projectEntry) html = html.replace(/<main\b([^>]*\bid="portfolio"[^>]*)>/, '<main$1 data-section-project-entry>');
-    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_FROM_PALETTE__=${escapeScript(fromPalette)};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
+    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_THEME_CHOICE__=${escapeScript(themeChoice)};window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=${systemPreference.matches};window.addEventListener('message',function(event){if(event.source===window.parent&&event.data?.type==='portfolio-preview-system-theme'){window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=!!event.data.dark;document.dispatchEvent(new Event('portfolio:preview-system-change'))}});window.__PORTFOLIO_PREVIEW_SET_THEME__=function(state){window.parent.postMessage({type:'portfolio-preview-theme',choice:state.choice,resolved:state.resolved},'*')};window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_FROM_PALETTE__=${escapeScript(fromPalette)};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
     html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
     html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*(")/, `$1${resumeAddress}$2`);
     // Attributes can appear in either order in compiler output.
@@ -150,6 +158,11 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
   };
   window.addEventListener('message', event => {
     if (event.source !== frame.contentWindow) return;
+    if (event.data?.type === 'portfolio-preview-theme' && ['system', 'light', 'dark'].includes(event.data.choice)) {
+      themeChoice = event.data.choice;
+      document.documentElement.dataset.theme = event.data.resolved === 'dark' ? 'dark' : 'light';
+      window.__PORTFOLIO_THEME_STATE__ = { choice: themeChoice, resolved: document.documentElement.dataset.theme };
+    }
     if (event.data?.type === 'portfolio-preview-route' && ['home', 'about', 'projects'].includes(event.data.route)) {
       pendingHandoff = Boolean(event.data.gallerySwipe);
       const hash = `#${event.data.route}${event.data.fragment ? `?${event.data.fragment}` : ''}`;
@@ -175,6 +188,8 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
 const payload = JSON.stringify({ pages, assets, resumePDF, projectSlugs }).replaceAll('<', '\\u003c');
 const loader = `(${initializePreview.toString()})(JSON.parse(document.getElementById('preview-data').textContent));`;
 new Script(loader, { filename: 'preview-navigation.js' });
-const output = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Derek Stone — Portfolio preview</title><style>html,body{margin:0;width:100%;height:100%;background:#fff}iframe{display:block;width:100%;height:100%;border:0}noscript{padding:24px;font:16px/1.5 Arial,sans-serif}</style></head><body><iframe title="Derek Stone’s portfolio"></iframe><noscript>Open this preview in a browser with JavaScript enabled to explore Home, About, and Projects.</noscript><script type="application/json" id="preview-data">${payload}</script><script>${loader}</script></body></html>`;
+const startup = `(${initializeTheme.toString()})();`;
+new Script(startup, { filename: 'preview-theme-startup.js' });
+const output = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Derek Stone — Portfolio preview</title><style>html,body{margin:0;width:100%;height:100%}html{background:#fff;color-scheme:light}html[data-theme="dark"]{background:#17171b;color-scheme:dark}iframe{display:block;width:100%;height:100%;border:0}noscript{padding:24px;font:16px/1.5 Arial,sans-serif}</style><script>${startup}</script></head><body><iframe title="Derek Stone’s portfolio"></iframe><noscript>Open this preview in a browser with JavaScript enabled to explore Home, About, and Projects.</noscript><script type="application/json" id="preview-data">${payload}</script><script>${loader}</script></body></html>`;
 await writeFile('portfolio-preview.html', output);
 console.log(`Exported all three portfolio pages (${Math.round(Buffer.byteLength(output) / 1024)} KB).`);

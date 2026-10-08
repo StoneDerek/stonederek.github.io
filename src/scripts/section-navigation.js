@@ -8,6 +8,10 @@ import { prepareGalleryImages } from './section-assets.js';
 import { captureTouchSectionMotion, finishTouchSectionMotion, usesTouchSectionMotion } from './touch-section-motion.js';
 import { projectSectionEntry } from './project-links.js';
 import { readHeaderPalette, blendHeaderPalette } from './header-palette.js';
+import { mountTheme } from './theme.js';
+import { mountPublicationLabel } from './publication-label.js';
+
+const theme = mountTheme();
 
 let mountedHeader = null;
 let dispose = () => {};
@@ -24,11 +28,13 @@ function mount({ fragment, sectionEntry = Boolean(window.__PORTFOLIO_PREVIEW_SEC
   if (!header || header === mountedHeader) return;
   dispose();
   mountedHeader = header;
+  theme.refresh();
+  const releasePublication = mountPublicationLabel();
   const links = mountSectionLinks();
   const cleanup = header.dataset.page === 'projects'
     ? mountPortfolio({ sectionLinks: links, fragment, sectionEntry }) : mountProfileNavigation();
   dispose = () => {
-    cleanup?.(); links.destroy(); mountedHeader = null;
+    cleanup?.(); links.destroy(); releasePublication(); mountedHeader = null;
     if (paletteHeader === header) { stopPalette(); stopPalette = () => {}; paletteHeader = null; }
   };
   if (window.__PORTFOLIO_PREVIEW_DIRECTION__) {
@@ -120,6 +126,10 @@ document.addEventListener('astro:before-swap', event => {
   dispose();
 });
 document.addEventListener('astro:page-load', mount);
+document.addEventListener('portfolio:theme-change', () => {
+  finishTouchSectionMotion();
+  stopPalette();
+});
 document.addEventListener('portfolio:section-navigate', event => {
   const route = event.detail?.route;
   const link = document.querySelector(route === 'about' ? '[data-menu-about]' : '[data-menu-gallery]');
