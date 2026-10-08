@@ -7,10 +7,17 @@ import { sectionTiming } from '../data/section-motion.js';
 import { prepareGalleryImages } from './section-assets.js';
 import { captureTouchSectionMotion, finishTouchSectionMotion, usesTouchSectionMotion } from './touch-section-motion.js';
 import { projectSectionEntry } from './project-links.js';
+import { readHeaderPalette, blendHeaderPalette } from './header-palette.js';
 
 let mountedHeader = null;
 let dispose = () => {};
 const projectEntryHandoffs = new WeakSet();
+let paletteHeader = null;
+let stopPalette = () => {};
+function startPalette(header, from) {
+  stopPalette(); paletteHeader = header;
+  stopPalette = blendHeaderPalette(header, from, { duration: sectionTiming.header });
+}
 
 function mount({ fragment, sectionEntry = Boolean(window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__) } = {}) {
   const header = document.querySelector('.site-header');
@@ -20,8 +27,14 @@ function mount({ fragment, sectionEntry = Boolean(window.__PORTFOLIO_PREVIEW_SEC
   const links = mountSectionLinks();
   const cleanup = header.dataset.page === 'projects'
     ? mountPortfolio({ sectionLinks: links, fragment, sectionEntry }) : mountProfileNavigation();
-  dispose = () => { cleanup?.(); links.destroy(); mountedHeader = null; };
-  if (window.__PORTFOLIO_PREVIEW_DIRECTION__) animatePreviewEntry(window.__PORTFOLIO_PREVIEW_DIRECTION__);
+  dispose = () => {
+    cleanup?.(); links.destroy(); mountedHeader = null;
+    if (paletteHeader === header) { stopPalette(); stopPalette = () => {}; paletteHeader = null; }
+  };
+  if (window.__PORTFOLIO_PREVIEW_DIRECTION__) {
+    startPalette(header, window.__PORTFOLIO_PREVIEW_FROM_PALETTE__);
+    animatePreviewEntry(window.__PORTFOLIO_PREVIEW_DIRECTION__);
+  }
   return cleanup;
 }
 
@@ -44,6 +57,7 @@ function animatePreviewEntry(direction) {
 // The offline preview swaps frames instead of using Astro's document router.
 // Give it the same exit phase, keeping navigation available for a newer choice.
 if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ !== undefined) {
+  window.__PORTFOLIO_PREVIEW_PALETTE__ = () => readHeaderPalette();
   window.__PORTFOLIO_PREVIEW_EXIT__ = () => {
     document.dispatchEvent(new Event('portfolio:preview-exit'));
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return Promise.resolve();
@@ -74,7 +88,10 @@ document.addEventListener('astro:before-swap', event => {
   const projectEntry = data && projectSectionEntry(event.from, event.to, JSON.parse(data.textContent)) >= 0;
   if (projectEntry) event.newDocument.getElementById('portfolio').setAttribute('data-section-project-entry', '');
   let startMotion;
-  if (usesTouchSectionMotion() || projectEntry || projectEntryHandoffs.has(event.signal)) {
+  const darkHeader = document.querySelector('#portfolio')?.dataset.atGalleryEnd === 'true';
+  if (event.info?.gallerySwipe || usesTouchSectionMotion() || projectEntry || projectEntryHandoffs.has(event.signal) || darkHeader) {
+    // A completed edge swipe already shows About. Skip the browser snapshot
+    // handoff as well as the entry animation, so it cannot flash on completion.
     // Keep the short drift on live elements, without relying on an incoming
     // browser snapshot being available to paint on touch devices.
     event.viewTransition.ready.catch(() => {});
@@ -84,7 +101,10 @@ document.addEventListener('astro:before-swap', event => {
       startMotion = captureTouchSectionMotion(direction, { projectEntry });
     }
   }
-  if (startMotion || projectEntry) {
+  const palette = !event.info?.gallerySwipe
+    && (usesTouchSectionMotion() || projectEntry || darkHeader || typeof document.startViewTransition !== 'function')
+    ? readHeaderPalette() : null;
+  if (startMotion || projectEntry || palette) {
     const swap = event.swap;
     event.swap = () => {
       swap();
@@ -92,6 +112,7 @@ document.addEventListener('astro:before-swap', event => {
       // normal page-load event is too late and would expose the gallery first.
       const cleanup = projectEntry ? mount({ fragment: event.to.hash, sectionEntry: true }) : null;
       startMotion?.({ projectFinished: cleanup?.entryDone });
+      if (palette) startPalette(document.querySelector('.site-header'), palette);
     };
   }
   event.newDocument.documentElement.toggleAttribute('data-gallery-handoff', Boolean(event.info?.gallerySwipe));

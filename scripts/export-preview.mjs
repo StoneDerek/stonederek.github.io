@@ -10,6 +10,12 @@ const pages = {};
 const assets = {};
 const projectSlugs = JSON.parse(await readFile(resolve('src/data/projects.json'), 'utf8')).map(project => project.slug);
 const embedded = new Map();
+const resources = new Map();
+const embedResource = (path, content) => {
+  const token = `__PORTFOLIO_RESOURCE_${resources.size}__`;
+  resources.set(path, token); assets[token] = content;
+  return token;
+};
 const resumePDF = await readFile(resolve('dist', 'resume.pdf')).then(bytes => bytes.toString('base64')).catch(error => {
   if (error.code !== 'ENOENT') throw error;
   return null;
@@ -35,33 +41,38 @@ for (const [route, file] of Object.entries(routes)) {
   for (const match of [...html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"[^>]*>/g)]) {
     const relative = match[1].match(/\/_astro\/.+$/)?.[0].slice(1);
     if (!relative) throw new Error(`Cannot locate preview stylesheet: ${match[1]}`);
-    html = html.replace(match[0], `<style>${await readFile(resolve('dist', relative), 'utf8')}</style>`);
+    const token = resources.get(relative) || embedResource(relative, await readFile(resolve('dist', relative), 'utf8'));
+    html = html.replace(match[0], () => `<style>${token}</style>`);
   }
   for (const match of [...html.matchAll(/<script\b([^>]*?)\bsrc="([^"]+)"([^>]*?)><\/script>/g)]) {
     const relative = match[2].match(/\/_astro\/.+$/)?.[0].slice(1);
     if (!relative) throw new Error(`Cannot locate preview script: ${match[2]}`);
-    const result = await build({ entryPoints: [resolve('dist', relative)], bundle: true, write: false, format: 'iife', platform: 'browser', minify: true, logLevel: 'silent' });
-    const script = result.outputFiles[0].text;
-    const classic = `(function(){function start(){${script}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',start,{once:true})}else{start()}})();`;
-    new Script(classic, { filename: `preview-${route}.js` });
-    // A function replacement keeps minified $&, $` and $' sequences literal.
-    html = html.replace(match[0], () => `<script>${classic.replaceAll('</script', '<\\/script')}</script>`);
+    let token = resources.get(relative);
+    if (!token) {
+      const result = await build({ entryPoints: [resolve('dist', relative)], bundle: true, write: false, format: 'iife', platform: 'browser', minify: true, logLevel: 'silent' });
+      const script = result.outputFiles[0].text;
+      const classic = `(function(){function start(){${script}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',start,{once:true})}else{start()}})();`;
+      new Script(classic, { filename: `preview-${route}.js` });
+      token = embedResource(relative, classic.replaceAll('</script', '<\\/script'));
+    }
+    html = html.replace(match[0], () => `<script>${token}</script>`);
   }
   // Validate the inserted bytes too, not only the bundle before substitution.
   for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
     if (match[1].includes('application/json')) continue;
-    new Script(match[2], { filename: `embedded-preview-${route}.js` });
+    new Script(assets[match[2]] ?? match[2], { filename: `embedded-preview-${route}.js` });
   }
   pages[route] = html;
 }
 
 function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
-  const frame = document.querySelector('iframe');
+  let frame = document.querySelector('iframe');
+  let cancelHandoff = () => {};
   const favicon = document.createElement('link');
   favicon.rel = 'icon'; favicon.type = 'image/svg+xml'; document.head.append(favicon);
   const expanded = route => {
     let html = pages[route];
-    for (const [token, value] of Object.entries(assets)) html = html.replaceAll(token, value);
+    for (const [token, value] of Object.entries(assets)) html = html.replaceAll(token, () => value);
     return html;
   };
   const escapeScript = value => JSON.stringify(value).replaceAll('<', '\\u003c');
@@ -75,19 +86,22 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
   let renderGeneration = 0;
   const render = async () => {
     const generation = ++renderGeneration;
+    cancelHandoff();
     const [requested, fragment = ''] = location.hash.slice(1).split('?');
     const route = ['home', 'about', 'projects'].includes(requested) ? requested : 'home';
     document.title = route === 'home' ? 'Derek Stone — Portfolio preview' : `Derek Stone — ${route === 'about' ? 'About' : 'Projects'} preview`;
     let html = expanded(route);
     const order = ['home', 'about', 'projects'];
-    const direction = previousRoute && !pendingHandoff ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
+    const handoff = pendingHandoff;
+    const direction = previousRoute && !handoff ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
     const projectEntry = direction && route === 'projects' && projectSlugs.includes(new URLSearchParams(fragment).get('project'));
     pendingHandoff = false;
     if (direction) await frame.contentWindow?.__PORTFOLIO_PREVIEW_EXIT__?.();
     if (generation !== renderGeneration) return;
+    const fromPalette = direction ? frame.contentWindow?.__PORTFOLIO_PREVIEW_PALETTE__?.() : null;
     previousRoute = route;
     if (projectEntry) html = html.replace(/<main\b([^>]*\bid="portfolio"[^>]*)>/, '<main$1 data-section-project-entry>');
-    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
+    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_FROM_PALETTE__=${escapeScript(fromPalette)};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
     html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
     html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*(")/, `$1${resumeAddress}$2`);
     // Attributes can appear in either order in compiler output.
@@ -104,7 +118,35 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
       const id=window.__PORTFOLIO_PREVIEW_FRAGMENT__.slice(1);
       if(id&&!id.startsWith('project='))document.getElementById(decodeURIComponent(id))?.scrollIntoView();
     });<\/script>`;
-    frame.srcdoc = html.replace('</body>', `${navigation}</body>`);
+    html = html.replace('</body>', `${navigation}</body>`);
+    if (!handoff) { frame.srcdoc = html; return; }
+    // The gesture has already revealed About. Keep that painted page on top
+    // until its replacement document is ready, rather than emptying the frame.
+    const outgoing = frame, incoming = document.createElement('iframe');
+    incoming.title = outgoing.title; incoming.dataset.staging = 'true';
+    incoming.inert = true; incoming.setAttribute('aria-hidden', 'true');
+    Object.assign(outgoing.style, { position: 'relative', zIndex: '1' });
+    Object.assign(incoming.style, { position: 'absolute', inset: '0', zIndex: '0' });
+    let paintFrame = 0;
+    const cleanup = () => {
+      incoming.remove(); cancelAnimationFrame(paintFrame); outgoing.removeAttribute('style'); cancelHandoff = () => {};
+    };
+    cancelHandoff = cleanup;
+    incoming.addEventListener('load', () => {
+      if (generation !== renderGeneration) return;
+      paintFrame = requestAnimationFrame(() => {
+        paintFrame = requestAnimationFrame(() => {
+          if (generation !== renderGeneration) return;
+          frame = incoming;
+          delete incoming.dataset.staging; incoming.inert = false; incoming.removeAttribute('aria-hidden');
+          incoming.removeAttribute('style'); outgoing.remove(); cancelHandoff = () => {};
+          const icon = incoming.contentDocument?.querySelector('[data-project-favicon]');
+          if (icon) favicon.href = icon.href;
+          incoming.contentWindow.focus();
+        });
+      });
+    }, { once: true });
+    incoming.srcdoc = html; document.body.append(incoming);
   };
   window.addEventListener('message', event => {
     if (event.source !== frame.contentWindow) return;

@@ -1,6 +1,6 @@
 ---
 import site from '../data/site.json';
-import css from '../styles/portfolio.css?inline';
+import '../styles/portfolio.css';
 import { ClientRouter } from 'astro:transitions';
 import { projectIcon } from '../data/project-icons.js';
 import { homePalette } from '../data/section-palettes.js';
@@ -16,7 +16,6 @@ const { title = site.title, description = site.description, favicon = projectIco
     <meta name="description" content={description} />
     <title>{title}</title>
     <link rel="icon" href={favicon} type="image/svg+xml" data-project-favicon />
-    <style is:inline set:html={css}></style>
     <ClientRouter />
   </head>
   <body>
