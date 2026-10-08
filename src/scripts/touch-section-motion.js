@@ -3,8 +3,6 @@ import { sectionTiming } from '../data/section-motion.js';
 const contentSelector = '[data-section-motion], [data-section-art]';
 let activeMotion;
 
-export const usesTouchSectionMotion = () => window.matchMedia('(pointer: coarse)').matches;
-
 export function finishTouchSectionMotion() {
   activeMotion?.finish();
 }
@@ -27,11 +25,16 @@ function copyDrawing(element, { freeze = false } = {}) {
       copy.style.translate = style.translate;
       copy.style.opacity = style.opacity;
       if (freeze) {
+        copy.style.display = style.display;
+        copy.style.visibility = style.visibility;
         copy.style.color = style.color;
         copy.style.backgroundColor = style.backgroundColor;
         copy.style.backdropFilter = style.backdropFilter;
         copy.style.webkitBackdropFilter = style.webkitBackdropFilter;
       }
+    }
+    if (original.tagName === 'CANVAS' && original.width && original.height) {
+      copy.getContext('2d')?.drawImage(original, 0, 0);
     }
   });
   const style = getComputedStyle(element);
@@ -43,7 +46,7 @@ function copyDrawing(element, { freeze = false } = {}) {
     transform: 'none', translate: 'none', color: style.color, font: style.font,
     width: `${element.getBoundingClientRect().width}px`, height: `${element.getBoundingClientRect().height}px`
   });
-  return { clone, opacity: style.opacity, restoreScroll() {
+  return { clone, restoreScroll() {
     scrollPositions.forEach((position, index) => {
       copies[index].scrollLeft = position.left;
       copies[index].scrollTop = position.top;
@@ -52,6 +55,9 @@ function copyDrawing(element, { freeze = false } = {}) {
 }
 
 window.addEventListener('pagehide', finishTouchSectionMotion);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) finishTouchSectionMotion();
+});
 window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', event => {
   if (event.matches) finishTouchSectionMotion();
 });
@@ -63,12 +69,13 @@ export function captureTouchSectionMotion(direction, { projectEntry = false } = 
     return element.getClientRects().length && style.visibility !== 'hidden';
   }).map(element => {
     const rect = element.getBoundingClientRect();
-    return { ...copyDrawing(element), rect, artwork: element.matches('[data-section-art]') };
+    return { ...copyDrawing(element, { freeze: true }), rect };
   });
   const header = document.querySelector('.site-header');
   // Freeze page-scoped labels and both navigation rows before the swap.
   const headerDrawing = copyDrawing(header, { freeze: true });
   const headerRect = header.getBoundingClientRect();
+  const canvas = getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim();
 
   return ({ projectFinished = Promise.resolve() } = {}) => {
     const host = document.querySelector('#portfolio, .profile-shell');
@@ -76,57 +83,52 @@ export function captureTouchSectionMotion(direction, { projectEntry = false } = 
     const animations = [];
     const layers = [];
     document.documentElement.setAttribute('data-touch-section-motion', '');
-    for (const artwork of [true, false]) {
-      const layer = document.createElement('div');
-      layer.className = `section-outgoing section-outgoing-${artwork ? 'art' : 'text'}`;
-      layer.setAttribute('aria-hidden', 'true');
-      layer.inert = true;
-      for (const drawing of drawings.filter(drawing => drawing.artwork === artwork)) {
-        drawing.clone.style.left = `${drawing.rect.left}px`;
-        drawing.clone.style.top = `${drawing.rect.top}px`;
-        layer.append(drawing.clone);
-        if (!projectEntry) animations.push(drawing.clone.animate([{ opacity: drawing.opacity }, { opacity: 0 }], {
-          duration: artwork ? sectionTiming.artwork : sectionTiming.exit,
-          easing: artwork ? 'linear' : 'ease-in', fill: 'both'
-        }));
-      }
-      if (layer.childElementCount) {
-        host.append(layer);
-        layers.push(layer);
-      }
+    // One opaque outgoing drawing over the painted incoming page gives a true
+    // crossfade. Fading both live trees would expose the canvas in the middle.
+    const layer = document.createElement('div');
+    layer.className = `section-outgoing section-outgoing-page${projectEntry ? ' section-outgoing-project-entry' : ''}`;
+    layer.setAttribute('aria-hidden', 'true');
+    layer.inert = true;
+    layer.style.backgroundColor = canvas;
+    for (const drawing of drawings) {
+      drawing.clone.style.left = `${drawing.rect.left}px`;
+      drawing.clone.style.top = `${drawing.rect.top}px`;
+      layer.append(drawing.clone);
     }
+    host.append(layer);
+    layers.push(layer);
     drawings.forEach(drawing => drawing.restoreScroll());
     if (!projectEntry) incoming.forEach(element => {
-      const artwork = element.matches('[data-section-art]');
+      if (element.matches('[data-section-art]')) return;
       const resting = getComputedStyle(element).transform;
-      const frames = artwork ? [{ opacity: 0 }, { opacity: 1 }] : [
-        { opacity: 0, transform: `translateX(${direction * sectionTiming.distance}px) ${resting === 'none' ? '' : resting}` },
-        { opacity: 1, transform: resting }
+      const frames = [
+        { transform: `translateX(${direction * sectionTiming.distance}px) ${resting === 'none' ? '' : resting}` },
+        { transform: resting }
       ];
       animations.push(element.animate(frames, {
-        duration: artwork ? sectionTiming.artwork : sectionTiming.enter,
-        delay: artwork ? 0 : sectionTiming.exit,
-        easing: artwork ? 'linear' : sectionTiming.easing, fill: 'both'
+        duration: sectionTiming.enter, easing: sectionTiming.easing, fill: 'both'
       }));
     });
-    const nextHeader = document.querySelector('.site-header');
-    const navigationLayer = document.createElement('div');
-    navigationLayer.className = 'section-outgoing section-outgoing-navigation';
-    navigationLayer.setAttribute('aria-hidden', 'true');
-    navigationLayer.inert = true;
     headerDrawing.clone.style.left = `${headerRect.left}px`;
     headerDrawing.clone.style.top = `${headerRect.top}px`;
-    navigationLayer.append(headerDrawing.clone);
-    host.append(navigationLayer);
+    if (projectEntry) {
+      const navigationLayer = document.createElement('div');
+      navigationLayer.className = 'section-outgoing section-outgoing-navigation';
+      navigationLayer.setAttribute('aria-hidden', 'true');
+      navigationLayer.inert = true;
+      navigationLayer.append(headerDrawing.clone);
+      host.append(navigationLayer);
+      layers.push(navigationLayer);
+      animations.push(navigationLayer.animate([{ opacity: 1 }, { opacity: 0 }], {
+        duration: sectionTiming.header, easing: sectionTiming.easing, fill: 'both'
+      }));
+    } else {
+      layer.append(headerDrawing.clone);
+      animations.push(layer.animate([{ opacity: 1 }, { opacity: 0 }], {
+        duration: sectionTiming.enter, easing: sectionTiming.easing, fill: 'both'
+      }));
+    }
     headerDrawing.restoreScroll();
-    layers.push(navigationLayer);
-    animations.push(headerDrawing.clone.animate([
-      { opacity: headerDrawing.opacity }, { opacity: 0 }
-    ], { duration: sectionTiming.exit, easing: 'ease-in', fill: 'both' }));
-    animations.push(nextHeader.animate([
-      { opacity: 0 }, { opacity: 1 }
-    ],
-      { duration: sectionTiming.enter, delay: sectionTiming.exit, easing: sectionTiming.easing, fill: 'both' }));
 
     const motion = { finish() {
       animations.forEach(animation => animation.cancel());
@@ -138,7 +140,7 @@ export function captureTouchSectionMotion(direction, { projectEntry = false } = 
     } };
     activeMotion = motion;
     // A direct project entry keeps the original section behind the tile reveal.
-    // Its anchored header still clears and enters with the section text.
+    // Its anchored header blends over the fully painted incoming navigation.
     Promise.allSettled([...animations.map(animation => animation.finished), projectFinished]).then(() => {
       if (activeMotion === motion) motion.finish();
     });

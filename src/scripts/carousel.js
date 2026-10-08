@@ -9,6 +9,7 @@ import { createMotionSpring } from './motion-spring.js';
 import { createAboutHeader } from './about-header.js';
 import { mountLaser } from './ascii-laser.js';
 import { aboutPalette, darkAboutPalette, linksPalette } from '../data/section-palettes.js';
+import { sectionTiming } from '../data/section-motion.js';
 import { readHeaderPalette, blendHeaderPalette, stopHeaderPalette } from './header-palette.js';
 
 export function mountPortfolio({ sectionLinks = { hide() {} },
@@ -41,7 +42,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   const stage = root.querySelector('[data-stage]');
   const menu = root.querySelector('[data-menu]');
   const menuToggle = menu.querySelector('summary');
-  const menuChoices = [...menu.querySelectorAll('button, a[href], [data-projects-toggle]')];
+  const menuChoices = [...menu.querySelectorAll('button, a[href], [data-projects-toggle], [data-publication-date]')];
   const menuProjects = [...menu.querySelectorAll('[data-menu-project]')];
   const projectsMenu = menu.querySelector('[data-projects-menu]');
   const projectsToggle = projectsMenu.querySelector('[data-projects-toggle]');
@@ -564,6 +565,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   }
 
   listen(document, 'portfolio:theme-change', () => {
+    projectAbort?.abort();
     stopHeaderPalette(siteHeader);
     aboutHeader = createAboutHeader(projects[0].palette, aboutTarget());
     if (aboutTravel) presentAbout(aboutTravel);
@@ -751,7 +753,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     document.body.classList.add('dialog-open');
     try {
       await settleTiles(root, projectPage, {
-        opening, origin: projectOrigin, scrollTop: opening ? 0 : scrollTop,
+        opening, replacing, origin: projectOrigin, scrollTop: opening ? 0 : scrollTop,
         signal: projectAbort.signal, reducedMotion: reducedMotion.matches
       });
     } finally {
@@ -777,6 +779,9 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (disposed) return;
     const backdrop = replacing && canAnimateTiles({ reducedMotion: reducedMotion.matches })
       ? captureProjectBackdrop(root, projectPage, { scrollTop: projectView.scrollTop }) : null;
+    const outgoing = backdrop?.animate?.([{ opacity: 1 }, { opacity: 0 }], {
+      duration: sectionTiming.feedback, easing: 'ease-in', fill: 'both'
+    });
     try {
       projectOrigin = request.origin || projectOrigin;
       projectReturnFocus = request.returnFocus || projectReturnFocus;
@@ -785,6 +790,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
         document.documentElement.clientWidth, projectView.clientHeight);
       await transitionProject(true, { replacing, sectionEntry: request.sectionEntry });
     } finally {
+      outgoing?.cancel();
       backdrop?.remove();
     }
   }

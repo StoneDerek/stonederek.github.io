@@ -101,14 +101,16 @@ test('a direct article switch preserves the outgoing scroll, geometry, and palet
     s.page.style.setProperty('--ink', '#efeaf3');
     assert.equal(backdrop.style['--accent'], '#d9ff61');
     assert.equal(backdrop.style['--ink'], '#1b2612');
-    const finished = settleTiles(s.root, s.page, { opening: true, signal: controller.signal });
+    const finished = settleTiles(s.root, s.page, { opening: true, replacing: true, signal: controller.signal });
     assert.equal(s.root.children.length, 2);
     assert.equal(s.root.children[1].hidden, true, 'incoming article must not flash its completed state');
     assert.equal(backdrop.hidden, false);
     s.advance(150);
     assert.equal(s.root.children[1].hidden, false);
     assert.equal(backdrop.children[0].style.top, '-320px');
-    s.advance(700);
+    s.advance(480);
+    assert.equal(s.root.children.length, 2, 'replacement remains masked before its last moving frame');
+    s.advance(490);
     await finished;
     assert.deepEqual(s.root.children, [backdrop]);
     backdrop.remove();

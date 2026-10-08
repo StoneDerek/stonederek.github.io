@@ -5,23 +5,15 @@ import { mountSectionLinks } from './section-links.js';
 import { sectionDirection, sectionFromPath } from './section-state.js';
 import { sectionTiming } from '../data/section-motion.js';
 import { prepareGalleryImages } from './section-assets.js';
-import { captureTouchSectionMotion, finishTouchSectionMotion, usesTouchSectionMotion } from './touch-section-motion.js';
+import { captureTouchSectionMotion, finishTouchSectionMotion } from './touch-section-motion.js';
 import { projectSectionEntry } from './project-links.js';
-import { readHeaderPalette, blendHeaderPalette } from './header-palette.js';
-import { mountTheme } from './theme.js';
+import { mountTheme, appearanceEnabled } from './theme.js';
 import { mountPublicationLabel } from './publication-label.js';
 
-const theme = mountTheme();
+const theme = mountTheme({ enabled: appearanceEnabled });
 
 let mountedHeader = null;
 let dispose = () => {};
-const projectEntryHandoffs = new WeakSet();
-let paletteHeader = null;
-let stopPalette = () => {};
-function startPalette(header, from) {
-  stopPalette(); paletteHeader = header;
-  stopPalette = blendHeaderPalette(header, from, { duration: sectionTiming.header });
-}
 
 function mount({ fragment, sectionEntry = Boolean(window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__) } = {}) {
   const header = document.querySelector('.site-header');
@@ -35,49 +27,19 @@ function mount({ fragment, sectionEntry = Boolean(window.__PORTFOLIO_PREVIEW_SEC
     ? mountPortfolio({ sectionLinks: links, fragment, sectionEntry }) : mountProfileNavigation();
   dispose = () => {
     cleanup?.(); links.destroy(); releasePublication(); mountedHeader = null;
-    if (paletteHeader === header) { stopPalette(); stopPalette = () => {}; paletteHeader = null; }
   };
-  if (window.__PORTFOLIO_PREVIEW_DIRECTION__) {
-    startPalette(header, window.__PORTFOLIO_PREVIEW_FROM_PALETTE__);
-    animatePreviewEntry(window.__PORTFOLIO_PREVIEW_DIRECTION__);
-  }
   return cleanup;
 }
 
-function animatePreviewEntry(direction) {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const offset = direction * sectionTiming.distance;
-  if (!window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__) document.querySelectorAll('[data-section-motion]').forEach(element => {
-    // Add the short drift to the element's existing centering transform.
-    const resting = getComputedStyle(element).transform;
-    element.animate([{ opacity: 0, transform: `translateX(${offset}px) ${resting === 'none' ? '' : resting}` },
-      { opacity: 1, transform: resting }], { duration: sectionTiming.enter, easing: sectionTiming.easing });
-  });
-  document.querySelectorAll('[data-section-fade]').forEach(element =>
-    element.animate([{ opacity: 0 }, { opacity: 1 }],
-      { duration: sectionTiming.enter, easing: sectionTiming.easing }));
-  if (!window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__) document.querySelectorAll('[data-section-art]').forEach(element =>
-    element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: sectionTiming.artwork, easing: 'linear' }));
-}
-
 // The offline preview swaps frames instead of using Astro's document router.
-// Give it the same exit phase, keeping navigation available for a newer choice.
+// Its outer frame owns the blend; the outgoing document stays fully painted.
 if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ !== undefined) {
-  window.__PORTFOLIO_PREVIEW_PALETTE__ = () => readHeaderPalette();
   window.__PORTFOLIO_PREVIEW_EXIT__ = () => {
     document.dispatchEvent(new Event('portfolio:preview-exit'));
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return Promise.resolve();
-    return Promise.allSettled([...document.querySelectorAll('[data-section-motion], [data-section-fade], [data-section-art]')].map(element =>
-      element.animate([{ opacity: getComputedStyle(element).opacity }, { opacity: 0 }],
-        { duration: element.matches('[data-section-art]') ? sectionTiming.artwork : sectionTiming.exit,
-          easing: element.matches('[data-section-art]') ? 'linear' : 'ease-in', fill: 'forwards' }).finished));
   };
 }
 
 document.addEventListener('astro:before-preparation', event => {
-  // Interrupt an entry with another live section handoff, rather than starting
-  // a second snapshot transition while the first reveal is still settling.
-  if (document.querySelector('#portfolio[data-section-project-entry]')) projectEntryHandoffs.add(event.signal);
   finishTouchSectionMotion();
   const loader = event.loader;
   event.loader = async () => {
@@ -94,23 +56,16 @@ document.addEventListener('astro:before-swap', event => {
   const projectEntry = data && projectSectionEntry(event.from, event.to, JSON.parse(data.textContent)) >= 0;
   if (projectEntry) event.newDocument.getElementById('portfolio').setAttribute('data-section-project-entry', '');
   let startMotion;
-  const darkHeader = document.querySelector('#portfolio')?.dataset.atGalleryEnd === 'true';
-  if (event.info?.gallerySwipe || usesTouchSectionMotion() || projectEntry || projectEntryHandoffs.has(event.signal) || darkHeader) {
-    // A completed edge swipe already shows About. Skip the browser snapshot
-    // handoff as well as the entry animation, so it cannot flash on completion.
-    // Keep the short drift on live elements, without relying on an incoming
-    // browser snapshot being available to paint on touch devices.
-    event.viewTransition.ready.catch(() => {});
-    event.viewTransition.skipTransition();
-    if (!event.info?.gallerySwipe && !window.matchMedia('(prefers-reduced-motion: reduce)').matches &&
-        document.querySelector('.site-header') && event.newDocument.querySelector('.site-header')) {
-      startMotion = captureTouchSectionMotion(direction, { projectEntry });
-    }
+  // Use the same painted blend on every device. Some native implementations
+  // omit the incoming drawing even after their ready promise has resolved.
+  event.viewTransition.ready.catch(() => {});
+  event.viewTransition.skipTransition();
+  // A completed edge swipe has already revealed About and needs no second fade.
+  if (!event.info?.gallerySwipe && !window.matchMedia('(prefers-reduced-motion: reduce)').matches &&
+      document.querySelector('.site-header') && event.newDocument.querySelector('.site-header')) {
+    startMotion = captureTouchSectionMotion(direction, { projectEntry });
   }
-  const palette = !event.info?.gallerySwipe
-    && (usesTouchSectionMotion() || projectEntry || darkHeader || typeof document.startViewTransition !== 'function')
-    ? readHeaderPalette() : null;
-  if (startMotion || projectEntry || palette) {
+  if (startMotion || projectEntry) {
     const swap = event.swap;
     event.swap = () => {
       swap();
@@ -118,7 +73,6 @@ document.addEventListener('astro:before-swap', event => {
       // normal page-load event is too late and would expose the gallery first.
       const cleanup = projectEntry ? mount({ fragment: event.to.hash, sectionEntry: true }) : null;
       startMotion?.({ projectFinished: cleanup?.entryDone });
-      if (palette) startPalette(document.querySelector('.site-header'), palette);
     };
   }
   event.newDocument.documentElement.toggleAttribute('data-gallery-handoff', Boolean(event.info?.gallerySwipe));
@@ -128,7 +82,6 @@ document.addEventListener('astro:before-swap', event => {
 document.addEventListener('astro:page-load', mount);
 document.addEventListener('portfolio:theme-change', () => {
   finishTouchSectionMotion();
-  stopPalette();
 });
 document.addEventListener('portfolio:section-navigate', event => {
   const route = event.detail?.route;

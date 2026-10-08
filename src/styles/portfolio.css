@@ -24,23 +24,21 @@ html { background: var(--canvas); }
 ::view-transition-old(gallery-caption), ::view-transition-old(gallery-filmstrip),
 ::view-transition-old(gallery-controls),
 ::view-transition-old(gallery-article) {
-  animation: section-fade-out var(--section-exit) ease-in both !important;
-  mix-blend-mode: normal;
+  animation: section-fade-out var(--section-exit) var(--section-ease) both !important;
+  mix-blend-mode: plus-lighter;
 }
 ::view-transition-new(home-content), ::view-transition-new(about-content),
 ::view-transition-new(home-footer), ::view-transition-new(about-footer),
 ::view-transition-new(gallery-caption), ::view-transition-new(gallery-filmstrip),
 ::view-transition-new(gallery-controls), ::view-transition-new(gallery-article) {
-  animation: section-drift-in var(--section-enter) var(--section-ease) var(--section-exit) both !important;
-  mix-blend-mode: normal;
+  animation: section-drift-in var(--section-enter) var(--section-ease) both !important;
+  mix-blend-mode: plus-lighter;
 }
-::view-transition-old(gallery-art) { animation: section-fade-out var(--section-artwork) linear both !important; mix-blend-mode: normal; }
-::view-transition-new(gallery-art) { animation: section-fade-in var(--section-artwork) linear both !important; mix-blend-mode: normal; }
-/* The entire navigation clears with the page text, including its lower row. */
-::view-transition-old(site-navigation) { animation: section-fade-out var(--section-exit) ease-in both !important; mix-blend-mode: normal; }
-::view-transition-new(site-navigation) { animation: section-fade-in var(--section-enter) var(--section-ease) var(--section-exit) both !important; mix-blend-mode: normal; }
-/* Astro's fallback already waits for the exit before swapping documents. */
-html[data-astro-transition-fallback="new"] :is([data-section-motion], [data-section-fade], .artwork-visual) { animation-delay: 0ms !important; }
+::view-transition-old(gallery-art) { animation: section-fade-out var(--section-artwork) linear both !important; mix-blend-mode: plus-lighter; }
+::view-transition-new(gallery-art) { animation: section-fade-in var(--section-artwork) linear both !important; mix-blend-mode: plus-lighter; }
+/* Complementary snapshots blend without exposing the page behind the header. */
+::view-transition-old(site-navigation) { animation: section-fade-out var(--section-exit) var(--section-ease) both !important; mix-blend-mode: plus-lighter; }
+::view-transition-new(site-navigation) { animation: section-fade-in var(--section-enter) var(--section-ease) both !important; mix-blend-mode: plus-lighter; }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   .site-menu { animation: none !important; }
@@ -50,12 +48,9 @@ html[data-gallery-handoff]::view-transition-old(*) { opacity: 0 !important; }
 html[data-gallery-handoff]::view-transition-new(*) { opacity: 1 !important; }
 html[data-gallery-handoff] [data-astro-transition-scope] { animation: none !important; }
 .section-outgoing { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
-.section-outgoing-art { z-index: 1; }
-.section-outgoing-text { z-index: 2; }
 .section-outgoing-navigation { z-index: 60; }
-html[data-touch-section-motion] :is(.profile-main, .profile-footer) { position: relative; z-index: 2; }
-html[data-touch-section-motion] .carousel { z-index: auto; }
-html[data-touch-section-motion] .project-caption { z-index: 2; }
+.section-outgoing-page { z-index: 70; }
+.section-outgoing-project-entry { z-index: 5; }
 html[data-touch-section-motion] .site-menu { transition: none; }
 .portfolio[data-section-project-entry] :is(.carousel, .filmstrip, .mobile-controls) { visibility: hidden !important; }
 body { margin: 0; background: var(--canvas); font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }

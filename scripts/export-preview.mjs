@@ -2,7 +2,8 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { Script } from 'node:vm';
 import { build } from 'esbuild';
-import { initializeTheme } from '../src/scripts/theme.js';
+import { initializeTheme, themeStorageKey, appearanceEnabled } from '../src/scripts/theme.js';
+import { sectionTiming } from '../src/data/section-motion.js';
 
 // Bundle the actual production pages into one offline, navigable review file.
 // Each route runs in a fresh frame, so gallery event listeners never accumulate.
@@ -26,7 +27,7 @@ for (const [route, file] of Object.entries(routes)) {
   let html = await readFile(resolve('dist', file), 'utf8');
   // srcdoc routes use the preview's message bridge instead of network fetching.
   html = html.replace(/<meta\b[^>]*name="astro-view-transitions-enabled"[^>]*>/g, '')
-    .replace(/(<meta\b[^>]*name="astro-view-transitions-fallback"[^>]*content=")animate("[^>]*>)/g, '$1none$2');
+    .replace(/(<meta\b[^>]*name="astro-view-transitions-fallback"[^>]*content=")(?:animate|swap)("[^>]*>)/g, '$1none$2');
   for (const match of html.matchAll(/(?:src|href)="([^"]+\.(?:webp|svg|png|jpg))"/g)) {
     const path = match[1];
     const publicPath = path.match(/\/(art|thumbnails)\/.+$/)?.[0].slice(1) || path.match(/favicon\.svg$/)?.[0];
@@ -66,9 +67,10 @@ for (const [route, file] of Object.entries(routes)) {
   pages[route] = html;
 }
 
-function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
+function initializePreview({ pages, assets, resumePDF, projectSlugs, timing }) {
   let themeChoice = window.__PORTFOLIO_THEME_STATE__?.choice || 'system';
   const systemPreference = window.matchMedia('(prefers-color-scheme: dark)');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   systemPreference.addEventListener('change', () => {
     document.querySelectorAll('iframe').forEach(element => element.contentWindow?.postMessage({
       type: 'portfolio-preview-system-theme', dark: systemPreference.matches
@@ -92,7 +94,7 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
   let previousRoute = null;
   let pendingHandoff = false;
   let renderGeneration = 0;
-  const render = async () => {
+  const render = () => {
     const generation = ++renderGeneration;
     cancelHandoff();
     const [requested, fragment = ''] = location.hash.slice(1).split('?');
@@ -104,12 +106,8 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
     const direction = previousRoute && !handoff ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
     const projectEntry = direction && route === 'projects' && projectSlugs.includes(new URLSearchParams(fragment).get('project'));
     pendingHandoff = false;
-    if (direction) await frame.contentWindow?.__PORTFOLIO_PREVIEW_EXIT__?.();
-    if (generation !== renderGeneration) return;
-    const fromPalette = direction ? frame.contentWindow?.__PORTFOLIO_PREVIEW_PALETTE__?.() : null;
-    previousRoute = route;
     if (projectEntry) html = html.replace(/<main\b([^>]*\bid="portfolio"[^>]*)>/, '<main$1 data-section-project-entry>');
-    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_THEME_CHOICE__=${escapeScript(themeChoice)};window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=${systemPreference.matches};window.addEventListener('message',function(event){if(event.source===window.parent&&event.data?.type==='portfolio-preview-system-theme'){window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=!!event.data.dark;document.dispatchEvent(new Event('portfolio:preview-system-change'))}});window.__PORTFOLIO_PREVIEW_SET_THEME__=function(state){window.parent.postMessage({type:'portfolio-preview-theme',choice:state.choice,resolved:state.resolved},'*')};window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_DIRECTION__=${direction};window.__PORTFOLIO_PREVIEW_FROM_PALETTE__=${escapeScript(fromPalette)};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
+    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_THEME_CHOICE__=${escapeScript(themeChoice)};window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=${systemPreference.matches};window.addEventListener('message',function(event){if(event.source===window.parent&&event.data?.type==='portfolio-preview-system-theme'){window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=!!event.data.dark;document.dispatchEvent(new Event('portfolio:preview-system-change'))}});window.__PORTFOLIO_PREVIEW_SET_THEME__=function(state){window.parent.postMessage({type:'portfolio-preview-theme',choice:state.choice,resolved:state.resolved},'*')};window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
     html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
     html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*(")/, `$1${resumeAddress}$2`);
     // Attributes can appear in either order in compiler output.
@@ -127,30 +125,48 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
       if(id&&!id.startsWith('project='))document.getElementById(decodeURIComponent(id))?.scrollIntoView();
     });<\/script>`;
     html = html.replace('</body>', `${navigation}</body>`);
-    if (!handoff) { frame.srcdoc = html; return; }
-    // The gesture has already revealed About. Keep that painted page on top
-    // until its replacement document is ready, rather than emptying the frame.
+    if (!previousRoute) { previousRoute = route; frame.srcdoc = html; return; }
+    // Keep the outgoing document fully painted until the replacement is ready.
+    // Fade this opaque frame over its painted successor, with no blank phase.
     const outgoing = frame, incoming = document.createElement('iframe');
     incoming.title = outgoing.title; incoming.dataset.staging = 'true';
     incoming.inert = true; incoming.setAttribute('aria-hidden', 'true');
     Object.assign(outgoing.style, { position: 'relative', zIndex: '1' });
     Object.assign(incoming.style, { position: 'absolute', inset: '0', zIndex: '0' });
-    let paintFrame = 0;
+    let paintFrame = 0, blend, committed = false, finished = false;
     const cleanup = () => {
-      incoming.remove(); cancelAnimationFrame(paintFrame); outgoing.removeAttribute('style'); cancelHandoff = () => {};
+      if (finished) return;
+      finished = true;
+      cancelAnimationFrame(paintFrame); blend?.cancel();
+      reducedMotion.removeEventListener('change', onMotionChange);
+      if (committed) {
+        outgoing.remove(); incoming.removeAttribute('style');
+      } else {
+        incoming.remove(); outgoing.removeAttribute('style');
+      }
+      if (cancelHandoff === cleanup) cancelHandoff = () => {};
     };
+    const onMotionChange = event => { if (event.matches && committed) cleanup(); };
+    reducedMotion.addEventListener('change', onMotionChange);
     cancelHandoff = cleanup;
     incoming.addEventListener('load', () => {
       if (generation !== renderGeneration) return;
       paintFrame = requestAnimationFrame(() => {
         paintFrame = requestAnimationFrame(() => {
           if (generation !== renderGeneration) return;
-          frame = incoming;
+          outgoing.contentWindow?.__PORTFOLIO_PREVIEW_EXIT__?.();
+          committed = true; previousRoute = route; frame = incoming;
+          outgoing.inert = true; outgoing.setAttribute('aria-hidden', 'true');
+          outgoing.style.pointerEvents = 'none';
           delete incoming.dataset.staging; incoming.inert = false; incoming.removeAttribute('aria-hidden');
-          incoming.removeAttribute('style'); outgoing.remove(); cancelHandoff = () => {};
           const icon = incoming.contentDocument?.querySelector('[data-project-favicon]');
           if (icon) favicon.href = icon.href;
           incoming.contentWindow.focus();
+          if (handoff || reducedMotion.matches) { cleanup(); return; }
+          blend = outgoing.animate([{ opacity: 1 }, { opacity: 0 }], {
+            duration: timing.enter, easing: timing.easing, fill: 'both'
+          });
+          blend.finished.then(cleanup, cleanup);
         });
       });
     }, { once: true });
@@ -185,10 +201,10 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs }) {
   });
   render();
 }
-const payload = JSON.stringify({ pages, assets, resumePDF, projectSlugs }).replaceAll('<', '\\u003c');
+const payload = JSON.stringify({ pages, assets, resumePDF, projectSlugs, timing: sectionTiming }).replaceAll('<', '\\u003c');
 const loader = `(${initializePreview.toString()})(JSON.parse(document.getElementById('preview-data').textContent));`;
 new Script(loader, { filename: 'preview-navigation.js' });
-const startup = `(${initializeTheme.toString()})();`;
+const startup = `(${initializeTheme.toString()})(${JSON.stringify(themeStorageKey)},${appearanceEnabled});`;
 new Script(startup, { filename: 'preview-theme-startup.js' });
 const output = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Derek Stone — Portfolio preview</title><style>html,body{margin:0;width:100%;height:100%}html{background:#fff;color-scheme:light}html[data-theme="dark"]{background:#17171b;color-scheme:dark}iframe{display:block;width:100%;height:100%;border:0}noscript{padding:24px;font:16px/1.5 Arial,sans-serif}</style><script>${startup}</script></head><body><iframe title="Derek Stone’s portfolio"></iframe><noscript>Open this preview in a browser with JavaScript enabled to explore Home, About, and Projects.</noscript><script type="application/json" id="preview-data">${payload}</script><script>${loader}</script></body></html>`;
 await writeFile('portfolio-preview.html', output);
