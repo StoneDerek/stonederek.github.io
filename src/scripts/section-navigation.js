@@ -8,10 +8,10 @@ import { prepareGalleryImages } from './section-assets.js';
 import { captureTouchSectionMotion, finishTouchSectionMotion, usesTouchSectionMotion } from './touch-section-motion.js';
 import { projectSectionEntry } from './project-links.js';
 import { readHeaderPalette, blendHeaderPalette } from './header-palette.js';
+import { mountTheme } from './theme.js';
 import { mountPublicationLabel } from './publication-label.js';
-import { initializeTheme } from './theme.js';
 
-initializeTheme();
+const theme = mountTheme();
 
 let mountedHeader = null;
 let dispose = () => {};
@@ -19,10 +19,6 @@ const projectEntryHandoffs = new WeakSet();
 let paletteHeader = null;
 let stopPalette = () => {};
 let activeTransition;
-document.addEventListener('portfolio:theme-change', () => {
-  finishTouchSectionMotion();
-  activeTransition?.skipTransition();
-});
 function startPalette(header, from) {
   stopPalette(); paletteHeader = header;
   stopPalette = blendHeaderPalette(header, from, { duration: sectionTiming.header });
@@ -33,12 +29,13 @@ function mount({ fragment, sectionEntry = Boolean(window.__PORTFOLIO_PREVIEW_SEC
   if (!header || header === mountedHeader) return;
   dispose();
   mountedHeader = header;
-  const releasePublicationLabel = mountPublicationLabel(header);
+  theme.refresh();
+  const releasePublication = mountPublicationLabel();
   const links = mountSectionLinks();
   const cleanup = header.dataset.page === 'projects'
     ? mountPortfolio({ sectionLinks: links, fragment, sectionEntry }) : mountProfileNavigation();
   dispose = () => {
-    cleanup?.(); links.destroy(); releasePublicationLabel(); mountedHeader = null;
+    cleanup?.(); links.destroy(); releasePublication(); mountedHeader = null;
     if (paletteHeader === header) { stopPalette(); stopPalette = () => {}; paletteHeader = null; }
   };
   if (window.__PORTFOLIO_PREVIEW_DIRECTION__) {
@@ -68,12 +65,10 @@ function animatePreviewEntry(direction) {
 // Give it the same exit phase, keeping navigation available for a newer choice.
 if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ !== undefined) {
   window.__PORTFOLIO_PREVIEW_PALETTE__ = () => readHeaderPalette();
-  window.__PORTFOLIO_PREVIEW_EXIT__ = ({ route } = {}) => {
+  window.__PORTFOLIO_PREVIEW_EXIT__ = () => {
     document.dispatchEvent(new Event('portfolio:preview-exit'));
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return Promise.resolve();
-    const selector = '[data-section-motion], [data-section-fade], [data-section-art]'
-      + (route === 'projects' ? ', .page-links' : '');
-    return Promise.allSettled([...document.querySelectorAll(selector)].map(element =>
+    return Promise.allSettled([...document.querySelectorAll('[data-section-motion], [data-section-fade], [data-section-art]')].map(element =>
       element.animate([{ opacity: getComputedStyle(element).opacity }, { opacity: 0 }],
         { duration: element.matches('[data-section-art]') ? sectionTiming.artwork : sectionTiming.exit,
           easing: element.matches('[data-section-art]') ? 'linear' : 'ease-in', fill: 'forwards' }).finished));
@@ -91,14 +86,13 @@ document.addEventListener('astro:before-preparation', event => {
     if (!event.signal.aborted) await prepareGalleryImages(event.newDocument, event.to, event.signal);
   };
   document.documentElement.toggleAttribute('data-gallery-handoff', Boolean(event.info?.gallerySwipe));
-  document.documentElement.toggleAttribute('data-section-links-exit', sectionFromPath(event.to.pathname) === 'projects');
   const direction = sectionDirection(sectionFromPath(event.from.pathname), sectionFromPath(event.to.pathname));
   document.documentElement.style.setProperty('--section-drift', `${direction * sectionTiming.distance}px`);
 });
 document.addEventListener('astro:before-swap', event => {
   activeTransition = event.viewTransition;
   const clearTransition = () => {
-    if (activeTransition === event.viewTransition) activeTransition = null;
+    if (activeTransition === event.viewTransition) activeTransition = undefined;
   };
   event.viewTransition.finished.then(clearTransition, clearTransition);
   const direction = sectionDirection(sectionFromPath(event.from.pathname), sectionFromPath(event.to.pathname));
@@ -116,9 +110,7 @@ document.addEventListener('astro:before-swap', event => {
     event.viewTransition.skipTransition();
     if (!event.info?.gallerySwipe && !window.matchMedia('(prefers-reduced-motion: reduce)').matches &&
         document.querySelector('.site-header') && event.newDocument.querySelector('.site-header')) {
-      startMotion = captureTouchSectionMotion(direction, {
-        projectEntry, hideSectionLinks: sectionFromPath(event.to.pathname) === 'projects'
-      });
+      startMotion = captureTouchSectionMotion(direction, { projectEntry });
     }
   }
   const palette = !event.info?.gallerySwipe
@@ -136,11 +128,15 @@ document.addEventListener('astro:before-swap', event => {
     };
   }
   event.newDocument.documentElement.toggleAttribute('data-gallery-handoff', Boolean(event.info?.gallerySwipe));
-  event.newDocument.documentElement.toggleAttribute('data-section-links-exit', sectionFromPath(event.to.pathname) === 'projects');
   event.newDocument.documentElement.style.setProperty('--section-drift', `${direction * sectionTiming.distance}px`);
   dispose();
 });
 document.addEventListener('astro:page-load', mount);
+document.addEventListener('portfolio:theme-change', () => {
+  finishTouchSectionMotion();
+  stopPalette();
+  activeTransition?.skipTransition();
+});
 document.addEventListener('portfolio:section-navigate', event => {
   const route = event.detail?.route;
   const link = document.querySelector(route === 'about' ? '[data-menu-about]' : '[data-menu-gallery]');

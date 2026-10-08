@@ -1,5 +1,5 @@
 import { laserPuzzle, mirrorEndpoints, traceLaser } from './laser-optics.js';
-import { ASCII_GLYPHS, ASCII_COLORS, ASCII_DARK_COLORS, asciiCell, nearestInk } from './ascii-grid.js';
+import { ASCII_GLYPHS, ASCII_COLORS, asciiCell, nearestInk } from './ascii-grid.js';
 import { mountTrophy } from './trophy-ascii.js';
 import { canAnimateTiles, createTileCells, createTileMask } from './project-transition.js';
 
@@ -26,7 +26,6 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
   let active = false, disposed = false, frame = 0, dirtySize = true, drag = null;
   let width = 1, height = 1, columns = 1, rows = 1, cellWidth = 1, cellHeight = 1, ratio = 1;
   let atlasWidth = 1, atlasHeight = 1, coverage, inks, luminance;
-  let background = '#fff';
 
   function measure() {
     width = Math.max(1, host.clientWidth); height = Math.max(1, host.clientHeight - 44);
@@ -43,9 +42,9 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
     atlas.width = atlasWidth * ASCII_GLYPHS.length; atlas.height = atlasHeight * ASCII_COLORS.length;
     atlasContext.font = `${cellWidth / .6 * ratio}px ui-monospace, SFMono-Regular, Consolas, monospace`;
     atlasContext.textAlign = 'center'; atlasContext.textBaseline = 'middle';
-    background = getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim() || '#fff';
-    const outputColors = document.documentElement.dataset.theme === 'dark' ? ASCII_DARK_COLORS : ASCII_COLORS;
-    outputColors.forEach((color, colorIndex) => {
+    const colors = document.documentElement.dataset.theme === 'dark'
+      ? ['#eee9f2', '#b7b1c4', '#777383', '#ff8392', '#ffc06d', '#d8c75f', '#8cce9d', '#82cad8', '#96b9ff', '#ba9ae8'] : ASCII_COLORS;
+    colors.forEach((color, colorIndex) => {
       atlasContext.fillStyle = color;
       [...ASCII_GLYPHS].forEach((glyph, glyphIndex) => atlasContext.fillText(glyph,
         (glyphIndex + .5) * atlasWidth, (colorIndex + .5) * atlasHeight));
@@ -147,7 +146,7 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
       status.textContent = won ? 'Target reached.' : 'Drag the mirrors to reach the target.';
     }
     viewTrophy.hidden = !won || winPending;
-    context.setTransform(ratio, 0, 0, ratio, 0, 0); context.fillStyle = background; context.fillRect(0, 0, width, height);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0); context.fillStyle = getComputedStyle(host).getPropertyValue('--canvas').trim() || '#fff'; context.fillRect(0, 0, width, height);
     let drawn = 0;
     for (let y = 0; y < rows; y++) for (let x = 0; x < columns; x++) {
       const index = y * columns + x;
@@ -170,10 +169,6 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
   function requestDraw() {
     if (active && !disposed && !document.hidden && !frame) frame = requestAnimationFrame(render);
   }
-  listen(document, 'portfolio:theme-change', () => {
-    dirtySize = true;
-    if (host.dataset.rendered === 'true') draw();
-  });
   function finishDrag({ cancelled = true } = {}) {
     if (!drag) return;
     const finished = drag; drag = null;
@@ -307,6 +302,10 @@ export function mountLaser(host, { onInteraction = () => {} } = {}) {
   listen(document, 'visibilitychange', () => {
     if (document.hidden) { finishDrag(); stopPendingVictory(); finishReveal(); cancelAnimationFrame(frame); frame = 0; }
     else requestDraw();
+  });
+  listen(document, 'portfolio:theme-change', () => {
+    dirtySize = true;
+    if (!document.hidden && host.dataset.rendered === 'true') draw();
   });
   return {
     prepare() {

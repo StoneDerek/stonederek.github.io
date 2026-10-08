@@ -101,14 +101,16 @@ test('a direct article switch preserves the outgoing scroll, geometry, and palet
     s.page.style.setProperty('--ink', '#efeaf3');
     assert.equal(backdrop.style['--accent'], '#d9ff61');
     assert.equal(backdrop.style['--ink'], '#1b2612');
-    const finished = settleTiles(s.root, s.page, { opening: true, signal: controller.signal });
+    const finished = settleTiles(s.root, s.page, { opening: true, replacing: true, signal: controller.signal });
     assert.equal(s.root.children.length, 2);
     assert.equal(s.root.children[1].hidden, true, 'incoming article must not flash its completed state');
     assert.equal(backdrop.hidden, false);
     s.advance(150);
     assert.equal(s.root.children[1].hidden, false);
     assert.equal(backdrop.children[0].style.top, '-320px');
-    s.advance(700);
+    s.advance(480);
+    assert.equal(s.root.children.length, 2, 'replacement remains masked before its last moving frame');
+    s.advance(490);
     await finished;
     assert.deepEqual(s.root.children, [backdrop]);
     backdrop.remove();
@@ -132,27 +134,6 @@ test('interrupting a direct article switch releases its mask while the outgoing 
     backdrop.remove();
     assert.equal(s.root.children.length, 0);
     assert.equal(s.frames.size, 0);
-  } finally { controller.abort(); s.restore(); }
-});
-
-test('replacing an article reveals its tiles sooner and completes without the full gallery-opening wait', async () => {
-  const s = scene();
-  const controller = new AbortController();
-  try {
-    const finished = settleTiles(s.root, s.page, {
-      opening: true, replacing: true, origin: { x: .5, y: .5 }, signal: controller.signal
-    });
-    assert.equal(s.root.children[0].hidden, true, 'the initial copy must remain concealed');
-    s.advance(80);
-    assert.equal(s.root.children[0].hidden, false);
-    s.advance(480);
-    assert.equal(s.page.style.visibility, 'hidden', 'keep the original concealed until the last tiles finish');
-    s.advance(490);
-    await finished;
-    assert.equal(s.root.children.length, 0);
-    assert.equal(s.frames.size, 0);
-    assert.equal(s.page.style.opacity, '');
-    assert.equal(s.page.style.visibility, '');
   } finally { controller.abort(); s.restore(); }
 });
 

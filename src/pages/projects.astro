@@ -8,7 +8,7 @@ import AboutContent from '../components/AboutContent.astro';
 import { projectIcon } from '../data/project-icons.js';
 import { sectionFade, shortDrift, artworkFade } from '../data/section-motion.js';
 import { resumeURL } from '../data/resume.js';
-import { aboutPalette, linksPalette } from '../data/section-palettes.js';
+import { aboutPalette, darkAboutPalette, linksPalette } from '../data/section-palettes.js';
 const base = import.meta.env.BASE_URL;
 const url = (path) => `${base}${path}`;
 const first = projects[0];
@@ -21,7 +21,7 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
 
     <SiteHeader page="projects" />
 
-    <div class="about-preview" data-about-preview data-favicon={projectIcon(aboutPalette)} aria-hidden="true" inert hidden>
+    <div class="about-preview" data-about-preview data-favicon={projectIcon(aboutPalette)} data-dark-favicon={projectIcon(darkAboutPalette)} aria-hidden="true" inert hidden>
       <div class="profile-shell about-shell"><div class="profile-main about-main"><AboutContent prefix="preview-" /></div></div>
     </div>
 

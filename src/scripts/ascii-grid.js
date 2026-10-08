@@ -1,9 +1,6 @@
 export const ASCII_GLYPHS = ' .:-=+*#%@/\\|';
 export const ASCII_COLORS = ['#151515', '#77777e', '#b4b4ba', '#d65062', '#dc8b48', '#b8a329',
   '#62a271', '#4f9eac', '#5f86cc', '#8b65c2'];
-// Output inks share the same indices; sampling still uses the original scene.
-export const ASCII_DARK_COLORS = ['#eeedf2', '#b1aabb', '#cbc7d4', '#f07588', '#eab779', '#ebd06b',
-  '#83cd98', '#73cad7', '#89aaf3', '#b898ed'];
 const rgb = ASCII_COLORS.map(hex => [1, 3, 5].map(start => parseInt(hex.slice(start, start + 2), 16)));
 
 export function nearestInk(red, green, blue) {

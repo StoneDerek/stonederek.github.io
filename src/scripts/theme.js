@@ -1,78 +1,82 @@
-// This self-contained function also runs inline in <head>, before first paint.
-// Keep storage and media-query access guarded for private/offline browsers.
-export function themeBootstrap() {
-  let preference = 'system';
+export const themeStorageKey = 'derek-stone-theme';
+
+// This function also runs inline in <head>, before the first page can paint.
+// Keep it self-contained so the static and offline pages use the same startup.
+export function initializeTheme(key = 'derek-stone-theme') {
+  const valid = value => ['system', 'light', 'dark'].includes(value);
+  let choice = window.__PORTFOLIO_THEME_STATE__?.choice || 'system';
   try {
-    const saved = localStorage.getItem('portfolio-color-theme');
-    if (saved === 'light' || saved === 'dark') preference = saved;
-  } catch {}
-  const preview = window.__PORTFOLIO_PREVIEW_THEME_PREFERENCE__;
-  if (preview === 'light' || preview === 'dark' || preview === 'system') preference = preview;
-  let dark = false;
-  try { dark = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch {}
-  const theme = preference === 'system' ? (dark ? 'dark' : 'light') : preference;
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.dataset.themePreference = preference;
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = theme === 'dark' ? '#17151b' : '#ffffff';
+    const saved = window.localStorage.getItem(key);
+    if (valid(saved)) choice = saved;
+  } catch { /* Private/file contexts still retain this document's choice. */ }
+  if (valid(window.__PORTFOLIO_PREVIEW_THEME_CHOICE__)) choice = window.__PORTFOLIO_PREVIEW_THEME_CHOICE__;
+  let systemDark = false;
+  try { systemDark = Boolean(window.matchMedia?.('(prefers-color-scheme: dark)').matches); } catch {}
+  if (typeof window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__ === 'boolean') systemDark = window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__;
+  const resolved = choice === 'system' ? systemDark ? 'dark' : 'light' : choice;
+  window.__PORTFOLIO_THEME_STATE__ = { choice, resolved };
+  document.documentElement.dataset.theme = resolved;
+  document.documentElement.dataset.themePreference = choice;
+  const color = document.querySelector('meta[name="theme-color"]');
+  if (color) color.content = resolved === 'dark' ? '#17171b' : '#ffffff';
+  const icon = document.querySelector('[data-project-favicon]');
+  if (icon && icon.dataset.themeLightFavicon !== icon.dataset.themeDarkFavicon) {
+    icon.href = resolved === 'dark' ? icon.dataset.themeDarkFavicon : icon.dataset.themeLightFavicon;
+  }
+  return window.__PORTFOLIO_THEME_STATE__;
 }
 
-export function resolveTheme(preference, systemDark = false) {
-  return preference === 'light' || preference === 'dark' ? preference : systemDark ? 'dark' : 'light';
-}
-
-let initialized = false;
-export function initializeTheme() {
-  if (initialized) return;
-  initialized = true;
-  let media = null;
-  try { media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null; } catch {}
-  const valid = value => ['light', 'dark', 'system'].includes(value) ? value : 'system';
-  let preference = valid(document.documentElement.dataset.themePreference);
-  const apply = (doc = document, { notify = false } = {}) => {
-    const theme = resolveTheme(preference, media?.matches);
-    const previous = doc.documentElement.dataset.theme;
-    doc.documentElement.dataset.theme = theme;
-    doc.documentElement.dataset.themePreference = preference;
-    const meta = doc.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = theme === 'dark' ? '#17151b' : '#ffffff';
-    doc.querySelectorAll('[data-theme-toggle]').forEach(button => button.setAttribute('aria-checked', String(theme === 'dark')));
-    doc.querySelectorAll('[data-theme-reset]').forEach(button => { button.hidden = preference === 'system'; });
-    doc.querySelectorAll('[data-theme-status]').forEach(label => {
-      label.textContent = preference === 'system' ? 'Following your system' : `${theme === 'dark' ? 'Dark' : 'Light'} mode selected`;
+export function mountTheme() {
+  let state = window.__PORTFOLIO_THEME_STATE__ || initializeTheme(themeStorageKey);
+  let media;
+  try { media = window.matchMedia?.('(prefers-color-scheme: dark)'); } catch {}
+  const resolve = choice => choice === 'system'
+    ? (window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__ ?? media?.matches) ? 'dark' : 'light' : choice;
+  function chrome(doc = document) {
+    doc.documentElement.dataset.theme = state.resolved;
+    doc.documentElement.dataset.themePreference = state.choice;
+    const color = doc.querySelector('meta[name="theme-color"]');
+    if (color) color.content = state.resolved === 'dark' ? '#17171b' : '#ffffff';
+    const icon = doc.querySelector('[data-project-favicon]');
+    // Gallery icons follow their selected project, rather than the page theme.
+    if (icon && icon.dataset.themeLightFavicon !== icon.dataset.themeDarkFavicon) {
+      icon.href = state.resolved === 'dark' ? icon.dataset.themeDarkFavicon : icon.dataset.themeLightFavicon;
+    }
+    doc.querySelectorAll('[data-theme-control]').forEach(control => {
+      control.hidden = false;
+      control.querySelector('[data-theme-switch]').setAttribute('aria-checked', String(state.resolved === 'dark'));
+      control.querySelector('[data-theme-status]').textContent = state.choice === 'system' ? 'Following system' : 'Saved preference';
+      control.querySelector('[data-theme-system]').hidden = state.choice === 'system';
     });
-    doc.querySelectorAll('[data-theme-control]').forEach(control => { control.hidden = false; });
-    if (notify && doc === document) {
-      if (previous !== theme) document.dispatchEvent(new CustomEvent('portfolio:theme-change', { detail: { theme } }));
-      if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ !== undefined)
-        window.parent.postMessage({ type: 'portfolio-preview-theme', theme, preference }, '*');
+  }
+  function apply(choice = state.choice, remember = false) {
+    const previous = state.resolved;
+    state = { choice, resolved: resolve(choice) };
+    window.__PORTFOLIO_THEME_STATE__ = state;
+    if (remember) {
+      try {
+        if (choice === 'system') window.localStorage.removeItem(themeStorageKey);
+        else window.localStorage.setItem(themeStorageKey, choice);
+      } catch {}
     }
-  };
-  const choose = value => {
-    preference = valid(value);
-    try {
-      if (preference === 'system') localStorage.removeItem('portfolio-color-theme');
-      else localStorage.setItem('portfolio-color-theme', preference);
-    } catch {}
-    apply(document, { notify: true });
-  };
+    chrome();
+    window.__PORTFOLIO_PREVIEW_SET_THEME__?.(state);
+    if (previous !== state.resolved) document.dispatchEvent(new CustomEvent('portfolio:theme-change', { detail: state }));
+  }
   document.addEventListener('click', event => {
-    if (event.target.closest('[data-theme-toggle]')) choose(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
-    else if (event.target.closest('[data-theme-reset]')) choose('system');
+    if (event.target.closest('[data-theme-switch]')) apply(state.resolved === 'dark' ? 'light' : 'dark', true);
+    else if (event.target.closest('[data-theme-system]')) apply('system', true);
   });
-  media?.addEventListener?.('change', () => { if (preference === 'system') apply(document, { notify: true }); });
+  media?.addEventListener('change', () => { if (state.choice === 'system') apply(); });
+  document.addEventListener('portfolio:preview-system-change', () => { if (state.choice === 'system') apply(); });
   window.addEventListener('storage', event => {
-    if (event.key !== 'portfolio-color-theme' && event.key !== null) return;
-    preference = valid(event.newValue);
-    apply(document, { notify: true });
-  });
-  document.addEventListener('astro:before-swap', event => apply(event.newDocument));
-  document.addEventListener('astro:after-swap', () => apply());
-  window.addEventListener('pageshow', () => {
-    if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ === undefined) {
-      try { preference = valid(localStorage.getItem('portfolio-color-theme')); } catch {}
+    if (event.key === themeStorageKey || event.key === null) {
+      apply(['light', 'dark'].includes(event.newValue) ? event.newValue : 'system');
     }
-    apply(document, { notify: true });
   });
+  document.addEventListener('astro:before-swap', event => chrome(event.newDocument));
+  document.addEventListener('astro:page-load', () => apply());
+  window.addEventListener('pageshow', () => apply());
   apply();
+  return { refresh: () => apply() };
 }

@@ -6,9 +6,9 @@ import site from '../data/site.json';
 import { shortDrift } from '../data/section-motion.js';
 import { projectIcon } from '../data/project-icons.js';
 import AboutContent from '../components/AboutContent.astro';
-import { aboutPalette } from '../data/section-palettes.js';
+import { aboutPalette, darkAboutPalette } from '../data/section-palettes.js';
 ---
-<Layout title={`${site.name} — About`} description="Lorem ipsum dolor sit amet, consectetur adipiscing elit." favicon={projectIcon(aboutPalette)}>
+<Layout title={`${site.name} — About`} description="Lorem ipsum dolor sit amet, consectetur adipiscing elit." favicon={projectIcon(aboutPalette)} darkFavicon={projectIcon(darkAboutPalette)}>
   <div class="profile-shell about-shell">
     <a class="skip-link" href="#about-title">Skip to About</a>
     <SiteHeader page="about" />

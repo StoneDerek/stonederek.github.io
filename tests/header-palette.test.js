@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { interpolatePalette, readHeaderPalette, blendHeaderPalette } from '../src/scripts/header-palette.js';
 import projects from '../src/data/projects.json' with { type: 'json' };
-import { homePalette, aboutPalette, linksPalette } from '../src/data/section-palettes.js';
+import { homePalette, aboutPalette, darkHomePalette, darkAboutPalette, linksPalette } from '../src/data/section-palettes.js';
 
 const from = { accent: '#ded3ff', ink: '#241a36' }, to = { accent: '#cde9ff', ink: '#1b2b43' };
 test('palette blends have exact endpoints and reversible opaque RGB intermediate colors', () => {
@@ -29,12 +29,29 @@ const rgb = color => {
 const luminance = color => rgb(color).map(value => { const c = value / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; })
   .reduce((sum, channel, i) => sum + channel * [.2126, .7152, .0722][i], 0);
 test('text stays readable throughout every project and section palette blend', () => {
-  const palettes = [homePalette, aboutPalette, linksPalette, ...projects.map(project => project.palette)];
+  const palettes = [homePalette, aboutPalette, darkHomePalette, darkAboutPalette, linksPalette, ...projects.map(project => project.palette)];
   for (const a of palettes) for (const b of palettes) for (let i = 0; i <= 100; i++) {
     const p = interpolatePalette(a, b, i / 100);
     const background = luminance(p.accent), ink = luminance(p.ink);
     const contrast = (Math.max(background, ink) + .05) / (Math.min(background, ink) + .05);
     assert.ok(contrast >= 4.5, `${a.accent} → ${b.accent} at ${i}%: ${contrast}`);
+  }
+});
+
+test('selected tabs preserve their own text contrast through light/dark and Links handoffs', () => {
+  const palettes = [];
+  for (const dark of [false, true]) {
+    const surface = dark ? [34, 33, 39] : [255, 255, 255];
+    for (const palette of [dark ? darkHomePalette : homePalette, dark ? darkAboutPalette : aboutPalette, ...projects.map(project => project.palette)]) {
+      palettes.push({ ...palette, selection: `rgb(${rgb(palette.accent).map((channel, i) => Math.round(channel * .8 + surface[i] * .2)).join(', ')})`, selectionInk: palette.ink });
+    }
+    palettes.push({ ...linksPalette, selection: dark ? '#37333f' : '#e4e4e7', selectionInk: dark ? '#eeebf3' : '#211b2b' });
+  }
+  for (const a of palettes) for (const b of palettes) for (let i = 0; i <= 100; i++) {
+    const p = interpolatePalette(a, b, i / 100);
+    const bg = luminance(p.selection), fg = luminance(p.selectionInk);
+    assert.ok((Math.max(bg, fg) + .05) / (Math.min(bg, fg) + .05) >= 4.5,
+      `${a.accent} → ${b.accent}, selected tab at ${i}%`);
   }
 });
 

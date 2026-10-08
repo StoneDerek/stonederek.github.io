@@ -16,7 +16,7 @@ export function mountProfileNavigation() {
   const navigation = mountSiteMenu(menu, preference, { signal: controller.signal, onChange: () => {
     toggle.setAttribute('aria-label', `${navigation.expanded ? 'Close' : 'Open'} navigation. ${header.dataset.page === 'about' ? 'About' : 'Home'}: ${header.dataset.owner}`);
   } });
-  const choices = [...menu.querySelectorAll('a[href], [data-projects-toggle]')];
+  const choices = [...menu.querySelectorAll('a[href], [data-projects-toggle], [data-publication-date]')];
   const visible = () => choices.filter(choice => choice === projectsToggle || !projects.contains(choice) || nested.expanded);
   const close = (focus = false) => navigation.set(false, { focus });
   listen(toggle, 'click', event => { event.preventDefault(); navigation.set(!navigation.expanded); });

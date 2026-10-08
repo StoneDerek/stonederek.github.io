@@ -26,6 +26,12 @@ function copyDrawing(element, { freeze = false } = {}) {
       copy.style.transform = style.transform;
       copy.style.translate = style.translate;
       copy.style.opacity = style.opacity;
+      if (freeze) {
+        copy.style.color = style.color;
+        copy.style.backgroundColor = style.backgroundColor;
+        copy.style.backdropFilter = style.backdropFilter;
+        copy.style.webkitBackdropFilter = style.webkitBackdropFilter;
+      }
     }
   });
   const style = getComputedStyle(element);
@@ -50,7 +56,7 @@ window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',
   if (event.matches) finishTouchSectionMotion();
 });
 
-export function captureTouchSectionMotion(direction, { projectEntry = false, hideSectionLinks = false } = {}) {
+export function captureTouchSectionMotion(direction, { projectEntry = false } = {}) {
   finishTouchSectionMotion();
   const drawings = [...document.querySelectorAll(contentSelector)].filter(element => {
     const style = getComputedStyle(element);
@@ -59,15 +65,10 @@ export function captureTouchSectionMotion(direction, { projectEntry = false, hid
     const rect = element.getBoundingClientRect();
     return { ...copyDrawing(element), rect, artwork: element.matches('[data-section-art]') };
   });
-  const label = document.querySelector('.menu-location');
-  // A label copy loses its page-scoped selectors when its routing attributes
-  // are removed. Freeze those hidden rows as well as any running animation.
-  const labelDrawing = copyDrawing(label, { freeze: true });
-  const sectionLinks = hideSectionLinks && document.querySelector('.page-links');
-  const linksStyle = sectionLinks && getComputedStyle(sectionLinks);
-  const linksDrawing = linksStyle?.visibility === 'visible' && Number(linksStyle.opacity) > 0
-    ? { ...copyDrawing(sectionLinks, { freeze: true }), rect: sectionLinks.getBoundingClientRect(),
-      background: linksStyle.backgroundColor } : null;
+  const header = document.querySelector('.site-header');
+  // Freeze page-scoped labels and both navigation rows before the swap.
+  const headerDrawing = copyDrawing(header, { freeze: true });
+  const headerRect = header.getBoundingClientRect();
 
   return ({ projectFinished = Promise.resolve() } = {}) => {
     const host = document.querySelector('#portfolio, .profile-shell');
@@ -95,22 +96,6 @@ export function captureTouchSectionMotion(direction, { projectEntry = false, hid
       }
     }
     drawings.forEach(drawing => drawing.restoreScroll());
-    if (linksDrawing) {
-      const layer = document.createElement('div');
-      layer.className = 'section-outgoing section-outgoing-navigation';
-      layer.setAttribute('aria-hidden', 'true');
-      layer.inert = true;
-      Object.assign(linksDrawing.clone.style, {
-        left: `${linksDrawing.rect.left}px`, top: `${linksDrawing.rect.top}px`,
-        backgroundColor: linksDrawing.background, transition: 'none'
-      });
-      layer.append(linksDrawing.clone);
-      host.append(layer);
-      layers.push(layer);
-      animations.push(linksDrawing.clone.animate([{ opacity: linksDrawing.opacity }, { opacity: 0 }], {
-        duration: sectionTiming.exit, easing: 'ease-in', fill: 'both'
-      }));
-    }
     if (!projectEntry) incoming.forEach(element => {
       const artwork = element.matches('[data-section-art]');
       const resting = getComputedStyle(element).transform;
@@ -124,19 +109,21 @@ export function captureTouchSectionMotion(direction, { projectEntry = false, hid
         easing: artwork ? 'linear' : sectionTiming.easing, fill: 'both'
       }));
     });
-    const nextLabel = document.querySelector('.menu-location');
-    labelDrawing.clone.style.color = 'inherit';
-    nextLabel.parentElement.append(labelDrawing.clone);
-    labelDrawing.clone.classList.add('section-outgoing-location');
-    labelDrawing.clone.setAttribute('aria-hidden', 'true');
-    labelDrawing.clone.inert = true;
-    layers.push(labelDrawing.clone);
-    // Match the desktop label's fade-through, keeping both drawings stationary.
-    animations.push(labelDrawing.clone.animate([
-      { opacity: labelDrawing.opacity }, { opacity: 0 }
-    ],
-      { duration: sectionTiming.exit, easing: 'ease-in', fill: 'both' }));
-    animations.push(nextLabel.animate([
+    const nextHeader = document.querySelector('.site-header');
+    const navigationLayer = document.createElement('div');
+    navigationLayer.className = 'section-outgoing section-outgoing-navigation';
+    navigationLayer.setAttribute('aria-hidden', 'true');
+    navigationLayer.inert = true;
+    headerDrawing.clone.style.left = `${headerRect.left}px`;
+    headerDrawing.clone.style.top = `${headerRect.top}px`;
+    navigationLayer.append(headerDrawing.clone);
+    host.append(navigationLayer);
+    headerDrawing.restoreScroll();
+    layers.push(navigationLayer);
+    animations.push(headerDrawing.clone.animate([
+      { opacity: headerDrawing.opacity }, { opacity: 0 }
+    ], { duration: sectionTiming.exit, easing: 'ease-in', fill: 'both' }));
+    animations.push(nextHeader.animate([
       { opacity: 0 }, { opacity: 1 }
     ],
       { duration: sectionTiming.enter, delay: sectionTiming.exit, easing: sectionTiming.easing, fill: 'both' }));
@@ -151,7 +138,7 @@ export function captureTouchSectionMotion(direction, { projectEntry = false, hid
     } };
     activeMotion = motion;
     // A direct project entry keeps the original section behind the tile reveal.
-    // Only its anchored header uses the short section-label transition.
+    // Its anchored header still clears and enters with the section text.
     Promise.allSettled([...animations.map(animation => animation.finished), projectFinished]).then(() => {
       if (activeMotion === motion) motion.finish();
     });

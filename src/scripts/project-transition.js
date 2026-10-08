@@ -4,6 +4,15 @@ const offsets = [[-14, -10], [13, -12], [-12, 13], [14, 10]];
 const round = value => Math.round(value * 100) / 100;
 const frameInterval = 1000 / 60;
 
+// Start replacement reveals at visible article content, rather than at the
+// dropdown's click position, where the first tiles may only uncover whitespace.
+export function articleRevealOrigin(bounds, width, height) {
+  if (!bounds || ![width, height, bounds.left, bounds.top, bounds.width, bounds.height].every(Number.isFinite)
+    || width <= 0 || height <= 0) return { x: .5, y: .5 };
+  return { x: clamp((bounds.left + bounds.width / 2) / width),
+    y: clamp((bounds.top + Math.min(bounds.height / 2, 48)) / height) };
+}
+
 // Keep phone tiles at 24px and bound the mask work on larger displays.
 export function createTileCells(width, height, origin = { x: .5, y: .5 }) {
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return [];
