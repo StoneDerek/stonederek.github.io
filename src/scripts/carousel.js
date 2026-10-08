@@ -11,6 +11,7 @@ import { mountLaser } from './ascii-laser.js';
 import { aboutPalette, darkAboutPalette, linksPalette } from '../data/section-palettes.js';
 import { sectionTiming } from '../data/section-motion.js';
 import { readHeaderPalette, blendHeaderPalette, stopHeaderPalette } from './header-palette.js';
+import { mountProjectCaseStudy, renderProjectMedia } from './project-case-study.js';
 
 export function mountPortfolio({ sectionLinks = { hide() {} },
   fragment = window.__PORTFOLIO_PREVIEW_FRAGMENT__ ?? window.location.hash, sectionEntry = false } = {}) {
@@ -65,6 +66,9 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   const captionHeading = root.querySelector('.project-caption h1');
   const mobileInspect = root.querySelector('.mobile-inspect');
   const detailMedia = root.querySelector('[data-detail-media]');
+  const caseStudy = mountProjectCaseStudy(root.querySelector('[data-detail-case-study]'), {
+    base: detailMedia.dataset.assetBase, reducedMotion
+  });
   const skipLink = root.querySelector('.skip-link');
   const last = projects.length - 1;
   const end = projects.length;
@@ -694,31 +698,9 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     setText('[data-detail-description]', project.description);
     setText('[data-detail-note]', project.note);
     setText('[data-detail-number]', `${String(active + 1).padStart(2, '0')} / ${String(projects.length).padStart(2, '0')}`);
-    const media = detailMedia;
-    media.replaceChildren();
-    const figures = document.createDocumentFragment();
-    // Article media is explicitly supplied; the gallery cover is never inserted here.
-    for (const item of project.articleMedia || []) {
-      if (!item.src) continue;
-      const figure = document.createElement('figure');
-      figure.className = 'project-figure';
-      const image = document.createElement('img');
-      image.src = /^(https?:\/\/|\/)/.test(item.src) ? item.src : `${media.dataset.assetBase}${item.src}`;
-      image.alt = item.alt || '';
-      image.decoding = 'async';
-      image.loading = figures.childElementCount ? 'lazy' : 'eager';
-      if (item.width > 0) image.width = item.width;
-      if (item.height > 0) image.height = item.height;
-      figure.append(image);
-      if (item.caption) {
-        const caption = document.createElement('figcaption');
-        caption.textContent = item.caption;
-        figure.append(caption);
-      }
-      figures.append(figure);
-    }
-    media.append(figures);
-    media.hidden = !media.childElementCount;
+    // Article images are supplied explicitly; the gallery cover stays in the gallery.
+    renderProjectMedia(detailMedia, project.articleMedia, { base: detailMedia.dataset.assetBase });
+    caseStudy.render(project);
     projectView.scrollTop = 0;
   }
 
@@ -1097,6 +1079,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     disposed = true;
     stopHeaderPalette(siteHeader);
     laser.destroy();
+    caseStudy.destroy();
     credits.open = false;
     controller.abort();
     projectAbort?.abort();

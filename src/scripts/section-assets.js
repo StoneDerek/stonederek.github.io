@@ -1,4 +1,5 @@
 import { projectIndexFromHash } from './project-links.js';
+import { projectMediaSource } from './project-case-study.js';
 
 // Decode the visible gallery assets before the router captures its new page.
 // A slower connection keeps the current section usable instead of capturing
@@ -15,7 +16,7 @@ export function prepareGalleryImages(doc, base, signal) {
   const firstMedia = projects[index]?.articleMedia?.find(item => item.src);
   if (firstMedia) {
     const assetBase = doc.querySelector('[data-detail-media]').dataset.assetBase;
-    assets.push({ src: /^(https?:\/\/|\/)/.test(firstMedia.src) ? firstMedia.src : `${assetBase}${firstMedia.src}`, priority: 'high', critical: true });
+    assets.push({ src: projectMediaSource(firstMedia.src, assetBase), priority: 'high', critical: true });
   }
   // Warm the whole strip, but wait only for the cover, centered thumbnail, and
   // first article image. A stalled neighboring thumbnail must not hold the route.
