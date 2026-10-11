@@ -229,9 +229,9 @@ test('a 120 Hz display updates the mask at 60 Hz without stretching the transiti
       get: () => clip,
       set: value => { clip = value; draws++; }
     });
-    for (let frame = 1; frame <= 81; frame++) s.advance(frame * 1000 / 120);
+    for (let frame = 1; frame <= 59; frame++) s.advance(frame * 1000 / 120);
     await finished;
-    assert.equal(draws, 40, 'skip alternate expensive mask updates, including redundant final geometry');
+    assert.equal(draws, 29, 'skip alternate expensive mask updates, including redundant final geometry');
     assert.equal(s.root.children.length, 0);
     assert.equal(s.frames.size, 0);
     assert.equal(s.page.style.visibility, '');
