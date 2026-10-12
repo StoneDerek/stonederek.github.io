@@ -106,6 +106,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   let titleSlots = [];
   let slideEndsAt = 0;
   let projectOpen = false;
+  let articleIndex = -1;
   let projectAbort = null;
   let projectOrigin = { x: .5, y: .5 };
   let projectReturnFocus = captionButton;
@@ -128,7 +129,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   let renderedEndProgress = NaN;
   const menuNavigation = mountSiteMenu(menu, reducedMotion, { signal: controller.signal, onChange: updateMenuName });
   const projectRequests = createProjectRequests({
-    getCurrent: () => ({ open: projectOpen, index: active }),
+    getCurrent: () => ({ open: projectOpen, index: articleIndex }),
     open: openProject,
     close: () => transitionProject(false),
     cancel: () => projectAbort?.abort(),
@@ -151,7 +152,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
 
   function updateMenuName() {
     const location = menuContext === 'about' ? `About: ${siteHeader.dataset.owner}`
-      : `${menuContext === 'project' ? 'Project' : 'Projects'}: ${endOpen ? 'Links' : projects[Math.max(0, active)].title}`;
+      : menuContext === 'project' ? `Project: ${projects[Math.max(0, articleIndex)].title}`
+      : `Projects: ${endOpen ? 'Links' : projects[Math.max(0, active)].title}`;
     menuToggle.setAttribute('aria-label', `${menuNavigation.expanded ? 'Close' : 'Open'} navigation. ${location}`);
     homeMenuButton.removeAttribute('aria-current');
     aboutMenuButton.removeAttribute('aria-current');
@@ -237,19 +239,20 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     nextButton.setAttribute('aria-label', index >= last ? 'Show professional links' : 'Next project');
   }
 
-  function updateGalleryIdentity({ immediate = false } = {}) {
+  function updateGalleryIdentity({ immediate = false, index = active, links = endOpen } = {}) {
     const from = readHeaderPalette(siteHeader);
-    const project = projects[Math.max(0, active)];
-    const palette = endOpen ? linksPalette : project.palette;
+    const project = projects[Math.max(0, index)];
+    const palette = links ? linksPalette : project.palette;
     root.style.setProperty('--accent', palette.accent);
     root.style.setProperty('--ink', palette.ink);
-    root.style.setProperty('--caption-color', palette.caption || palette.accent);
+    // An article can change identity while its outgoing gallery drawing stays put.
+    if (index === active && links === endOpen) root.style.setProperty('--caption-color', palette.caption || palette.accent);
     if (!immediate && !aboutTravel) blendHeaderPalette(siteHeader, from, { duration: 320 });
     menuProjects.forEach(button => {
-      if (!endOpen && Number(button.dataset.menuProject) === active) button.setAttribute('aria-current', 'true');
+      if (!links && Number(button.dataset.menuProject) === index) button.setAttribute('aria-current', 'true');
       else button.removeAttribute('aria-current');
     });
-    setMenuTitle(endOpen ? 'Links' : project.title, { immediate });
+    setMenuTitle(links ? 'Links' : project.title, { immediate });
   }
 
   function selectGalleryFavicon(index) {
@@ -685,15 +688,13 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   });
 
   function fillProject(index) {
-    select(index, { immediate: true, announceSelection: false });
-    finishTitle();
-    const project = projects[active];
+    const project = projects[index];
     setText('[data-detail-title]', project.title);
     setText('[data-detail-category]', project.category);
     setText('[data-detail-year]', project.year);
     setText('[data-detail-description]', project.description);
     setText('[data-detail-note]', project.note);
-    setText('[data-detail-number]', `${String(active + 1).padStart(2, '0')} / ${String(projects.length).padStart(2, '0')}`);
+    setText('[data-detail-number]', `${String(index + 1).padStart(2, '0')} / ${String(projects.length).padStart(2, '0')}`);
     const media = detailMedia;
     media.replaceChildren();
     const figures = document.createDocumentFragment();
@@ -785,10 +786,25 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     try {
       projectOrigin = request.origin || projectOrigin;
       projectReturnFocus = request.returnFocus || projectReturnFocus;
+      stopWheel();
+      stopAnimation();
+      cancelAnimationFrame(liftFrame);
+      cancelAnimationFrame(titleFrame);
+      liftFrame = titleFrame = 0;
+      root.classList.remove('is-lifting');
+      articleIndex = request.index;
       fillProject(request.index);
+      updateGalleryIdentity({ index: articleIndex, links: false, immediate: request.sectionEntry });
+      updateFavicon(projects[articleIndex].favicon);
       if (replacing) projectOrigin = articleRevealOrigin(projectPage.querySelector('[data-detail-title]').getBoundingClientRect(),
         document.documentElement.clientWidth, projectView.clientHeight);
       await transitionProject(true, { replacing, sectionEntry: request.sectionEntry });
+      // The solid article now conceals the gallery. Select its return slide here,
+      // so opening never jumps to the cover but closing reveals the right project.
+      if (!disposed) {
+        select(request.index, { immediate: true, announceSelection: false });
+        finishTitle();
+      }
     } finally {
       outgoing?.cancel();
       backdrop?.remove();
