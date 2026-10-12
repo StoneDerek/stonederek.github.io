@@ -8,6 +8,7 @@ An identity-led homepage, an expanded About page, and a dedicated full-screen pr
 - `/about/`: five expanded sections with obvious filler headings and paragraphs. Derek will write the actual copy. Edit `src/components/AboutContent.astro` and `src/pages/index.astro` to replace the filler. The shared About component also supplies the inert preview uncovered by the gallery's edge gesture.
 - `/projects/`: the existing draggable gallery, project-specific palettes, thumbnail strip, title scramble, and tile-settle articles. All five gallery entries and their abstract artwork are still fictional placeholders, clearly identified as such.
 - `/projects/#project=signal-studies`: a direct article link. Menu project links on Home and About open the corresponding article. Unknown slugs leave the gallery available.
+- Signal studies demonstrates the optional case-study layout: project facts, six sections, a supporting placeholder illustration, and On this page controls. The body copy remains Lorem ipsum. Projects without case-study data keep their short introduction layout.
 - Swiping beyond the final project reveals the hidden Links page, with an ASCII laser puzzle, professional links, and Credits. It has no dropdown entry or extra project thumbnail.
 - `/resume/`: the permanent résumé route.
 
@@ -46,11 +47,14 @@ Edit `src/data/projects.json`. Each item contains:
 
 | Field | Purpose |
 | --- | --- |
+| `slug` | Stable project ID for direct URLs; use lowercase letters, numbers, and hyphens |
 | `title`, `category`, `year`, `caption` | Project metadata and gallery announcement text |
 | `description`, `note` | Text shown when clicking the centered project title |
 | `image`, `thumbnail` | Image paths relative to `public/` |
 | `imageAlt` | A useful description for screen readers |
 | `articleMedia` | Optional article-only images: an array of `{ "src", "alt", "caption", "width", "height" }`; the gallery cover is not used automatically |
+| `caseStudy.facts` | Optional project facts: an array of `{ "label", "value" }`, such as Role, Timeline, Team, and Tools |
+| `caseStudy.sections` | Optional sections: an array of `{ "title", "paragraphs", "media" }`; paragraphs is an array of plain-text strings, and media uses the `articleMedia` image fields |
 | `position` | CSS object position for cropping, such as `63% 50%` |
 | `palette.accent` | Navigation, caption, controls, and thumbnail outline color |
 | `palette.ink` | Text color on accent controls and in the white project view |
@@ -58,13 +62,15 @@ Edit `src/data/projects.json`. Each item contains:
 
 Use landscape images around 1920 × 1200 and smaller thumbnail copies around 320 × 200. Put them in `public/art/` and `public/thumbnails/`, then change the paths in the JSON. Use strong contrast between accent and ink, and check the caption against the image. There is no automatic palette extraction or slideshow timer.
 
-Article images can use paths relative to `public/` or absolute URLs. Omit `articleMedia` for a text-only article. Supplying image width and height reserves its layout space before it loads.
+Article images can use paths relative to `public/` or absolute URLs. Omit `articleMedia` for a text-only article. Supplying image width and height reserves its layout space before it loads. Section images load lazily as the reader approaches them. The offline exporter embeds local article and section images, including images that only appear in project data; remote images still require a connection.
+
+The case-study facts and sections are optional. Empty entries are omitted, and switching to a shorter project clears the previous article's content. On desktop, the section controls stay beside the reading column; on smaller screens they wrap above it. Choosing a section scrolls within the article and moves keyboard focus to its heading while keeping the direct project URL intact. Reduced motion makes the jump immediate. All body text and captions are inserted as plain text.
 
 Edit `src/data/site.json` for the name, header domain, email, LinkedIn URL, default page title, and description. Section navigation uses Astro ClientRouter and a 180ms fade with 8px text drift. The dropdown stays anchored, and gallery artwork fades without lateral travel. Browser Back/Forward uses the same navigation, and each page releases its listeners and animations before swapping. Reduced motion disables section travel. The exported offline preview uses fresh route frames and the same gesture controller.
 
 Section navigation blends the outgoing page and both header rows over the fully painted incoming page for 180ms. Touch, desktop, and offline navigation share this timing; the outgoing drawing is inert and removed when the blend finishes. Gallery header colors blend over 320ms between selections. The selected navigation fill retains its strong tint, and hovering another tab uses a lighter tint of the current section's accent. Home and About use a 96% opaque navigation surface so scrolling text does not compete with the labels. The About edge gesture continues to drive its palette directly from swipe position. Reduced motion, hidden pages, and page cleanup release timed blends.
 
-The styling lives in `src/styles/portfolio.css`; the interaction lives in `src/scripts/carousel.js`, `src/scripts/site-menu.js`, `src/scripts/project-menu.js`, `src/scripts/project-navigation.js`, `src/scripts/project-transition.js`, and `src/scripts/favicon.js`. The hidden-page puzzle uses `ascii-laser.js`, `laser-optics.js`, and `ascii-grid.js`. `art-sources/` contains the editable originals of the temporary textures.
+The styling lives in `src/styles/portfolio.css`; the interaction lives in `src/scripts/carousel.js`, `src/scripts/project-case-study.js`, `src/scripts/site-menu.js`, `src/scripts/project-menu.js`, `src/scripts/project-navigation.js`, `src/scripts/project-transition.js`, and `src/scripts/favicon.js`. The hidden-page puzzle uses `ascii-laser.js`, `laser-optics.js`, and `ascii-grid.js`. `art-sources/` contains the editable originals of the temporary textures.
 
 ## Navigation and résumé link
 
