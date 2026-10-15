@@ -7,13 +7,10 @@ export function mountSectionLinks() {
   const controller = new AbortController();
   const listen = (target, type, handler, options = {}) => target.addEventListener(type, handler, { ...options, signal: controller.signal });
   const gallery = header.dataset.page === 'projects';
-  const touchInput = window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0;
-  const state = createScrollReveal({ hidden: gallery || window.scrollY > 8, minVisibleMs: touchInput ? 3000 : 0 });
+  const state = createScrollReveal({ hidden: gallery || window.scrollY > 8 });
   const positions = new WeakMap();
   let windowPosition = window.scrollY;
   let touch = null;
-  let aboutProgress = 0;
-  let aboutCurrent = false;
   let press = null;
   let pressTimer = 0;
   const clearPress = () => {
@@ -37,36 +34,22 @@ export function mountSectionLinks() {
     if (press?.id === event.pointerId) clearPress();
   }, { passive: true });
   function apply(hidden) {
-    if (hidden && !aboutProgress && (press || links.contains(document.activeElement))) return;
-    const inert = aboutProgress ? aboutProgress < 1 : hidden;
+    const focused = links.contains(document.activeElement);
+    if (hidden && (press || (focused && document.activeElement.matches(':focus-visible')))) return;
+    if (hidden && focused) header.querySelector('summary').focus({ preventScroll: true });
     links.dataset.scrolled = String(hidden);
-    links.inert = inert;
-    links.setAttribute('aria-hidden', String(inert));
+    links.inert = hidden;
+    links.setAttribute('aria-hidden', String(hidden));
   }
   function move(delta) { apply(state.move(delta)); }
   function hide() { apply(state.setHidden(true)); }
-  function previewAbout(progress) {
-    if (!gallery) return;
-    const returning = aboutProgress > 0 && progress === 0;
-    aboutProgress = progress;
-    const current = progress >= .5;
-    if (current !== aboutCurrent) {
-      aboutCurrent = current;
-      links.querySelectorAll('[data-site-route]').forEach(link => {
-        if (link.dataset.siteRoute === (current ? 'about' : 'projects')) link.setAttribute('aria-current', 'page');
-        else link.removeAttribute('aria-current');
-      });
-    }
-    if (progress) links.dataset.aboutReady = String(progress >= 1);
-    else delete links.dataset.aboutReady;
-    if (returning && state.hidden && links.contains(document.activeElement)) header.querySelector('summary').focus({ preventScroll: true });
-    apply(state.hidden);
-  }
   listen(document, 'scroll', event => {
     const page = event.target === document;
     const article = event.target instanceof Element && event.target.matches('[data-project-view]');
-    if (!page && !article) return;
-    const now = page ? window.scrollY : event.target.scrollTop;
+    if ((!page && !article) || (page && gallery)) return;
+    const scroller = page ? document.scrollingElement : event.target;
+    // Ignore browser overscroll outside a native page/article's real bounds.
+    const now = Math.max(0, Math.min(scroller.scrollHeight - scroller.clientHeight, page ? window.scrollY : scroller.scrollTop));
     const previous = page ? windowPosition : positions.get(event.target) || 0;
     if (page) windowPosition = now;
     else positions.set(event.target, now);
@@ -75,27 +58,32 @@ export function mountSectionLinks() {
   }, { capture: true, passive: true });
   // The full-screen gallery has no vertical document scroll. Read its vertical
   // wheel/touch intent while leaving normal gallery and thumbnail gestures alone.
-  const onGallery = target => gallery && !target.closest('.site-header, .thumbnail-rail, [data-project-view], [data-laser-control], [data-credits]');
+  const onGallery = target => gallery && !target.closest('.site-header, .gallery-about, .thumbnail-rail, [data-project-view], [data-laser-control], [data-credits]');
   listen(document, 'wheel', event => {
     if (!onGallery(event.target) || event.ctrlKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
     move(event.deltaY * unit);
   }, { passive: true });
   listen(document, 'touchstart', event => {
-    touch = event.touches.length === 1 && onGallery(event.target)
-      ? { x: event.touches[0].clientX, y: event.touches[0].clientY, lastY: event.touches[0].clientY } : null;
+    state.endTouch();
+    touch = event.touches.length === 1 && !header.contains(event.target)
+      ? { x: event.touches[0].clientX, y: event.touches[0].clientY, lastY: event.touches[0].clientY,
+        axis: null, gallery: onGallery(event.target) } : null;
+    if (touch) state.beginTouch();
   }, { passive: true });
   listen(document, 'touchmove', event => {
     if (!touch || event.touches.length !== 1) return;
     const point = event.touches[0];
     const dx = point.clientX - touch.x;
     const dy = point.clientY - touch.y;
-    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) move(touch.lastY - point.clientY);
+    if (!touch.axis && Math.max(Math.abs(dx), Math.abs(dy)) > 8) touch.axis = Math.abs(dy) >= Math.abs(dx) ? 'y' : 'x';
+    if (touch.gallery && touch.axis === 'y') move(touch.lastY - point.clientY);
     touch.lastY = point.clientY;
   }, { passive: true });
-  listen(document, 'touchend', () => { touch = null; }, { passive: true });
-  listen(document, 'touchcancel', () => { touch = null; }, { passive: true });
+  const endTouch = () => { touch = null; state.endTouch(); };
+  listen(document, 'touchend', endTouch, { passive: true });
+  listen(document, 'touchcancel', endTouch, { passive: true });
   listen(links, 'focusout', () => { queueMicrotask(() => apply(state.hidden)); });
   apply(state.hidden);
-  return { hide, previewAbout, destroy() { clearPress(); controller.abort(); } };
+  return { hide, destroy() { clearPress(); controller.abort(); } };
 }

@@ -43,10 +43,6 @@ html { background: var(--canvas); }
   ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   .site-menu { animation: none !important; }
 }
-html[data-gallery-handoff]::view-transition-group(*), html[data-gallery-handoff]::view-transition-old(*), html[data-gallery-handoff]::view-transition-new(*) { animation: none !important; }
-html[data-gallery-handoff]::view-transition-old(*) { opacity: 0 !important; }
-html[data-gallery-handoff]::view-transition-new(*) { opacity: 1 !important; }
-html[data-gallery-handoff] [data-astro-transition-scope] { animation: none !important; }
 .section-outgoing { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
 .section-outgoing-navigation { z-index: 60; }
 .section-outgoing-page { z-index: 70; }
@@ -79,9 +75,6 @@ button { font: inherit; cursor: pointer; border: 0; }
 .menu-open-label { position: absolute; inset: 0; opacity: 0; line-height: 18px; transition: opacity 160ms ease; }
 .site-menu[data-expanded="true"] .menu-location, .site-menu:not([data-expanded])[open] .menu-location { opacity: 0; }
 .site-menu[data-expanded="true"] .menu-open-label, .site-menu:not([data-expanded])[open] .menu-open-label { opacity: 1; }
-#portfolio[data-about-swipe] .site-menu, #portfolio[data-about-swipe] .menu-location { transition: none; }
-#portfolio[data-about-swipe] .site-header, #portfolio[data-about-swipe] .page-links a, #portfolio[data-about-swipe] .selection-frame { transition: none; }
-#portfolio[data-about-swipe] .site-menu:not([open]) .menu-location { opacity: var(--about-menu-opacity, 1); }
 .menu-context { position: relative; flex: 0 0 55px; width: 55px; height: 18px; overflow: hidden; }
 .menu-context-row { position: absolute; inset: 0; display: block; }
 .menu-context-project, .menu-context-about { opacity: 0; transform: translateY(100%); }
@@ -118,9 +111,13 @@ button { font: inherit; cursor: pointer; border: 0; }
 .menu-signature { margin: 0; }
 .menu-published { white-space: nowrap; }
 .carousel { position: absolute; inset: 0; z-index: 1; outline: none; }
-.about-preview { position: absolute; inset: 0; z-index: 0; overflow: hidden; clip-path: inset(0 max(0px, calc(100% - var(--about-drag, 0px))) 0 0); pointer-events: none; }
+.gallery-about { position: absolute; z-index: 2; top: max(12px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 12px; border-radius: 6px; background: var(--nav-surface); color: var(--page-text); font-size: 13px; line-height: 18px; text-decoration: none; }
+.gallery-about:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.has-project .gallery-about, .portfolio:has(.site-menu[open]) .gallery-about { visibility: hidden; }
+@media (hover: hover) and (pointer: fine) { .gallery-about:hover { background: color-mix(in srgb, var(--accent) 40%, var(--nav-surface)); } }
+@media (max-width: 600px) { .gallery-about { top: calc(max(12px, env(safe-area-inset-top)) + 124px); } }
 .artwork-stage { position: absolute; inset: 0; touch-action: pan-y pinch-zoom; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.artwork-visual { position: absolute; inset: 0; transform: translateX(var(--about-drag, 0px)); }
+.artwork-visual { position: absolute; inset: 0; }
 .artwork-track { display: flex; width: 100%; height: 100%; }
 .is-moving .artwork-track, .is-dragging .artwork-track, .is-lifting .artwork-track { will-change: transform; }
 .artwork-slide { position: relative; flex: 0 0 100%; width: 100%; height: 100%; transform: translateX(calc(var(--gallery-order, 0) * var(--gallery-inset, 0px) * -1)); }
@@ -182,9 +179,8 @@ dialog.victory-dialog { width: min(320px, calc(100vw - 48px)); max-height: calc(
 .gallery-end-return:hover .control-arrow { transform: translateX(-2px); }
 .gallery-end-return:focus-visible { outline: 1px dashed currentColor; outline-offset: -5px; }
 .portfolio :is(.project-caption, .filmstrip, .mobile-controls) { opacity: max(0, calc(1 - var(--end-progress, 0) * 2)); }
-.project-caption { position: absolute; z-index: 1; top: 50%; left: 50%; transform: translate(calc(-50% + var(--about-drag, 0px)), -50%); width: max-content; max-width: calc(100% - 40px); text-align: center; }
+.project-caption { position: absolute; z-index: 1; top: 50%; left: 50%; transform: translate(-50%, -50%); width: max-content; max-width: calc(100% - 40px); text-align: center; }
 .project-caption[inert] { pointer-events: none; }
-.filmstrip, .mobile-controls { translate: var(--about-drag, 0px) 0; }
 h1 { margin: 0; font-size: 14px; line-height: 1.25; font-weight: 600; }
 .caption-link { position: relative; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 6px 12px; border-radius: 5px; background: transparent; color: var(--caption-color); font-size: inherit; font-weight: inherit; line-height: inherit; user-select: none; -webkit-user-select: none; transition: color 180ms ease; }
 .caption-link::before { content: ''; position: absolute; z-index: -1; inset: 8px 0; border-radius: inherit; background: var(--accent); opacity: 0; transition: opacity 180ms ease; }
@@ -328,8 +324,6 @@ dialog::backdrop { background: #050b1bc9; }
 .site-header .page-links a:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
 @media (hover: hover) and (pointer: fine) { .page-links a:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--accent) 40%, var(--nav-surface)); } }
 .site-header:has(.site-menu[open]) .page-links { visibility: hidden; pointer-events: none; }
-#portfolio[data-about-swipe] .site-header:not(:has(.site-menu[open])) .page-links { opacity: var(--about-links-opacity, 0); transform: translateY(calc(-6px * (1 - var(--about-links-opacity, 0)))); visibility: visible; pointer-events: none; transition: none; }
-#portfolio[data-about-swipe] .site-header:not(:has(.site-menu[open])) .page-links[data-about-ready="true"] { pointer-events: auto; }
 .profile-shell { --accent: var(--default-accent); --ink: var(--default-ink); --accent-hover: var(--default-accent-hover); --accent-mark: var(--default-accent-mark); color: var(--page-text); }
 .about-shell { --accent: var(--about-accent); --ink: var(--about-ink); --accent-hover: var(--about-hover); --accent-mark: var(--about-mark); }
 .profile-shell :is(a, h1, main):focus-visible { outline: 2px solid var(--ink); outline-offset: 5px; }

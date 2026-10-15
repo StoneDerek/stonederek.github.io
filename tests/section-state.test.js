@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAboutSwipe, createScrollReveal, galleryFrame, sectionDirection, sectionFromPath, settleProjectSwipe } from '../src/scripts/section-state.js';
+import { createScrollReveal, galleryFrame, sectionDirection, sectionFromPath, settleProjectSwipe } from '../src/scripts/section-state.js';
 
 test('section direction follows the selected sections, including project base paths', () => {
   assert.equal(sectionFromPath('/portfolio/about/index.html'), 'about');
@@ -22,64 +22,36 @@ test('upward intent reveals links, down hides them, small reversals do not flick
   assert.equal(nav.move(NaN), true);
 });
 
-test('touch navigation survives rebound and requires fresh dismissal intent after its reading window', () => {
-  let time = 0;
-  const nav = createScrollReveal({ hidden: true, minVisibleMs: 3000, now: () => time });
+test('a revealing touch cannot dismiss its own navigation with a small reversal', () => {
+  const nav = createScrollReveal({ hidden: true });
+  nav.beginTouch();
   assert.equal(nav.move(-24), false);
-  time = 100;
   assert.equal(nav.move(90), false);
-  time = 2999;
-  assert.equal(nav.move(120), false);
-  time = 3000;
-  assert.equal(nav.hidden, false, 'idle time must never dismiss the bar');
-  assert.equal(nav.move(35), false, 'rebound travel must not count toward a later hide');
-  assert.equal(nav.move(1), true);
+  nav.endTouch();
+  nav.beginTouch();
+  assert.equal(nav.move(35), false);
+  assert.equal(nav.move(1), true, 'the next gesture dismisses without waiting');
+  nav.endTouch();
 });
 
-test('continuing an upward swipe renews the touch navigation reading window', () => {
-  let time = 0;
-  const nav = createScrollReveal({ hidden: true, minVisibleMs: 3000, now: () => time });
-  nav.move(-24);
-  time = 2500;
-  nav.move(-1);
-  time = 3000;
-  assert.equal(nav.move(100), false);
-  time = 5500;
-  assert.equal(nav.move(36), true);
-});
-
-test('gallery interaction cannot immediately dismiss newly revealed touch navigation', () => {
-  let time = 0;
-  const nav = createScrollReveal({ hidden: true, minVisibleMs: 3000, now: () => time });
+test('gallery interaction can immediately dismiss revealed navigation', () => {
+  const nav = createScrollReveal({ hidden: true });
+  nav.beginTouch();
   nav.move(-40);
-  time = 500;
-  assert.equal(nav.setHidden(true), false);
-  time = 3000;
+  nav.endTouch();
   assert.equal(nav.setHidden(true), true);
-  assert.equal(nav.setHidden(false), false);
-  time = 3500;
-  assert.equal(nav.setHidden(true), false, 'an explicit reveal starts a new reading window');
 });
 
-test('About crosses during movement at a reachable distance, without a release step', () => {
-  for (const width of [320, 390, 1440]) {
-    const swipe = createAboutSwipe(width);
-    assert.deepEqual(swipe.move(-100), { travel: 0, commit: false });
-    assert.equal(swipe.move(swipe.threshold - 1).commit, false);
-    assert.equal(swipe.move(swipe.threshold).commit, true);
-    assert.ok(swipe.threshold <= width * .4);
-    assert.equal(typeof swipe.release, 'undefined');
-  }
-});
-
-test('short project swipes and the former About crossing do not accidentally leave the gallery', () => {
-  for (const width of [320, 390, 430, 1440]) {
-    const swipe = createAboutSwipe(width);
-    const previousCrossing = Math.min(240, Math.max(72, width * .24));
-    assert.equal(swipe.move(56).commit, false);
-    assert.equal(swipe.move(previousCrossing).commit, false);
-    assert.equal(swipe.move(swipe.threshold).commit, true);
-  }
+test('ending or cancelling a touch releases reveal protection', () => {
+  const nav = createScrollReveal({ hidden: true });
+  nav.beginTouch();
+  nav.move(-40);
+  nav.endTouch();
+  assert.equal(nav.move(36), true, 'wheel input is not delayed after touch');
+  nav.beginTouch();
+  assert.equal(nav.move(-40), false);
+  nav.endTouch();
+  assert.equal(nav.move(36), true);
 });
 
 test('the links space is reachable beyond the final project without inventing another project', () => {
@@ -93,41 +65,6 @@ test('the links space is reachable beyond the final project without inventing an
   assert.equal(galleryFrame(5.49, 6).links, false);
   assert.equal(galleryFrame(5.5, 6).links, true);
   assert.deepEqual(galleryFrame(5, 6), { position: 5, project: 5, endProgress: 0, links: false });
-});
-
-test('the bump has continuous, nearly one-to-one motion and no threshold jump', () => {
-  const swipe = createAboutSwipe(390);
-  let previous = 0;
-  for (let distance = 1; distance <= 140; distance++) {
-    const { travel } = swipe.move(distance);
-    assert.ok(travel - previous >= .75 && travel - previous <= 1.001);
-    assert.ok(travel >= distance * .92 && travel <= distance);
-    previous = travel;
-  }
-  const below = swipe.move(swipe.threshold - .1).travel;
-  const above = swipe.move(swipe.threshold + .1).travel;
-  assert.ok(Math.abs(above - below - .2) < .001);
-});
-
-test('backtracking before the crossing restores the untouched boundary', () => {
-  const swipe = createAboutSwipe(390);
-  assert.equal(swipe.move(swipe.threshold - 1).commit, false);
-  assert.equal(swipe.move(25).commit, false);
-  assert.deepEqual(swipe.move(0), { travel: 0, commit: false });
-});
-
-test('re-grabbing a returning page preserves its exact visible position and bump response', () => {
-  for (const width of [320, 390, 1440]) {
-    const swipe = createAboutSwipe(width);
-    for (let distance = 0; distance < swipe.threshold; distance += 3) {
-      const travel = swipe.move(distance).travel;
-      const resumed = swipe.distanceForTravel(travel);
-      assert.ok(Math.abs(resumed - distance) < .001);
-      assert.ok(Math.abs(swipe.move(resumed).travel - travel) < .001);
-      assert.ok(swipe.move(resumed + 8).travel - travel >= 6);
-      assert.equal(swipe.distanceForTravel(-20), 0);
-    }
-  }
 });
 
 test('short, slow mobile swipes advance a project in either direction', () => {

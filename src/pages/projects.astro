@@ -4,11 +4,10 @@ import projects from '../data/projects.json';
 import site from '../data/site.json';
 import SiteHeader from '../components/SiteHeader.astro';
 import ExternalLinkIcon from '../components/ExternalLinkIcon.astro';
-import AboutContent from '../components/AboutContent.astro';
 import { projectIcon } from '../data/project-icons.js';
 import { sectionFade, shortDrift, artworkFade } from '../data/section-motion.js';
 import { resumeURL } from '../data/resume.js';
-import { aboutPalette, darkAboutPalette, linksPalette } from '../data/section-palettes.js';
+import { linksPalette } from '../data/section-palettes.js';
 const base = import.meta.env.BASE_URL;
 const url = (path) => `${base}${path}`;
 const first = projects[0];
@@ -21,9 +20,7 @@ const serialized = JSON.stringify(projects.map(project => ({ ...project, favicon
 
     <SiteHeader page="projects" />
 
-    <div class="about-preview" data-about-preview data-favicon={projectIcon(aboutPalette)} data-dark-favicon={projectIcon(darkAboutPalette)} aria-hidden="true" inert hidden>
-      <div class="profile-shell about-shell"><div class="profile-main about-main"><AboutContent prefix="preview-" /></div></div>
-    </div>
+    <a class="gallery-about" href={url('about/')} data-site-route="about" data-about-return data-section-motion transition:name="gallery-return" transition:animate={shortDrift}><svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="m7 3-5 5 5 5M2 8h12" /></svg> About</a>
 
     <section class="carousel" aria-roledescription="carousel" aria-label="Selected placeholder projects" tabindex="0">
       <div class="artwork-stage" data-stage>

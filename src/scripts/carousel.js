@@ -4,11 +4,10 @@ import { mountSiteMenu } from './site-menu.js';
 import { createProjectRequests } from './project-navigation.js';
 import { mountProjectFavicon } from './favicon.js';
 import { projectIndexFromHash } from './project-links.js';
-import { createAboutSwipe, galleryFrame, settleProjectSwipe } from './section-state.js';
+import { galleryFrame, settleProjectSwipe } from './section-state.js';
 import { createMotionSpring } from './motion-spring.js';
-import { createAboutHeader } from './about-header.js';
 import { mountLaser } from './ascii-laser.js';
-import { aboutPalette, darkAboutPalette, linksPalette } from '../data/section-palettes.js';
+import { linksPalette } from '../data/section-palettes.js';
 import { sectionTiming } from '../data/section-motion.js';
 import { readHeaderPalette, blendHeaderPalette, stopHeaderPalette } from './header-palette.js';
 import { mountProjectCaseStudy, renderProjectMedia } from './project-case-study.js';
@@ -21,14 +20,12 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   const controller = new AbortController();
   const listen = (target, type, handler, options = {}) => target.addEventListener(type, handler, { ...options, signal: controller.signal });
   let disposed = false;
-  const aboutPreview = root.querySelector('[data-about-preview]');
+  const aboutReturn = root.querySelector('[data-about-return]');
   const endPanel = root.querySelector('[data-gallery-end]');
   const endReturn = root.querySelector('[data-end-return]');
   const credits = root.querySelector('[data-credits]');
   const projects = JSON.parse(data.textContent);
   const requestedIndex = projectIndexFromHash(fragment, projects);
-  const aboutTarget = () => document.documentElement.dataset.theme === 'dark' ? darkAboutPalette : aboutPalette;
-  let aboutHeader = createAboutHeader(projects[0].palette, aboutTarget());
   const updateFavicon = mountProjectFavicon(document.querySelector('[data-project-favicon]'));
   const slides = [...root.querySelectorAll('[data-slide]')];
   const slideImages = slides.map(slide => slide.querySelector('img'));
@@ -52,8 +49,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   const siteHeader = root.querySelector('.site-header');
   const projectView = root.querySelector('[data-project-view]');
   const projectPage = projectView.querySelector('.project-page');
-  const gallerySurfaces = [...root.querySelectorAll('.carousel, .filmstrip, .mobile-controls')];
-  const endSurfaces = gallerySurfaces.filter(surface => !surface.classList.contains('carousel'));
+  const gallerySurfaces = [...root.querySelectorAll('.carousel, .filmstrip, .mobile-controls, .gallery-about')];
+  const endSurfaces = gallerySurfaces.filter(surface => surface.classList.contains('filmstrip') || surface.classList.contains('mobile-controls'));
   const workLabel = menu.querySelector('[data-menu-context="work"]');
   const projectLabel = menu.querySelector('[data-menu-context="project"]');
   const aboutLabel = menu.querySelector('[data-menu-context="about"]');
@@ -80,7 +77,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     const node = textNodes.get(selector);
     if (node.textContent !== String(value)) node.textContent = value;
   };
-  const hasDialog = () => projectOpen || projectRequests.busy || aboutCommitting;
+  const hasDialog = () => projectOpen || projectRequests.busy;
   let active = -1;
   let faviconIndex = Math.max(0, requestedIndex);
   let endOpen = false;
@@ -99,12 +96,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   let drag = null;
   let dragFrame = 0;
   let pendingDrag = null;
-  let aboutTravel = 0;
-  let aboutFrame = 0;
-  let aboutVelocity = 0;
-  let aboutCommitting = false;
-  let aboutHeaderActive = false;
-  let aboutWarmed = false;
   let suppressClickUntil = 0;
   let titleFrame = 0;
   let titleSlots = [];
@@ -251,7 +242,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     root.style.setProperty('--ink', palette.ink);
     // An article can change identity while its outgoing gallery drawing stays put.
     if (index === active && links === endOpen) root.style.setProperty('--caption-color', palette.caption || palette.accent);
-    if (!immediate && !aboutTravel) blendHeaderPalette(siteHeader, from, { duration: 320 });
+    if (!immediate) blendHeaderPalette(siteHeader, from, { duration: 320 });
     menuProjects.forEach(button => {
       if (!links && Number(button.dataset.menuProject) === index) button.setAttribute('aria-current', 'true');
       else button.removeAttribute('aria-current');
@@ -467,7 +458,10 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     }
     updateEnd(frame.endProgress, frame.links);
     updateActive(frame.project);
-    if (!root.classList.contains('is-moving') && !aboutTravel) followGalleryFavicon(position);
+    const returnHidden = position > .001;
+    if (returnHidden && aboutReturn.contains(document.activeElement)) root.querySelector('.carousel').focus({ preventScroll: true });
+    if (aboutReturn.hidden !== returnHidden) aboutReturn.hidden = returnHidden;
+    if (!root.classList.contains('is-moving')) followGalleryFavicon(position);
   }
 
   function presentCards(value) {
@@ -526,85 +520,10 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     wheelPosition = null;
   }
 
-  function presentAbout(value) {
-    aboutTravel = Math.max(0, Math.min(stageWidth, value));
-    root.style.setProperty('--about-drag', `${aboutTravel}px`);
-    aboutPreview.hidden = aboutTravel === 0;
-    if (aboutTravel) {
-      stopHeaderPalette(siteHeader);
-      root.dataset.aboutSwipe = aboutCommitting ? 'entering' : 'preview';
-      const progress = aboutTravel / stageWidth;
-      const frame = aboutHeader(progress);
-      root.style.setProperty('--accent', frame.accent);
-      root.style.setProperty('--ink', frame.ink);
-      root.style.setProperty('--about-menu-opacity', String(frame.labelOpacity));
-      root.style.setProperty('--about-links-opacity', String(frame.linksOpacity));
-      const context = frame.about ? 'about' : 'home';
-      if (!aboutHeaderActive || menuContext !== context) {
-        setMenuContext(context, { immediate: true });
-        setMenuTitle(frame.about ? siteHeader.dataset.owner : projects[active].title, { immediate: true });
-      }
-      sectionLinks.previewAbout?.(progress);
-      aboutHeaderActive = true;
-    } else {
-      if (aboutHeaderActive) {
-        setMenuContext('home', { immediate: true });
-        updateGalleryIdentity({ immediate: true });
-        root.style.removeProperty('--about-menu-opacity');
-        root.style.removeProperty('--about-links-opacity');
-        sectionLinks.previewAbout?.(0);
-        selectGalleryFavicon(position);
-        // Settle the cancelled swipe before restoring ordinary palette transitions.
-        getComputedStyle(menu).backgroundColor;
-        aboutHeaderActive = false;
-      }
-      delete root.dataset.aboutSwipe;
-    }
-  }
-
-  function stopAbout({ reset = false } = {}) {
-    cancelAnimationFrame(aboutFrame);
-    aboutFrame = 0;
-    aboutVelocity = 0;
-    aboutCommitting = false;
-    if (!reset) return;
-    presentAbout(0);
-  }
-
   listen(document, 'portfolio:theme-change', () => {
     projectAbort?.abort();
     stopHeaderPalette(siteHeader);
-    aboutHeader = createAboutHeader(projects[0].palette, aboutTarget());
-    if (aboutTravel) presentAbout(aboutTravel);
   });
-
-  function animateAbout(target, { commit = false, velocity = aboutVelocity } = {}) {
-    stopAbout();
-    aboutCommitting = commit;
-    if (commit) updateFavicon(document.documentElement.dataset.theme === 'dark' ? aboutPreview.dataset.darkFavicon : aboutPreview.dataset.favicon);
-    const from = aboutTravel;
-    const finish = () => {
-      aboutFrame = 0;
-      aboutVelocity = 0;
-      presentAbout(target);
-      if (!commit || disposed) return;
-      document.dispatchEvent(new CustomEvent('portfolio:section-navigate', {
-        detail: { route: 'about', gallerySwipe: true }
-      }));
-    };
-    if (reducedMotion.matches || Math.abs(target - from) < .001) { finish(); return; }
-    const start = performance.now();
-    const spring = createMotionSpring({ from: from / stageWidth, to: target / stageWidth,
-      velocity: velocity / stageWidth, unit: stageWidth, response: commit ? 360 : 280 });
-    const frame = now => {
-      const state = spring.sample(now - start);
-      aboutVelocity = state.velocity * stageWidth;
-      presentAbout(state.position * stageWidth);
-      if (!state.done) aboutFrame = requestAnimationFrame(frame);
-      else finish();
-    };
-    aboutFrame = requestAnimationFrame(frame);
-  }
 
   function cancelDrag() {
     stopDragFrame();
@@ -651,7 +570,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
 
   function select(index, options) {
     cancelDrag();
-    stopAbout({ reset: true });
     stopWheel();
     animateTo(index, options);
   }
@@ -802,9 +720,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   }
 
   function requestProject(index, options = {}) {
-    const pendingAbout = aboutCommitting && menuContext === 'about';
     cancelDrag();
-    stopAbout({ reset: true });
     const selected = index === null ? null : clamp(index);
     const fragment = selected === null ? '' : `#project=${encodeURIComponent(projects[selected].slug)}`;
     // Astro moves to the destination URL after a section swap; its initial
@@ -817,11 +733,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
         address.hash = fragment;
         window.history.replaceState(window.history.state, '', address);
       }
-    }
-    if (pendingAbout) {
-      document.dispatchEvent(new CustomEvent('portfolio:section-navigate', {
-        detail: { route: 'projects', fragment: fragment.slice(1), replace: true }
-      }));
     }
     return projectRequests.request({ index: selected, ...options });
   }
@@ -854,7 +765,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (actionButton?.dataset.action === 'gallery') {
       event.preventDefault();
       closeMenu({ focus: true });
-      if (projectOpen || projectRequests.busy || aboutCommitting) requestProject(null);
+      if (projectOpen || projectRequests.busy) requestProject(null);
       else if (endOpen || destination > last) select(last);
     }
   });
@@ -864,29 +775,21 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     // A fresh press is intentional; only the click generated by the preceding drag is suppressed.
     suppressClickUntil = 0;
     if (event.target.closest('[data-end-link], [data-laser-control]')) return;
-    const aboutEligible = surface === stage && position < .001 && !animationFrame;
     stopDragFrame();
     stopWheel();
     stopAnimation();
-    stopAbout({ reset: !aboutEligible });
     destination = position;
     // Re-grabbing abandons the previous target and restores the visible card.
     selectGalleryFavicon(position);
     const capture = event.target.closest('button') || surface;
-    const about = aboutEligible ? createAboutSwipe(stageWidth) : null;
+    const pointerTouch = event.pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches;
     drag = {
       id: event.pointerId, surface, capture, unit,
       x: event.clientX, y: event.clientY, start: position,
-      lastX: event.clientX, lastTime: performance.now(), velocity: 0, aboutVelocity: 0, moved: false,
-      about,
-      aboutStart: about?.distanceForTravel(aboutTravel) || 0,
-      touch: surface === stage && (event.pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches)
+      lastX: event.clientX, lastTime: performance.now(), velocity: 0, moved: false, axis: null, pointerTouch,
+      touch: surface === stage && pointerTouch
     };
     capture.setPointerCapture(event.pointerId);
-    if (drag.about && !aboutWarmed && !window.__PORTFOLIO_PREVIEW_NAVIGATE__) {
-      aboutWarmed = true;
-      void fetch(aboutMenuButton.href, { signal: controller.signal }).catch(() => {});
-    }
   }
   function stopDragFrame() {
     cancelAnimationFrame(dragFrame);
@@ -899,7 +802,11 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (latest) moveDrag(latest);
   }
   function queueDrag(event) {
-    if (!drag || drag.id !== event.pointerId || aboutCommitting) return;
+    if (!drag || drag.id !== event.pointerId) return;
+    if (drag.pointerTouch && !drag.axis) {
+      const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) > 8) drag.axis = Math.abs(dy) >= Math.abs(dx) ? 'y' : 'x';
+    }
     // Mouse input can arrive several times per paint. Follow its latest sample
     // directly, retaining input time for velocity instead of adding smoothing.
     pendingDrag = { pointerId: event.pointerId, clientX: event.clientX,
@@ -907,11 +814,12 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (!dragFrame) dragFrame = requestAnimationFrame(flushDragFrame);
   }
   function moveDrag(event) {
-    if (!drag || drag.id !== event.pointerId || aboutCommitting) return;
+    if (!drag || drag.id !== event.pointerId) return;
     const dx = event.clientX - drag.x;
     const dy = event.clientY - drag.y;
+    if (drag.pointerTouch && drag.axis !== 'x') return;
     if (!drag.moved) {
-      if (Math.abs(dx) < 6 || Math.abs(dx) < Math.abs(dy)) return;
+      if (Math.abs(dx) < 6 || (!drag.pointerTouch && Math.abs(dx) < Math.abs(dy))) return;
       drag.moved = true;
       root.classList.add('is-dragging');
       sectionLinks.hide();
@@ -922,23 +830,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     drag.velocity = (drag.lastX - event.clientX) / (elapsed * drag.unit);
     drag.lastX = event.clientX;
     drag.lastTime = now;
-    if (drag.about) {
-      const distance = dx + drag.aboutStart;
-      const next = drag.about.move(distance);
-      drag.aboutVelocity = (next.travel - aboutTravel) / elapsed;
-      presentAbout(next.travel);
-      if (distance > 0) {
-        render(0);
-        if (next.commit) {
-          suppressClickUntil = performance.now() + 600;
-          animateLift(0, { duration: 180 });
-          animateAbout(stageWidth, { commit: true, velocity: drag.aboutVelocity });
-        }
-        return;
-      }
-      render(drag.start - distance / drag.unit);
-      return;
-    }
     const nextPosition = drag.start - dx / drag.unit;
     render(drag.surface === rail ? clamp(nextPosition) : nextPosition);
   }
@@ -951,14 +842,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     drag = null;
     root.classList.remove('is-dragging');
     if (finished.capture.hasPointerCapture(event.pointerId)) finished.capture.releasePointerCapture(event.pointerId);
-    if (aboutCommitting) return;
     const moving = performance.now() - finished.lastTime < 100 && !cancelled;
-    if (aboutTravel > 0) {
-      if (finished.moved) suppressClickUntil = performance.now() + 250;
-      animateLift(0);
-      animateAbout(0, { velocity: moving ? finished.aboutVelocity : 0 });
-      return;
-    }
     if (finished.moved) {
       suppressClickUntil = performance.now() + 250;
       const recentVelocity = moving ? finished.velocity : 0;
@@ -984,7 +868,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
     if (!delta) return;
     event.preventDefault();
-    stopAbout({ reset: true });
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rail.clientWidth : 1;
     wheelPosition = clamp((wheelPosition ?? position) + delta * unit / stride);
     animateTo(wheelPosition, { response: 140, announceSelection: false });
@@ -1022,15 +905,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       if (event.key === 'Escape') { event.preventDefault(); requestProject(null); }
       return;
     }
-    // The edge crossing commits to About. Keep its reveal steady while loading;
-    // normal section links can still choose a different destination.
-    if (aboutCommitting) {
-      if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(event.key)) event.preventDefault();
-      return;
-    }
-    if (event.key === 'Escape' && aboutTravel > 0) {
-      event.preventDefault(); cancelDrag(); stopAbout(); animateAbout(0); animateLift(0); return;
-    }
     if (event.key === 'Escape' && endOpen) {
       event.preventDefault(); select(last, { focusThumbnail: true }); return;
     }
@@ -1043,7 +917,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   listen(window, 'resize', () => {
     projectAbort?.abort();
     cancelDrag();
-    stopAbout({ reset: true });
     animateLift(0);
     cancelAnimationFrame(resizeFrame);
     resizeFrame = requestAnimationFrame(measure);
@@ -1058,27 +931,23 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (reducedMotion.matches && titleFrame) finishTitle();
     if (reducedMotion.matches && liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
     if (reducedMotion.matches && animationFrame) animateTo(destination, { immediate: true });
-    if (reducedMotion.matches && aboutFrame) animateAbout(aboutCommitting ? stageWidth : 0, { commit: aboutCommitting });
     if (reducedMotion.matches && menuNavigation.animating) menuNavigation.set(menuNavigation.expanded, { immediate: true });
   });
   listen(document, 'visibilitychange', () => {
     if (!document.hidden) return;
     projectAbort?.abort();
     cancelDrag();
-    stopAbout({ reset: true });
     stopWheel();
     if (menuNavigation.animating) menuNavigation.set(menuNavigation.expanded, { immediate: true });
     if (animationFrame) animateTo(Math.round(destination), { immediate: true });
     if (titleFrame) finishTitle();
     if (liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
   });
-  listen(document, 'astro:before-preparation', event => {
-    // Finish the local reveal before handing off to section navigation.
+  listen(document, 'astro:before-preparation', () => {
+    // Finish the local article transition before handing off to section navigation.
     projectAbort?.abort();
     closeMenu({ immediate: true });
-    if (event.info?.gallerySwipe) return;
     cancelDrag();
-    stopAbout({ reset: true });
   });
   listen(document, 'portfolio:preview-exit', () => closeMenu({ immediate: true }));
   measure();
@@ -1101,7 +970,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     projectAbort?.abort();
     stopWheel();
     stopAnimation();
-    stopAbout();
     stopDragFrame();
     [liftFrame, titleFrame, resizeFrame].forEach(cancelAnimationFrame);
     contextGeneration += 1;

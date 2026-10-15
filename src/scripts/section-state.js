@@ -10,72 +10,39 @@ export function sectionDirection(from, to) {
 }
 
 // Accumulate intent, rather than reacting to every tiny reversal of a trackpad.
-export function createScrollReveal({ hidden = false, minVisibleMs = 0, now = () => performance.now() } = {}) {
+export function createScrollReveal({ hidden = false } = {}) {
   let direction = 0;
   let travel = 0;
-  let visibleUntil = 0;
+  let touching = false;
+  let revealedDuringTouch = false;
   return {
     get hidden() { return hidden; },
+    beginTouch() {
+      touching = true;
+      revealedDuringTouch = false;
+      direction = travel = 0;
+    },
+    endTouch() { touching = false; },
     setHidden(value) {
       direction = 0;
       travel = 0;
-      if (value && !hidden && now() < visibleUntil) return hidden;
       hidden = value;
-      visibleUntil = value ? 0 : now() + minVisibleMs;
+      revealedDuringTouch = touching && !hidden;
       return hidden;
     },
     move(delta) {
       if (!Number.isFinite(delta) || delta === 0) return hidden;
-      const time = now();
-      // Ignore the revealing swipe's rebound, without queuing a later dismissal.
-      // Only fresh downward intent after the reading window may hide the links.
-      if (delta > 0 && !hidden && time < visibleUntil) {
-        direction = 0;
-        travel = 0;
-        return hidden;
-      }
-      if (delta < 0 && !hidden) visibleUntil = time + minVisibleMs;
+      // A finger's reversal must not undo its own reveal. The next gesture can
+      // dismiss immediately; no clock or minimum visibility period is needed.
+      if (delta > 0 && touching && revealedDuringTouch) return hidden;
       const next = Math.sign(delta);
       if (next !== direction) { direction = next; travel = 0; }
       travel += Math.abs(delta);
       if (travel >= (direction < 0 ? 24 : 36)) {
         hidden = direction > 0;
-        if (!hidden) visibleUntil = time + minVisibleMs;
+        if (!hidden && touching) revealedDuringTouch = true;
       }
       return hidden;
-    }
-  };
-}
-
-// A mostly one-to-one drag with a short, smooth slowdown, not a hard barrier.
-// Crossing enters About immediately; no pointer release is needed.
-export function createAboutSwipe(width) {
-  const threshold = Math.min(360, Math.max(112, width * .38));
-  const entry = threshold * .38;
-  const span = threshold * .35;
-  function travelAt(distance) {
-    const t = Math.max(0, Math.min(1, (distance - entry) / span));
-    return distance - span * .16 * t * t * (3 - 2 * t);
-  }
-  return {
-    threshold,
-    move(rightwardDistance) {
-      const distance = Math.max(0, rightwardDistance);
-      return { travel: travelAt(distance), commit: distance >= threshold };
-    },
-    // Resume from the drawn position without applying the slowdown twice.
-    distanceForTravel(travel) {
-      const value = Math.max(0, travel);
-      if (value <= entry) return value;
-      if (value >= travelAt(entry + span)) return value + span * .16;
-      let low = value;
-      let high = value + span * .16;
-      while (high - low > .001) {
-        const middle = (low + high) / 2;
-        if (travelAt(middle) < value) low = middle;
-        else high = middle;
-      }
-      return (low + high) / 2;
     }
   };
 }

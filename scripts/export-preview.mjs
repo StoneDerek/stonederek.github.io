@@ -118,7 +118,6 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs, timing }) {
   if (pdfAddress) resume = resume.replace(/(<a\b[^>]*\bdata-resume-pdf\b[^>]*\bhref=")[^"]*(")/, `$1${pdfAddress}$2`);
   const resumeAddress = pdfAddress || URL.createObjectURL(new Blob([resume], { type: 'text/html' }));
   let previousRoute = null;
-  let pendingHandoff = false;
   let renderGeneration = 0;
   const render = () => {
     const generation = ++renderGeneration;
@@ -128,12 +127,10 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs, timing }) {
     document.title = route === 'home' ? 'Derek Stone — Portfolio preview' : `Derek Stone — ${route === 'about' ? 'About' : 'Projects'} preview`;
     let html = expanded(route);
     const order = ['home', 'about', 'projects'];
-    const handoff = pendingHandoff;
-    const direction = previousRoute && !handoff ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
+    const direction = previousRoute ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
     const projectEntry = direction && route === 'projects' && projectSlugs.includes(new URLSearchParams(fragment).get('project'));
-    pendingHandoff = false;
     if (projectEntry) html = html.replace(/<main\b([^>]*\bid="portfolio"[^>]*)>/, '<main$1 data-section-project-entry>');
-    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_THEME_CHOICE__=${escapeScript(themeChoice)};window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=${systemPreference.matches};window.addEventListener('message',function(event){if(event.source===window.parent&&event.data?.type==='portfolio-preview-system-theme'){window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=!!event.data.dark;document.dispatchEvent(new Event('portfolio:preview-system-change'))}});window.__PORTFOLIO_PREVIEW_SET_THEME__=function(state){window.parent.postMessage({type:'portfolio-preview-theme',choice:state.choice,resolved:state.resolved},'*')};window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
+    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_THEME_CHOICE__=${escapeScript(themeChoice)};window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=${systemPreference.matches};window.addEventListener('message',function(event){if(event.source===window.parent&&event.data?.type==='portfolio-preview-system-theme'){window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=!!event.data.dark;document.dispatchEvent(new Event('portfolio:preview-system-change'))}});window.__PORTFOLIO_PREVIEW_SET_THEME__=function(state){window.parent.postMessage({type:'portfolio-preview-theme',choice:state.choice,resolved:state.resolved},'*')};window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',replace:!!options?.replace},'*')};<\/script>`;
     html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
     html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*(")/, `$1${resumeAddress}$2`);
     // Attributes can appear in either order in compiler output.
@@ -188,7 +185,7 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs, timing }) {
           const icon = incoming.contentDocument?.querySelector('[data-project-favicon]');
           if (icon) favicon.href = icon.href;
           incoming.contentWindow.focus();
-          if (handoff || reducedMotion.matches) { cleanup(); return; }
+          if (reducedMotion.matches) { cleanup(); return; }
           blend = outgoing.animate([{ opacity: 1 }, { opacity: 0 }], {
             duration: timing.enter, easing: timing.easing, fill: 'both'
           });
@@ -206,7 +203,6 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs, timing }) {
       window.__PORTFOLIO_THEME_STATE__ = { choice: themeChoice, resolved: document.documentElement.dataset.theme };
     }
     if (event.data?.type === 'portfolio-preview-route' && ['home', 'about', 'projects'].includes(event.data.route)) {
-      pendingHandoff = Boolean(event.data.gallerySwipe);
       const hash = `#${event.data.route}${event.data.fragment ? `?${event.data.fragment}` : ''}`;
       if (event.data.replace) { history.replaceState(history.state, '', hash); render(); }
       else location.hash = hash;
