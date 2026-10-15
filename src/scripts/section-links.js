@@ -7,7 +7,8 @@ export function mountSectionLinks() {
   const controller = new AbortController();
   const listen = (target, type, handler, options = {}) => target.addEventListener(type, handler, { ...options, signal: controller.signal });
   const gallery = header.dataset.page === 'projects';
-  const state = createScrollReveal({ hidden: gallery || window.scrollY > 8 });
+  const touchInput = window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+  const state = createScrollReveal({ hidden: gallery || window.scrollY > 8, minVisibleMs: touchInput ? 3000 : 0 });
   const positions = new WeakMap();
   let windowPosition = window.scrollY;
   let touch = null;
@@ -36,7 +37,7 @@ export function mountSectionLinks() {
     if (press?.id === event.pointerId) clearPress();
   }, { passive: true });
   function apply(hidden) {
-    if (hidden && !aboutProgress && links.contains(document.activeElement)) return;
+    if (hidden && !aboutProgress && (press || links.contains(document.activeElement))) return;
     const inert = aboutProgress ? aboutProgress < 1 : hidden;
     links.dataset.scrolled = String(hidden);
     links.inert = inert;

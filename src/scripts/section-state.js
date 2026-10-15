@@ -10,18 +10,38 @@ export function sectionDirection(from, to) {
 }
 
 // Accumulate intent, rather than reacting to every tiny reversal of a trackpad.
-export function createScrollReveal({ hidden = false } = {}) {
+export function createScrollReveal({ hidden = false, minVisibleMs = 0, now = () => performance.now() } = {}) {
   let direction = 0;
   let travel = 0;
+  let visibleUntil = 0;
   return {
     get hidden() { return hidden; },
-    setHidden(value) { hidden = value; direction = 0; travel = 0; return hidden; },
+    setHidden(value) {
+      direction = 0;
+      travel = 0;
+      if (value && !hidden && now() < visibleUntil) return hidden;
+      hidden = value;
+      visibleUntil = value ? 0 : now() + minVisibleMs;
+      return hidden;
+    },
     move(delta) {
       if (!Number.isFinite(delta) || delta === 0) return hidden;
+      const time = now();
+      // Ignore the revealing swipe's rebound, without queuing a later dismissal.
+      // Only fresh downward intent after the reading window may hide the links.
+      if (delta > 0 && !hidden && time < visibleUntil) {
+        direction = 0;
+        travel = 0;
+        return hidden;
+      }
+      if (delta < 0 && !hidden) visibleUntil = time + minVisibleMs;
       const next = Math.sign(delta);
       if (next !== direction) { direction = next; travel = 0; }
       travel += Math.abs(delta);
-      if (travel >= (direction < 0 ? 24 : 36)) hidden = direction > 0;
+      if (travel >= (direction < 0 ? 24 : 36)) {
+        hidden = direction > 0;
+        if (!hidden) visibleUntil = time + minVisibleMs;
+      }
       return hidden;
     }
   };

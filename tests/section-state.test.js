@@ -22,6 +22,45 @@ test('upward intent reveals links, down hides them, small reversals do not flick
   assert.equal(nav.move(NaN), true);
 });
 
+test('touch navigation survives rebound and requires fresh dismissal intent after its reading window', () => {
+  let time = 0;
+  const nav = createScrollReveal({ hidden: true, minVisibleMs: 3000, now: () => time });
+  assert.equal(nav.move(-24), false);
+  time = 100;
+  assert.equal(nav.move(90), false);
+  time = 2999;
+  assert.equal(nav.move(120), false);
+  time = 3000;
+  assert.equal(nav.hidden, false, 'idle time must never dismiss the bar');
+  assert.equal(nav.move(35), false, 'rebound travel must not count toward a later hide');
+  assert.equal(nav.move(1), true);
+});
+
+test('continuing an upward swipe renews the touch navigation reading window', () => {
+  let time = 0;
+  const nav = createScrollReveal({ hidden: true, minVisibleMs: 3000, now: () => time });
+  nav.move(-24);
+  time = 2500;
+  nav.move(-1);
+  time = 3000;
+  assert.equal(nav.move(100), false);
+  time = 5500;
+  assert.equal(nav.move(36), true);
+});
+
+test('gallery interaction cannot immediately dismiss newly revealed touch navigation', () => {
+  let time = 0;
+  const nav = createScrollReveal({ hidden: true, minVisibleMs: 3000, now: () => time });
+  nav.move(-40);
+  time = 500;
+  assert.equal(nav.setHidden(true), false);
+  time = 3000;
+  assert.equal(nav.setHidden(true), true);
+  assert.equal(nav.setHidden(false), false);
+  time = 3500;
+  assert.equal(nav.setHidden(true), false, 'an explicit reveal starts a new reading window');
+});
+
 test('About crosses during movement at a reachable distance, without a release step', () => {
   for (const width of [320, 390, 1440]) {
     const swipe = createAboutSwipe(width);
