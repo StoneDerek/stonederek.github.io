@@ -1,58 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createScrollReveal, galleryFrame, sectionDirection, sectionFromPath, settleProjectSwipe } from '../src/scripts/section-state.js';
-
-test('section direction follows the selected sections, including project base paths', () => {
-  assert.equal(sectionFromPath('/portfolio/about/index.html'), 'about');
-  assert.equal(sectionFromPath('/portfolio/projects/'), 'projects');
-  assert.equal(sectionFromPath('/portfolio/'), 'home');
-  assert.equal(sectionDirection('projects', 'about'), -1);
-  assert.equal(sectionDirection('about', 'projects'), 1);
-  assert.equal(sectionDirection('projects', 'projects'), 0);
-});
-
-test('upward intent reveals links, down hides them, small reversals do not flicker', () => {
-  const nav = createScrollReveal({ hidden: true });
-  assert.equal(nav.move(-10), true);
-  assert.equal(nav.move(-15), false);
-  assert.equal(nav.move(6), false);
-  assert.equal(nav.move(-6), false);
-  assert.equal(nav.move(35), false);
-  assert.equal(nav.move(1), true);
-  assert.equal(nav.move(NaN), true);
-});
-
-test('a revealing touch cannot dismiss its own navigation with a small reversal', () => {
-  const nav = createScrollReveal({ hidden: true });
-  nav.beginTouch();
-  assert.equal(nav.move(-24), false);
-  assert.equal(nav.move(90), false);
-  nav.endTouch();
-  nav.beginTouch();
-  assert.equal(nav.move(35), false);
-  assert.equal(nav.move(1), true, 'the next gesture dismisses without waiting');
-  nav.endTouch();
-});
-
-test('gallery interaction can immediately dismiss revealed navigation', () => {
-  const nav = createScrollReveal({ hidden: true });
-  nav.beginTouch();
-  nav.move(-40);
-  nav.endTouch();
-  assert.equal(nav.setHidden(true), true);
-});
-
-test('ending or cancelling a touch releases reveal protection', () => {
-  const nav = createScrollReveal({ hidden: true });
-  nav.beginTouch();
-  nav.move(-40);
-  nav.endTouch();
-  assert.equal(nav.move(36), true, 'wheel input is not delayed after touch');
-  nav.beginTouch();
-  assert.equal(nav.move(-40), false);
-  nav.endTouch();
-  assert.equal(nav.move(36), true);
-});
+import { galleryFrame, settleProjectSwipe } from '../src/scripts/section-state.js';
 
 test('the links space is reachable beyond the final project without inventing another project', () => {
   for (let position = -1; position < 8; position += .05) {

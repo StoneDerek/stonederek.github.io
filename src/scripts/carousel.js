@@ -3,7 +3,8 @@ import { mountProjectMenu } from './project-menu.js';
 import { mountSiteMenu } from './site-menu.js';
 import { createProjectRequests } from './project-navigation.js';
 import { mountProjectFavicon } from './favicon.js';
-import { projectIndexFromHash } from './project-links.js';
+import { resolveGalleryLocation, galleryAddress, sectionForPanel } from './gallery-location.js';
+import { firstProjectPanel } from '../data/gallery-panels.js';
 import { galleryFrame, settleProjectSwipe } from './section-state.js';
 import { createMotionSpring } from './motion-spring.js';
 import { mountLaser } from './ascii-laser.js';
@@ -12,20 +13,21 @@ import { sectionTiming } from '../data/section-motion.js';
 import { readHeaderPalette, blendHeaderPalette, stopHeaderPalette } from './header-palette.js';
 import { mountProjectCaseStudy, renderProjectMedia } from './project-case-study.js';
 
-export function mountPortfolio({ sectionLinks = { hide() {} },
-  fragment = window.__PORTFOLIO_PREVIEW_FRAGMENT__ ?? window.location.hash, sectionEntry = false } = {}) {
+export function mountPortfolio() {
   const root = document.getElementById('portfolio');
   const data = document.getElementById('portfolio-data');
   if (!root || !data) return;
   const controller = new AbortController();
   const listen = (target, type, handler, options = {}) => target.addEventListener(type, handler, { ...options, signal: controller.signal });
   let disposed = false;
-  const aboutReturn = root.querySelector('[data-about-return]');
   const endPanel = root.querySelector('[data-gallery-end]');
   const endReturn = root.querySelector('[data-end-return]');
   const credits = root.querySelector('[data-credits]');
-  const projects = JSON.parse(data.textContent);
-  const requestedIndex = projectIndexFromHash(fragment, projects);
+  const panels = JSON.parse(data.textContent);
+  const readAddress = () => new URL(window.__PORTFOLIO_PREVIEW_ADDRESS__ || window.location.href, 'https://portfolio.invalid');
+  const initial = resolveGalleryLocation(readAddress(), panels);
+  let lastAddress = readAddress().pathname + readAddress().hash;
+  let pendingPanel = null;
   const updateFavicon = mountProjectFavicon(document.querySelector('[data-project-favicon]'));
   const slides = [...root.querySelectorAll('[data-slide]')];
   const slideImages = slides.map(slide => slide.querySelector('img'));
@@ -49,8 +51,9 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   const siteHeader = root.querySelector('.site-header');
   const projectView = root.querySelector('[data-project-view]');
   const projectPage = projectView.querySelector('.project-page');
-  const gallerySurfaces = [...root.querySelectorAll('.carousel, .filmstrip, .mobile-controls, .gallery-about')];
+  const gallerySurfaces = [...root.querySelectorAll('.carousel, .filmstrip, .mobile-controls')];
   const endSurfaces = gallerySurfaces.filter(surface => surface.classList.contains('filmstrip') || surface.classList.contains('mobile-controls'));
+  const homeLabel = menu.querySelector('[data-menu-context="home"]');
   const workLabel = menu.querySelector('[data-menu-context="work"]');
   const projectLabel = menu.querySelector('[data-menu-context="project"]');
   const aboutLabel = menu.querySelector('[data-menu-context="about"]');
@@ -67,8 +70,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     base: detailMedia.dataset.assetBase, reducedMotion
   });
   const skipLink = root.querySelector('.skip-link');
-  const last = projects.length - 1;
-  const end = projects.length;
+  const last = panels.length - 1;
+  const end = panels.length;
   const clamp = value => Math.max(0, Math.min(last, value));
   const clampPosition = value => Math.max(0, Math.min(end, value));
   const textNodes = new Map();
@@ -79,9 +82,9 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   };
   const hasDialog = () => projectOpen || projectRequests.busy;
   let active = -1;
-  let faviconIndex = Math.max(0, requestedIndex);
+  let faviconIndex = initial.panel;
   let endOpen = false;
-  let position = requestedIndex >= 0 ? requestedIndex : 0;
+  let position = initial.panel;
   let destination = position;
   let stageWidth = 1;
   let galleryInset = 0;
@@ -105,7 +108,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   let projectAbort = null;
   let projectOrigin = { x: .5, y: .5 };
   let projectReturnFocus = captionButton;
-  let menuContext = 'home';
+  let menuContext = null;
   let contextAnimations = [];
   let contextGeneration = 0;
   let menuTitleAnimation = null;
@@ -126,15 +129,24 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   const projectRequests = createProjectRequests({
     getCurrent: () => ({ open: projectOpen, index: articleIndex }),
     open: openProject,
-    close: () => transitionProject(false),
+    close: request => {
+      if (request.panel !== undefined) select(request.panel, { immediate: true, history: false });
+      return transitionProject(false);
+    },
     cancel: () => projectAbort?.abort(),
-    settled: restoreProjectFocus
+    settled: () => {
+      if (pendingPanel !== null) {
+        const target = pendingPanel; pendingPanel = null;
+        select(target, { immediate: true, history: false });
+      }
+      if (!projectOpen) setMenuContext(sectionForPanel(active) === 'projects' ? 'gallery' : sectionForPanel(active));
+      restoreProjectFocus();
+    }
   });
   const laser = mountLaser(endPanel.querySelector('[data-laser-experiment]'), { onInteraction: () => {
     if (endOpen && animationFrame) animateTo(end, { immediate: true, announceSelection: false });
     // Input coordinates must not inherit a remaining card-lift transform.
     animateLift(0, { duration: 0 });
-    sectionLinks.hide();
   } });
   listen(document, 'pointerdown', event => {
     if (credits.open && !credits.contains(event.target)) credits.open = false;
@@ -146,24 +158,26 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   });
 
   function updateMenuName() {
-    const location = menuContext === 'about' ? `About: ${siteHeader.dataset.owner}`
-      : menuContext === 'project' ? `Project: ${projects[Math.max(0, articleIndex)].title}`
-      : `Projects: ${endOpen ? 'Links' : projects[Math.max(0, active)].title}`;
+    const location = menuContext === 'home' ? 'Home: Introduction'
+      : menuContext === 'about' ? `About: ${siteHeader.dataset.owner}`
+      : menuContext === 'project' ? `Project: ${panels[Math.max(firstProjectPanel, articleIndex)].title}`
+      : `Projects: ${endOpen ? 'Links' : panels[Math.max(0, active)].title}`;
     menuToggle.setAttribute('aria-label', `${menuNavigation.expanded ? 'Close' : 'Open'} navigation. ${location}`);
-    homeMenuButton.removeAttribute('aria-current');
-    aboutMenuButton.removeAttribute('aria-current');
-    if (menuContext === 'about') aboutMenuButton.setAttribute('aria-current', 'page');
-    const galleryLink = menu.querySelector('[data-menu-gallery]');
-    if (menuContext === 'home') galleryLink.setAttribute('aria-current', 'page');
-    else galleryLink.removeAttribute('aria-current');
-    projectsMenu.dataset.current = String(menuContext !== 'about');
+    const section = menuContext === 'project' || menuContext === 'gallery' ? 'projects' : menuContext;
+    for (const [route, link] of [['home', homeMenuButton], ['about', aboutMenuButton], ['projects', menu.querySelector('[data-menu-gallery]')]]) {
+      if (section === route) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    }
+    projectsMenu.dataset.current = String(section === 'projects');
+    siteHeader.dataset.page = section || 'home';
   }
 
   function setMenuContext(next, { immediate = false } = {}) {
-    const context = typeof next === 'boolean' ? next ? 'project' : 'home' : next;
+    const section = sectionForPanel(active);
+    const context = typeof next === 'boolean' ? next ? 'project' : section === 'projects' ? 'gallery' : section : next;
     if (menuContext === context && !immediate) return;
-    const labels = [workLabel, projectLabel, aboutLabel];
-    const selected = ['home', 'project', 'about'].indexOf(context);
+    const labels = [homeLabel, aboutLabel, workLabel, projectLabel];
+    const selected = ['home', 'about', 'gallery', 'project'].indexOf(context);
     const generation = ++contextGeneration;
     const starts = labels.map(label => {
       const style = getComputedStyle(label);
@@ -224,19 +238,21 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
 
   function announce() {
     setText('[data-announcement]', endOpen ? 'Professional links. End of selected work.'
-      : `${projects[active].title}, project ${active + 1} of ${projects.length}. ${projects[active].caption}`);
+      : panels[active].kind === 'project'
+        ? `${panels[active].title}, project ${active - firstProjectPanel + 1} of ${panels.length - firstProjectPanel}. ${panels[active].caption}`
+        : `${panels[active].title}. Panel ${active + 1} of ${panels.length}.`);
   }
 
   function updateBounds(index) {
     previousButton.disabled = index <= 0;
     nextButton.disabled = index >= end;
-    previousButton.setAttribute('aria-label', index >= end ? 'Back to last project' : 'Previous project');
-    nextButton.setAttribute('aria-label', index >= last ? 'Show professional links' : 'Next project');
+    previousButton.setAttribute('aria-label', index >= end ? 'Back to last project' : 'Previous panel');
+    nextButton.setAttribute('aria-label', index >= last ? 'Show professional links' : 'Next panel');
   }
 
   function updateGalleryIdentity({ immediate = false, index = active, links = endOpen } = {}) {
     const from = readHeaderPalette(siteHeader);
-    const project = projects[Math.max(0, index)];
+    const project = panels[Math.max(0, index)];
     const palette = links ? linksPalette : project.palette;
     root.style.setProperty('--accent', palette.accent);
     root.style.setProperty('--ink', palette.ink);
@@ -247,12 +263,12 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       if (!links && Number(button.dataset.menuProject) === index) button.setAttribute('aria-current', 'true');
       else button.removeAttribute('aria-current');
     });
-    setMenuTitle(links ? 'Links' : project.title, { immediate });
+    setMenuTitle(links ? 'Links' : project.kind === 'home' ? 'Introduction' : project.kind === 'about' ? siteHeader.dataset.owner : project.title, { immediate });
   }
 
   function selectGalleryFavicon(index) {
     faviconIndex = Math.round(clampPosition(index));
-    updateFavicon(faviconIndex === end ? endPanel.dataset.favicon : projects[faviconIndex].favicon);
+    updateFavicon(faviconIndex === end ? endPanel.dataset.favicon : panels[faviconIndex].favicon);
   }
 
   function followGalleryFavicon(value) {
@@ -295,8 +311,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     cancelAnimationFrame(titleFrame);
     titleFrame = 0;
     titleSlots = [];
-    titleText.textContent = projects[active].title;
-    titleMetrics.textContent = projects[active].title;
+    titleText.textContent = panels[active].title;
+    titleMetrics.textContent = panels[active].title;
     captionWord.style.width = '';
     root.classList.remove('is-scrambling');
   }
@@ -401,27 +417,35 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (active === index) return;
     const previous = active;
     const focusedThumbnail = previous >= 0 && document.activeElement === thumbnails[previous];
+    if (previous >= 0 && slides[previous].contains(document.activeElement)) root.querySelector('.carousel').focus({ preventScroll: true });
     active = index;
     prepareImages(active);
-    const project = projects[active];
+    const panel = panels[active];
+    root.dataset.panelKind = panel.kind;
     captionButton.dataset.project = String(active);
-    captionButton.setAttribute('aria-label', `View ${project.title}`);
-    captionHeading.setAttribute('aria-label', project.title);
-    scrambleTitle(project.title, { immediate: previous < 0, direction: Math.sign(index - previous) });
-    slides[active].setAttribute('aria-hidden', 'false');
+    captionButton.setAttribute('aria-label', `View ${panel.title}`);
+    captionHeading.setAttribute('aria-label', panel.title);
+    if (panel.kind === 'project') scrambleTitle(panel.title, { immediate: previous < 0, direction: Math.sign(index - previous) });
+    else finishTitle();
     if (focusedThumbnail) thumbnails[active].focus({ preventScroll: true });
     slides.forEach((slide, i) => {
       slide.classList.toggle('is-active', i === active);
       slide.setAttribute('aria-hidden', String(i !== active));
+      slide.inert = i !== active;
     });
     thumbnails.forEach((button, i) => {
       button.classList.toggle('is-active', i === active);
       button.setAttribute('aria-pressed', String(i === active));
       button.tabIndex = i === active ? 0 : -1;
     });
+    if (!projectOpen && !projectRequests.busy) setMenuContext(panel.kind === 'project' ? 'gallery' : panel.kind, { immediate: previous < 0 });
     updateGalleryIdentity({ immediate: previous < 0 });
-    setText('[data-mobile-count]', `${String(active + 1).padStart(2, '0')} / ${String(projects.length).padStart(2, '0')}`);
-    mobileInspect.setAttribute('aria-label', `View ${project.title}`);
+    setText('[data-mobile-count]', `${String(active + 1).padStart(2, '0')} / ${String(panels.length).padStart(2, '0')}`);
+    const action = panel.kind === 'home' ? 'About me' : panel.kind === 'about' ? 'Explore projects' : 'View project';
+    setText('[data-mobile-action-label]', action);
+    mobileInspect.setAttribute('aria-label', panel.kind === 'project' ? `View ${panel.title}` : action);
+    mobileInspect.setAttribute('aria-controls', panel.kind === 'project' ? 'project-article' : `site-panel-${panels[active + 1].slug}`);
+    if (!projectOpen) skipLink.href = panel.kind === 'home' ? '#home-title' : panel.kind === 'about' ? '#about-title' : '#project-caption';
     updateBounds(root.classList.contains('is-moving') ? Math.round(destination) : active);
   }
 
@@ -429,12 +453,12 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     // Fetch the destination and its neighbors before they slide into view.
     // Distant covers stay lazy; thumbnails are small and remain eager.
     for (let i = Math.max(0, index - 1); i <= Math.min(last, index + 1); i++) {
-      if (slideImages[i].loading === 'lazy') slideImages[i].loading = 'eager';
+      if (slideImages[i]?.loading === 'lazy') slideImages[i].loading = 'eager';
     }
   }
 
   function render(value) {
-    const frame = galleryFrame(value, projects.length);
+    const frame = galleryFrame(value, panels.length);
     position = frame.position;
     const x = -position * (stageWidth - galleryInset);
     if (x !== renderedX) {
@@ -458,9 +482,10 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     }
     updateEnd(frame.endProgress, frame.links);
     updateActive(frame.project);
-    const returnHidden = position > .001;
-    if (returnHidden && aboutReturn.contains(document.activeElement)) root.querySelector('.carousel').focus({ preventScroll: true });
-    if (aboutReturn.hidden !== returnHidden) aboutReturn.hidden = returnHidden;
+    caption.hidden = frame.links || panels[active].kind !== 'project';
+    caption.inert = caption.hidden;
+    root.dataset.panel = String(frame.links ? end : active);
+    root.dataset.panelKind = frame.links ? 'links' : panels[active].kind;
     if (!root.classList.contains('is-moving')) followGalleryFavicon(position);
   }
 
@@ -533,7 +558,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   }
 
   function animateTo(value, { immediate = false, velocity = motionVelocity, response,
-    focusThumbnail = false, announceSelection = true } = {}) {
+    focusThumbnail = false, announceSelection = true, history = true, settled = () => {} } = {}) {
     stopAnimation();
     destination = clampPosition(value);
     prepareImages(Math.round(destination));
@@ -552,6 +577,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       slideEndsAt = 0;
       if (focusThumbnail) (endOpen ? endReturn : thumbnails[active]).focus({ preventScroll: true });
       if (announceSelection) announce();
+      if (history && !projectOpen && !projectRequests.busy) writeAddress(destination);
+      settled();
     };
     if (immediate || reducedMotion.matches || distance < .001) { finish(); return; }
     const spring = createMotionSpring({ from, to: destination, velocity, unit: stageWidth, response });
@@ -610,13 +637,13 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   });
 
   function fillProject(index) {
-    const project = projects[index];
+    const project = panels[index];
     setText('[data-detail-title]', project.title);
     setText('[data-detail-category]', project.category);
     setText('[data-detail-year]', project.year);
     setText('[data-detail-description]', project.description);
     setText('[data-detail-note]', project.note);
-    setText('[data-detail-number]', `${String(index + 1).padStart(2, '0')} / ${String(projects.length).padStart(2, '0')}`);
+    setText('[data-detail-number]', `${String(index - firstProjectPanel + 1).padStart(2, '0')} / ${String(panels.length - firstProjectPanel).padStart(2, '0')}`);
     // Article images are supplied explicitly; the gallery cover stays in the gallery.
     renderProjectMedia(detailMedia, project.articleMedia, { base: detailMedia.dataset.assetBase });
     caseStudy.render(project);
@@ -627,11 +654,14 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (disposed) return;
     if (projectRequests.pending) return;
     const target = menuNavigation.expanded
-      ? menu.querySelector(projectOpen ? `[data-menu-project="${active}"]` : '[data-action="gallery"]')
+      ? menu.querySelector(projectOpen ? `[data-menu-project="${articleIndex}"]` : '[data-action="gallery"]')
       : projectOpen ? projectView.querySelector('[data-detail-title]')
       : endOpen ? endReturn
+      : pendingPanel !== null || panels[active].kind !== 'project' ? slides[active].querySelector('h1')
       : siteHeader.contains(projectReturnFocus) ? menuToggle : projectReturnFocus;
-    (target?.isConnected ? target : captionButton).focus({ preventScroll: true });
+    const focus = target?.isConnected && !target.closest('[inert]') ? target : panels[active].kind === 'project' ? captionButton : menuToggle;
+    if (focus.tagName === 'H1') focus.tabIndex = -1;
+    focus.focus({ preventScroll: true });
   }
 
   async function transitionProject(opening, { replacing = false, sectionEntry = false } = {}) {
@@ -664,8 +694,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       root.classList.remove('is-project-transitioning', 'is-project-opening', 'is-project-replacing');
       projectPage.style.visibility = originalVisibility;
       root.classList.toggle('has-project', opening);
-      root.removeAttribute('data-section-project-entry');
-      skipLink.href = opening ? '#detail-title' : '#project-caption';
+      root.dataset.article = opening ? String(articleIndex) : '';
+      skipLink.href = opening ? '#detail-title' : panels[active].kind === 'home' ? '#home-title' : panels[active].kind === 'about' ? '#about-title' : '#project-caption';
       gallerySurfaces.forEach(surface => {
         surface.inert = opening;
         if (opening) surface.setAttribute('aria-hidden', 'true');
@@ -695,14 +725,14 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       articleIndex = request.index;
       fillProject(request.index);
       updateGalleryIdentity({ index: articleIndex, links: false, immediate: request.sectionEntry });
-      updateFavicon(projects[articleIndex].favicon);
+      updateFavicon(panels[articleIndex].favicon);
       if (replacing) projectOrigin = articleRevealOrigin(projectPage.querySelector('[data-detail-title]').getBoundingClientRect(),
         document.documentElement.clientWidth, projectView.clientHeight);
       await transitionProject(true, { replacing, sectionEntry: request.sectionEntry });
       // The solid article now conceals the gallery. Select its return slide here,
       // so opening never jumps to the cover but closing reveals the right project.
       if (!disposed) {
-        select(request.index, { immediate: true, announceSelection: false });
+        select(request.index, { immediate: true, announceSelection: false, history: false });
         finishTitle();
       }
     } finally {
@@ -719,44 +749,111 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       y: Math.max(0, Math.min(1, y / (projectView.clientHeight || root.clientHeight || 1))) };
   }
 
-  function requestProject(index, options = {}) {
-    cancelDrag();
-    const selected = index === null ? null : clamp(index);
-    const fragment = selected === null ? '' : `#project=${encodeURIComponent(projects[selected].slug)}`;
-    // Astro moves to the destination URL after a section swap; its initial
-    // project fragment must not be written onto the outgoing section's URL.
-    if (!options.skipHistory) {
-      if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ !== undefined) {
-        window.parent.postMessage({ type: 'portfolio-preview-fragment', fragment }, '*');
+  function writeAddress(index, { article = false, replace = false, anchor = '' } = {}) {
+    const address = galleryAddress(index, panels, { base: root.dataset.base, article, anchor });
+    if (address !== lastAddress) {
+      lastAddress = address;
+      if (window.__PORTFOLIO_PREVIEW_ADDRESS__ !== undefined) {
+        window.__PORTFOLIO_PREVIEW_ADDRESS__ = address;
+        window.parent.postMessage({ type: 'portfolio-preview-address', address, replace }, '*');
       } else {
-        const address = new URL(window.location.href);
-        address.hash = fragment;
-        window.history.replaceState(window.history.state, '', address);
+        const state = { ...window.history.state, portfolio: true };
+        window.history[replace ? 'replaceState' : 'pushState'](state, '', address);
       }
     }
+    document.title = `${siteHeader.dataset.owner} — ${article ? panels[index].title : sectionForPanel(index) === 'home' ? 'Portfolio' : sectionForPanel(index) === 'about' ? 'About' : 'Projects'}`;
+  }
+
+  function navigatePanel(index, { skipHistory = false, immediate = false, focusThumbnail = false, focusContent = false } = {}) {
+    const target = Math.round(clampPosition(index));
+    if (menuNavigation.expanded) closeMenu({ focus: true });
+    if (!skipHistory) writeAddress(target);
+    if (projectOpen || projectRequests.busy) {
+      pendingPanel = target;
+      return projectRequests.request({ index: null, panel: target });
+    }
+    pendingPanel = null;
+    select(target, { immediate, focusThumbnail, history: false, settled: () => {
+      if (focusContent) (endOpen ? endReturn : slides[active].querySelector('[data-profile-scroll]') || captionButton).focus({ preventScroll: true });
+    } });
+    return Promise.resolve();
+  }
+
+  function requestProject(index, options = {}) {
+    cancelDrag();
+    const selected = index === null ? null : Math.max(firstProjectPanel, Math.round(clamp(index)));
+    if (selected !== null) pendingPanel = null;
+    if (!options.skipHistory) writeAddress(selected === null ? Math.round(position) : selected, {
+      article: selected !== null, replace: selected === null
+    });
     return projectRequests.request({ index: selected, ...options });
   }
 
+  function scrollAnchor(anchor, { focus = true } = {}) {
+    const target = document.getElementById(anchor);
+    if (!target) return;
+    const scroller = target.closest('[data-profile-scroll]');
+    if (scroller && scroller.closest('[data-slide]') !== slides[active]) return;
+    if (scroller) scroller.scrollTo({ top: scroller.scrollTop + target.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 110, behavior: 'instant' });
+    else if (target === projectView.querySelector('[data-detail-title]')) projectView.scrollTop = 0;
+    if (focus) { if (!target.hasAttribute('tabindex')) target.tabIndex = -1; target.focus({ preventScroll: true }); }
+  }
+
+  function followAddress() {
+    const address = readAddress();
+    const key = address.pathname + address.hash;
+    if (key === lastAddress) return;
+    lastAddress = key;
+    const route = resolveGalleryLocation(address, panels);
+    const pending = route.article === null
+      ? navigatePanel(route.panel, { skipHistory: true, immediate: Boolean(route.anchor) })
+      : requestProject(route.article, { skipHistory: true });
+    Promise.resolve(pending).then(() => {
+      if (lastAddress !== key) return;
+      if (route.anchor) scrollAnchor(route.anchor);
+      document.title = `${siteHeader.dataset.owner} — ${route.article === null ? route.panel === 0 ? 'Portfolio' : route.panel === 1 ? 'About' : 'Projects' : panels[route.article].title}`;
+    });
+  }
+
   listen(root, 'click', event => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
     if (performance.now() < suppressClickUntil && event.detail !== 0 && (stage.contains(event.target) || rail.contains(event.target))) {
       event.preventDefault();
       event.stopImmediatePropagation();
       return;
     }
     const thumbnail = event.target.closest('[data-thumbnail]');
-    if (thumbnail && !hasDialog()) { select(Number(thumbnail.dataset.thumbnail), { focusThumbnail: true }); return; }
+    if (thumbnail && !hasDialog()) { navigatePanel(Number(thumbnail.dataset.thumbnail), { focusThumbnail: true }); return; }
     const step = event.target.closest('[data-step]');
-    if (step && !hasDialog()) { select(Math.round(destination) + Number(step.dataset.step)); return; }
-    if (event.target.closest('[data-end-return]') && !hasDialog()) { select(last, { focusThumbnail: true }); return; }
+    if (step && !hasDialog()) { navigatePanel(Math.round(destination) + Number(step.dataset.step)); return; }
+    if (event.target.closest('[data-end-return]') && !hasDialog()) { navigatePanel(last, { focusThumbnail: true }); return; }
     const choice = event.target.closest('[data-menu-project]');
     if (choice) {
+      event.preventDefault();
       const index = Number(choice.dataset.menuProject);
       closeMenu({ focus: true });
       requestProject(index, { origin: clickOrigin(event, choice), returnFocus: choice });
       return;
     }
+    const routeLink = event.target.closest('a[data-site-route]');
+    if (routeLink && (!routeLink.target || routeLink.target === '_self')) {
+      event.preventDefault();
+      const route = routeLink.dataset.siteRoute;
+      const target = route === 'home' ? 0 : route === 'about' ? 1 : projectOpen || projectRequests.busy ? Math.max(firstProjectPanel, articleIndex) : firstProjectPanel;
+      navigatePanel(target, { focusContent: event.detail === 0 });
+      return;
+    }
+    const anchorLink = event.target.closest('a[href^="#"]');
+    if (anchorLink && (anchorLink.closest('[data-profile-scroll]') || anchorLink === skipLink)) {
+      event.preventDefault();
+      let anchor; try { anchor = decodeURIComponent(anchorLink.hash.slice(1)); } catch { return; }
+      scrollAnchor(anchor);
+      if (anchorLink !== skipLink) writeAddress(active, { anchor });
+      return;
+    }
     const actionButton = event.target.closest('[data-action]');
     if (actionButton?.dataset.action === 'project') {
+      if (panels[active].kind !== 'project') { navigatePanel(active + 1); return; }
       closeMenu();
       requestProject(Number(actionButton.dataset.project ?? active), {
         origin: clickOrigin(event, actionButton), returnFocus: actionButton
@@ -775,6 +872,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     // A fresh press is intentional; only the click generated by the preceding drag is suppressed.
     suppressClickUntil = 0;
     if (event.target.closest('[data-end-link], [data-laser-control]')) return;
+    const profile = event.target.closest('[data-profile-scroll]');
+    if (profile && (event.pointerType === 'mouse' || event.target.closest('a, button, summary, input, textarea, select'))) return;
     stopDragFrame();
     stopWheel();
     stopAnimation();
@@ -784,12 +883,12 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     const capture = event.target.closest('button') || surface;
     const pointerTouch = event.pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches;
     drag = {
-      id: event.pointerId, surface, capture, unit,
+      id: event.pointerId, surface, capture, unit, profile,
       x: event.clientX, y: event.clientY, start: position,
       lastX: event.clientX, lastTime: performance.now(), velocity: 0, moved: false, axis: null, pointerTouch,
       touch: surface === stage && pointerTouch
     };
-    capture.setPointerCapture(event.pointerId);
+    if (!profile) capture.setPointerCapture(event.pointerId);
   }
   function stopDragFrame() {
     cancelAnimationFrame(dragFrame);
@@ -820,10 +919,10 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (drag.pointerTouch && drag.axis !== 'x') return;
     if (!drag.moved) {
       if (Math.abs(dx) < 6 || (!drag.pointerTouch && Math.abs(dx) < Math.abs(dy))) return;
+      if (!drag.capture.hasPointerCapture(drag.id)) drag.capture.setPointerCapture(drag.id);
       drag.moved = true;
       root.classList.add('is-dragging');
-      sectionLinks.hide();
-      animateLift(1);
+        animateLift(1);
     }
     const now = event.time;
     const elapsed = Math.max(1, now - drag.lastTime);
@@ -856,7 +955,10 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   listen(stage, 'pointerdown', event => beginDrag(event, stage, stageWidth));
   listen(rail, 'pointerdown', event => beginDrag(event, rail, stride));
   [stage, rail].forEach(surface => {
-    listen(surface, 'selectstart', event => event.preventDefault());
+    listen(surface, 'selectstart', event => {
+      const target = event.target instanceof Element ? event.target : event.target.parentElement;
+      if (!target?.closest('[data-profile-scroll]')) event.preventDefault();
+    });
     listen(surface, 'pointermove', queueDrag);
     listen(surface, 'pointerup', event => endDrag(event));
     listen(surface, 'pointercancel', event => endDrag(event, true));
@@ -888,7 +990,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
         event.preventDefault(); projectNavigation.set(false, { focus: true }); return;
       }
       if (event.key === 'ArrowRight' && event.target === projectsToggle) {
-        event.preventDefault(); projectNavigation.set(true); menuProjects[Math.max(0, active)]?.focus({ preventScroll: true }); return;
+        event.preventDefault(); projectNavigation.set(true); menuProjects[Math.max(0, active - firstProjectPanel)]?.focus({ preventScroll: true }); return;
       }
       if (event.key === 'Escape') { event.preventDefault(); closeMenu({ focus: true }); return; }
       if (menu.contains(event.target) && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
@@ -911,7 +1013,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     const directions = { ArrowLeft: Math.round(destination) - 1, ArrowRight: Math.round(destination) + 1, Home: 0, End: end };
     if (!(event.key in directions)) return;
     event.preventDefault();
-    select(directions[event.key], { focusThumbnail: rail.contains(event.target) });
+    navigatePanel(directions[event.key], { focusThumbnail: rail.contains(event.target), focusContent: !rail.contains(event.target) });
   });
 
   listen(window, 'resize', () => {
@@ -943,22 +1045,21 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (titleFrame) finishTitle();
     if (liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
   });
-  listen(document, 'astro:before-preparation', () => {
-    // Finish the local article transition before handing off to section navigation.
-    projectAbort?.abort();
-    closeMenu({ immediate: true });
-    cancelDrag();
-  });
-  listen(document, 'portfolio:preview-exit', () => closeMenu({ immediate: true }));
   measure();
-  updateFavicon(projects[Math.max(0, active)].favicon);
-  const entryDone = requestedIndex >= 0
-    ? requestProject(requestedIndex, { sectionEntry, skipHistory: true }) : Promise.resolve();
+  render(position);
+  updateBounds(position);
+  updateFavicon(initial.panel === end ? endPanel.dataset.favicon : panels[initial.panel].favicon);
+  const entryDone = initial.article !== null
+    ? requestProject(initial.article, { skipHistory: true, sectionEntry: true }) : Promise.resolve();
+  writeAddress(initial.panel, { article: initial.article !== null, anchor: initial.anchor, replace: true });
+  if (initial.anchor) scrollAnchor(initial.anchor, { focus: false });
   root.dataset.ready = 'true';
-  listen(window, 'hashchange', () => {
-    if (window.location.hash && !new URLSearchParams(window.location.hash.slice(1)).has('project')) return;
-    const index = projectIndexFromHash(window.location.hash, projects);
-    requestProject(index >= 0 ? index : null);
+  listen(window, 'popstate', followAddress);
+  listen(window, 'hashchange', followAddress);
+  listen(window, 'message', event => {
+    if (event.source !== window.parent || event.data?.type !== 'portfolio-preview-navigate') return;
+    window.__PORTFOLIO_PREVIEW_ADDRESS__ = event.data.address;
+    followAddress();
   });
   const cleanup = () => {
     disposed = true;

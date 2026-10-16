@@ -41,9 +41,7 @@ export function interpolatePalette(from, to, progress) {
 export function readHeaderPalette(header = document.querySelector('.site-header')) {
   const menu = header?.querySelector('.site-menu');
   if (!menu) return null;
-  const selected = header.querySelector('.page-links a[aria-current="page"]');
-  return { accent: getComputedStyle(menu).backgroundColor, ink: getComputedStyle(header).color,
-    ...(selected ? { selection: getComputedStyle(selected).backgroundColor, selectionInk: getComputedStyle(selected).color } : {}) };
+  return { accent: getComputedStyle(menu).backgroundColor, ink: getComputedStyle(header).color };
 }
 
 // Blend opaque colors on the incoming live header. Fading the entire header
@@ -56,19 +54,12 @@ export function blendHeaderPalette(header, from, { duration = 180 } = {}) {
   // the first cover's displayed colors toward a directly requested project.
   const to = style ? { accent: style.getPropertyValue('--accent').trim(), ink: style.getPropertyValue('--ink').trim() } : null;
   if (!from || !to?.accent || !to.ink || reducedMotion.matches || document.hidden) return () => {};
-  const selected = header.querySelector('.page-links a[aria-current="page"]');
-  if (from.selection && selected) {
-    to.selection = getComputedStyle(selected).backgroundColor;
-    to.selectionInk = getComputedStyle(selected).color;
-  }
   const controller = new AbortController();
-  const saved = ['--accent', '--ink', '--nav-selection', '--nav-selection-ink'].map(name => [name, header.style.getPropertyValue(name), header.style.getPropertyPriority(name)]);
+  const saved = ['--accent', '--ink'].map(name => [name, header.style.getPropertyValue(name), header.style.getPropertyPriority(name)]);
   let frame = 0, finished = false;
   const apply = palette => {
     header.style.setProperty('--accent', palette.accent);
     header.style.setProperty('--ink', palette.ink);
-    if (palette.selection) header.style.setProperty('--nav-selection', palette.selection);
-    if (palette.selectionInk) header.style.setProperty('--nav-selection-ink', palette.selectionInk);
   };
   const finish = () => {
     if (finished) return;

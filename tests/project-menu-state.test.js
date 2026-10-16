@@ -11,9 +11,9 @@ test('open and closed states override page-specific defaults after navigation/re
   home.write(false);
   assert.equal(projectMenuPreference({ sessionStorage }).read(true), false);
 });
-test('fresh offline frames share the parent preference', () => {
+test('the persistent offline app shares its outer document preference', () => {
   const parent = { sessionStorage: storage() };
-  const frame = () => projectMenuPreference({ __PORTFOLIO_PREVIEW_FRAGMENT__: '', parent });
+  const frame = () => projectMenuPreference({ __PORTFOLIO_PREVIEW_ADDRESS__: '/', parent });
   frame().write(true); assert.equal(frame().read(false), true);
   frame().write(false); assert.equal(frame().read(true), false);
 });
