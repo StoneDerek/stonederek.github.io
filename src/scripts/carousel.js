@@ -1,34 +1,34 @@
 import { settleTiles, canAnimateTiles, captureProjectBackdrop, articleRevealOrigin } from './project-transition.js';
 import { mountProjectMenu } from './project-menu.js';
 import { mountSiteMenu } from './site-menu.js';
+import { mountMenuLabel } from './menu-label.js';
 import { createProjectRequests } from './project-navigation.js';
 import { mountProjectFavicon } from './favicon.js';
-import { projectIndexFromHash } from './project-links.js';
-import { createAboutSwipe, galleryFrame, settleProjectSwipe } from './section-state.js';
+import { resolveGalleryLocation, galleryAddress, sectionForPanel } from './gallery-location.js';
+import { firstProjectPanel } from '../data/gallery-panels.js';
+import { galleryFrame, settleProjectSwipe } from './section-state.js';
 import { createMotionSpring } from './motion-spring.js';
-import { createAboutHeader } from './about-header.js';
 import { mountLaser } from './ascii-laser.js';
-import { aboutPalette, darkAboutPalette, linksPalette } from '../data/section-palettes.js';
+import { linksPalette } from '../data/section-palettes.js';
 import { sectionTiming } from '../data/section-motion.js';
 import { readHeaderPalette, blendHeaderPalette, stopHeaderPalette } from './header-palette.js';
 import { mountProjectCaseStudy, renderProjectMedia } from './project-case-study.js';
 
-export function mountPortfolio({ sectionLinks = { hide() {} },
-  fragment = window.__PORTFOLIO_PREVIEW_FRAGMENT__ ?? window.location.hash, sectionEntry = false } = {}) {
+export function mountPortfolio() {
   const root = document.getElementById('portfolio');
   const data = document.getElementById('portfolio-data');
   if (!root || !data) return;
   const controller = new AbortController();
   const listen = (target, type, handler, options = {}) => target.addEventListener(type, handler, { ...options, signal: controller.signal });
   let disposed = false;
-  const aboutPreview = root.querySelector('[data-about-preview]');
   const endPanel = root.querySelector('[data-gallery-end]');
   const endReturn = root.querySelector('[data-end-return]');
   const credits = root.querySelector('[data-credits]');
-  const projects = JSON.parse(data.textContent);
-  const requestedIndex = projectIndexFromHash(fragment, projects);
-  const aboutTarget = () => document.documentElement.dataset.theme === 'dark' ? darkAboutPalette : aboutPalette;
-  let aboutHeader = createAboutHeader(projects[0].palette, aboutTarget());
+  const panels = JSON.parse(data.textContent);
+  const readAddress = () => new URL(window.__PORTFOLIO_PREVIEW_ADDRESS__ || window.location.href, 'https://portfolio.invalid');
+  const initial = resolveGalleryLocation(readAddress(), panels);
+  let lastAddress = readAddress().pathname + readAddress().hash;
+  let pendingPanel = null;
   const updateFavicon = mountProjectFavicon(document.querySelector('[data-project-favicon]'));
   const slides = [...root.querySelectorAll('[data-slide]')];
   const slideImages = slides.map(slide => slide.querySelector('img'));
@@ -39,6 +39,9 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   const titleMetrics = captionButton.querySelector('[data-title-metrics]');
   const thumbnails = [...root.querySelectorAll('[data-thumbnail]')];
   const rail = root.querySelector('.thumbnail-rail');
+  const thumbnailGroup = thumbnails[0].parentElement;
+  const selectionFrame = root.querySelector('.selection-frame');
+  const selectionOutline = selectionFrame.querySelector('[data-selection-outline]');
   const galleryTrack = root.querySelector('[data-gallery-track]');
   const stage = root.querySelector('[data-stage]');
   const menu = root.querySelector('[data-menu]');
@@ -53,12 +56,12 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   const projectView = root.querySelector('[data-project-view]');
   const projectPage = projectView.querySelector('.project-page');
   const gallerySurfaces = [...root.querySelectorAll('.carousel, .filmstrip, .mobile-controls')];
-  const endSurfaces = gallerySurfaces.filter(surface => !surface.classList.contains('carousel'));
-  const workLabel = menu.querySelector('[data-menu-context="work"]');
-  const projectLabel = menu.querySelector('[data-menu-context="project"]');
-  const aboutLabel = menu.querySelector('[data-menu-context="about"]');
+  const endSurfaces = gallerySurfaces.filter(surface => surface.classList.contains('filmstrip') || surface.classList.contains('mobile-controls'));
+  const contextLabel = menu.querySelector('[data-menu-context]');
   const menuTitle = menu.querySelector('[data-menu-title]');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const contextMotion = mountMenuLabel(contextLabel, reducedMotion);
+  const menuTitleMotion = mountMenuLabel(menuTitle, reducedMotion);
   const projectNavigation = mountProjectMenu(projectsMenu, reducedMotion, { signal: controller.signal, persist: true });
   const visibleMenuChoices = () => menuChoices.filter(choice => choice === projectsToggle || !projectsMenu.contains(choice) || projectNavigation.expanded);
   const previousButton = root.querySelector('[data-step="-1"]');
@@ -70,8 +73,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     base: detailMedia.dataset.assetBase, reducedMotion
   });
   const skipLink = root.querySelector('.skip-link');
-  const last = projects.length - 1;
-  const end = projects.length;
+  const last = panels.length - 1;
+  const end = panels.length;
   const clamp = value => Math.max(0, Math.min(last, value));
   const clampPosition = value => Math.max(0, Math.min(end, value));
   const textNodes = new Map();
@@ -80,17 +83,18 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     const node = textNodes.get(selector);
     if (node.textContent !== String(value)) node.textContent = value;
   };
-  const hasDialog = () => projectOpen || projectRequests.busy || aboutCommitting;
+  const hasDialog = () => projectOpen || projectRequests.busy;
   let active = -1;
-  let faviconIndex = Math.max(0, requestedIndex);
+  let faviconIndex = initial.panel;
   let endOpen = false;
-  let position = requestedIndex >= 0 ? requestedIndex : 0;
+  let position = initial.panel;
   let destination = position;
   let stageWidth = 1;
   let galleryInset = 0;
   let lift = 0;
   let liftFrame = 0;
   let stride = 1;
+  let railCenterPadding = 0;
   let animationFrame = 0;
   let motionVelocity = 0;
   let resizeFrame = 0;
@@ -99,12 +103,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   let drag = null;
   let dragFrame = 0;
   let pendingDrag = null;
-  let aboutTravel = 0;
-  let aboutFrame = 0;
-  let aboutVelocity = 0;
-  let aboutCommitting = false;
-  let aboutHeaderActive = false;
-  let aboutWarmed = false;
   let suppressClickUntil = 0;
   let titleFrame = 0;
   let titleSlots = [];
@@ -114,12 +112,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   let projectAbort = null;
   let projectOrigin = { x: .5, y: .5 };
   let projectReturnFocus = captionButton;
-  let menuContext = 'home';
-  let contextAnimations = [];
-  let contextGeneration = 0;
-  let menuTitleAnimation = null;
-  let menuTitleGeneration = 0;
-  let desiredMenuTitle = menuTitle.textContent;
+  let menuContext = null;
   const titleMeasure = document.createElement('canvas').getContext('2d');
   let measuredFont = '';
   const glyphWidths = new Map();
@@ -135,15 +128,24 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   const projectRequests = createProjectRequests({
     getCurrent: () => ({ open: projectOpen, index: articleIndex }),
     open: openProject,
-    close: () => transitionProject(false),
+    close: request => {
+      if (request.panel !== undefined) select(request.panel, { immediate: true, history: false });
+      return transitionProject(false);
+    },
     cancel: () => projectAbort?.abort(),
-    settled: restoreProjectFocus
+    settled: () => {
+      if (pendingPanel !== null) {
+        const target = pendingPanel; pendingPanel = null;
+        select(target, { immediate: true, history: false });
+      }
+      if (!projectOpen) setMenuContext(sectionForPanel(active) === 'projects' ? 'gallery' : sectionForPanel(active));
+      restoreProjectFocus();
+    }
   });
   const laser = mountLaser(endPanel.querySelector('[data-laser-experiment]'), { onInteraction: () => {
     if (endOpen && animationFrame) animateTo(end, { immediate: true, announceSelection: false });
     // Input coordinates must not inherit a remaining card-lift transform.
     animateLift(0, { duration: 0 });
-    sectionLinks.hide();
   } });
   listen(document, 'pointerdown', event => {
     if (credits.open && !credits.contains(event.target)) credits.open = false;
@@ -155,113 +157,69 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   });
 
   function updateMenuName() {
-    const location = menuContext === 'about' ? `About: ${siteHeader.dataset.owner}`
-      : menuContext === 'project' ? `Project: ${projects[Math.max(0, articleIndex)].title}`
-      : `Projects: ${endOpen ? 'Links' : projects[Math.max(0, active)].title}`;
+    const location = menuContext === 'home' ? 'Home: Introduction'
+      : menuContext === 'about' ? `About: ${siteHeader.dataset.owner}`
+      : menuContext === 'project' ? `Project: ${panels[Math.max(firstProjectPanel, articleIndex)].title}`
+      : `Projects: ${endOpen ? 'Links' : panels[Math.max(0, active)].title}`;
     menuToggle.setAttribute('aria-label', `${menuNavigation.expanded ? 'Close' : 'Open'} navigation. ${location}`);
-    homeMenuButton.removeAttribute('aria-current');
-    aboutMenuButton.removeAttribute('aria-current');
-    if (menuContext === 'about') aboutMenuButton.setAttribute('aria-current', 'page');
-    const galleryLink = menu.querySelector('[data-menu-gallery]');
-    if (menuContext === 'home') galleryLink.setAttribute('aria-current', 'page');
-    else galleryLink.removeAttribute('aria-current');
-    projectsMenu.dataset.current = String(menuContext !== 'about');
-  }
-
-  function setMenuContext(next, { immediate = false } = {}) {
-    const context = typeof next === 'boolean' ? next ? 'project' : 'home' : next;
-    if (menuContext === context && !immediate) return;
-    const labels = [workLabel, projectLabel, aboutLabel];
-    const selected = ['home', 'project', 'about'].indexOf(context);
-    const generation = ++contextGeneration;
-    const starts = labels.map(label => {
-      const style = getComputedStyle(label);
-      return { opacity: style.opacity, transform: style.transform };
-    });
-    contextAnimations.forEach(animation => animation.cancel());
-    contextAnimations = [];
-    menuContext = context;
-    labels.forEach((label, i) => label.setAttribute('aria-hidden', String(i !== selected)));
-    updateMenuName();
-    const ends = labels.map((_, i) => ({ opacity: i === selected ? '1' : '0',
-      transform: i === selected ? 'translateY(0)' : `translateY(${i < selected ? '-100%' : '100%'})` }));
-    const finish = () => {
-      if (generation !== contextGeneration) return;
-      labels.forEach((label, i) => Object.assign(label.style, ends[i]));
-      contextAnimations.forEach(animation => animation.cancel());
-      contextAnimations = [];
-    };
-    if (immediate || reducedMotion.matches || typeof menuTitle.animate !== 'function') { finish(); return; }
-    contextAnimations = labels.map((label, i) => label.animate([starts[i], ends[i]], {
-      duration: i === selected ? 260 : 220,
-      delay: (context === 'project' ? 100 : 50) + (i === selected ? 30 : 0),
-      easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'both'
-    }));
-    Promise.all(contextAnimations.map(animation => animation.finished.catch(() => {}))).then(finish);
-  }
-
-  async function setMenuTitle(title, { immediate = false } = {}) {
-    if (desiredMenuTitle === title && !immediate) return;
-    desiredMenuTitle = title;
-    const generation = ++menuTitleGeneration;
-    const style = getComputedStyle(menuTitle);
-    const start = { opacity: style.opacity, transform: style.transform };
-    menuTitleAnimation?.cancel();
-    menuTitleAnimation = null;
-    updateMenuName();
-    if (immediate || reducedMotion.matches || typeof menuTitle.animate !== 'function') {
-      menuTitle.textContent = title;
-      menuTitle.style.opacity = '';
-      menuTitle.style.transform = '';
-      return;
+    const section = menuContext === 'project' || menuContext === 'gallery' ? 'projects' : menuContext;
+    for (const [route, link] of [['home', homeMenuButton], ['about', aboutMenuButton], ['projects', menu.querySelector('[data-menu-gallery]')]]) {
+      if (section === route) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
     }
-    menuTitleAnimation = menuTitle.animate([start, { opacity: 0, transform: 'translateY(-100%)' }], {
-      duration: 120, easing: 'ease-in', fill: 'forwards'
-    });
-    await menuTitleAnimation.finished.catch(() => {});
-    if (generation !== menuTitleGeneration) return;
-    menuTitleAnimation.cancel();
-    menuTitle.textContent = title;
-    menuTitleAnimation = menuTitle.animate([
-      { opacity: 0, transform: 'translateY(100%)' }, { opacity: 1, transform: 'translateY(0)' }
-    ], { duration: 200, easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'both' });
-    await menuTitleAnimation.finished.catch(() => {});
-    if (generation !== menuTitleGeneration) return;
-    menuTitleAnimation.cancel();
-    menuTitleAnimation = null;
+    projectsMenu.dataset.current = String(section === 'projects');
+    siteHeader.dataset.page = section || 'home';
+  }
+
+  function setMenuContext(next, { immediate = false, direction } = {}) {
+    const section = sectionForPanel(active);
+    const context = typeof next === 'boolean' ? next ? 'project' : section === 'projects' ? 'gallery' : section : next;
+    if (menuContext === context && !immediate) return;
+    const order = ['home', 'about', 'gallery', 'project'];
+    direction ??= Math.sign(order.indexOf(context) - order.indexOf(menuContext)) || 1;
+    menuContext = context;
+    updateMenuName();
+    contextMotion.set({ home: 'Home:', about: 'About:', gallery: 'Projects:', project: 'Project:' }[context], { immediate, direction });
+  }
+
+  function setMenuTitle(title, options) {
+    updateMenuName();
+    return menuTitleMotion.set(title, options);
   }
 
   function announce() {
     setText('[data-announcement]', endOpen ? 'Professional links. End of selected work.'
-      : `${projects[active].title}, project ${active + 1} of ${projects.length}. ${projects[active].caption}`);
+      : panels[active].kind === 'project'
+        ? `${panels[active].title}, project ${active - firstProjectPanel + 1} of ${panels.length - firstProjectPanel}. ${panels[active].caption}`
+        : `${panels[active].title}. Panel ${active + 1} of ${panels.length}.`);
   }
 
   function updateBounds(index) {
     previousButton.disabled = index <= 0;
     nextButton.disabled = index >= end;
-    previousButton.setAttribute('aria-label', index >= end ? 'Back to last project' : 'Previous project');
-    nextButton.setAttribute('aria-label', index >= last ? 'Show professional links' : 'Next project');
+    previousButton.setAttribute('aria-label', index >= end ? 'Back to last project' : 'Previous panel');
+    nextButton.setAttribute('aria-label', index >= last ? 'Show professional links' : 'Next panel');
   }
 
-  function updateGalleryIdentity({ immediate = false, index = active, links = endOpen } = {}) {
+  function updateGalleryIdentity({ immediate = false, index = active, links = endOpen, direction = 1 } = {}) {
     const from = readHeaderPalette(siteHeader);
-    const project = projects[Math.max(0, index)];
+    const project = panels[Math.max(0, index)];
     const palette = links ? linksPalette : project.palette;
     root.style.setProperty('--accent', palette.accent);
     root.style.setProperty('--ink', palette.ink);
     // An article can change identity while its outgoing gallery drawing stays put.
     if (index === active && links === endOpen) root.style.setProperty('--caption-color', palette.caption || palette.accent);
-    if (!immediate && !aboutTravel) blendHeaderPalette(siteHeader, from, { duration: 320 });
+    if (!immediate) blendHeaderPalette(siteHeader, from, { duration: 320 });
     menuProjects.forEach(button => {
       if (!links && Number(button.dataset.menuProject) === index) button.setAttribute('aria-current', 'true');
       else button.removeAttribute('aria-current');
     });
-    setMenuTitle(links ? 'Links' : project.title, { immediate });
+    setMenuTitle(links ? 'Links' : project.kind === 'home' ? 'Introduction' : project.kind === 'about' ? siteHeader.dataset.owner : project.title, { immediate, direction });
   }
 
   function selectGalleryFavicon(index) {
     faviconIndex = Math.round(clampPosition(index));
-    updateFavicon(faviconIndex === end ? endPanel.dataset.favicon : projects[faviconIndex].favicon);
+    updateFavicon(faviconIndex === end ? endPanel.dataset.favicon : panels[faviconIndex].favicon);
   }
 
   function followGalleryFavicon(value) {
@@ -297,15 +255,15 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     endOpen = links;
     root.dataset.atGalleryEnd = String(links);
     skipLink.href = links ? '#gallery-end' : '#project-caption';
-    updateGalleryIdentity();
+    updateGalleryIdentity({ direction: projectOpen || projectRequests.busy ? -1 : links ? 1 : -1 });
   }
 
   function finishTitle() {
     cancelAnimationFrame(titleFrame);
     titleFrame = 0;
     titleSlots = [];
-    titleText.textContent = projects[active].title;
-    titleMetrics.textContent = projects[active].title;
+    titleText.textContent = panels[active].title;
+    titleMetrics.textContent = panels[active].title;
     captionWord.style.width = '';
     root.classList.remove('is-scrambling');
   }
@@ -409,28 +367,37 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   function updateActive(index) {
     if (active === index) return;
     const previous = active;
+    const direction = projectOpen || projectRequests.busy ? -1 : Math.sign(index - previous) || 1;
     const focusedThumbnail = previous >= 0 && document.activeElement === thumbnails[previous];
+    if (previous >= 0 && slides[previous].contains(document.activeElement)) root.querySelector('.carousel').focus({ preventScroll: true });
     active = index;
     prepareImages(active);
-    const project = projects[active];
+    const panel = panels[active];
+    root.dataset.panelKind = panel.kind;
     captionButton.dataset.project = String(active);
-    captionButton.setAttribute('aria-label', `View ${project.title}`);
-    captionHeading.setAttribute('aria-label', project.title);
-    scrambleTitle(project.title, { immediate: previous < 0, direction: Math.sign(index - previous) });
-    slides[active].setAttribute('aria-hidden', 'false');
+    captionButton.setAttribute('aria-label', `View ${panel.title}`);
+    captionHeading.setAttribute('aria-label', panel.title);
+    if (panel.kind === 'project') scrambleTitle(panel.title, { immediate: previous < 0, direction: Math.sign(index - previous) });
+    else finishTitle();
     if (focusedThumbnail) thumbnails[active].focus({ preventScroll: true });
     slides.forEach((slide, i) => {
       slide.classList.toggle('is-active', i === active);
       slide.setAttribute('aria-hidden', String(i !== active));
+      slide.inert = i !== active;
     });
     thumbnails.forEach((button, i) => {
       button.classList.toggle('is-active', i === active);
       button.setAttribute('aria-pressed', String(i === active));
       button.tabIndex = i === active ? 0 : -1;
     });
-    updateGalleryIdentity({ immediate: previous < 0 });
-    setText('[data-mobile-count]', `${String(active + 1).padStart(2, '0')} / ${String(projects.length).padStart(2, '0')}`);
-    mobileInspect.setAttribute('aria-label', `View ${project.title}`);
+    if (!projectOpen && !projectRequests.busy) setMenuContext(panel.kind === 'project' ? 'gallery' : panel.kind, { immediate: previous < 0, direction });
+    updateGalleryIdentity({ immediate: previous < 0, direction });
+    setText('[data-mobile-count]', `${String(active + 1).padStart(2, '0')} / ${String(panels.length).padStart(2, '0')}`);
+    const action = panel.kind === 'home' ? 'About me' : panel.kind === 'about' ? 'Explore projects' : 'View project';
+    setText('[data-mobile-action-label]', action);
+    mobileInspect.setAttribute('aria-label', panel.kind === 'project' ? `View ${panel.title}` : action);
+    mobileInspect.setAttribute('aria-controls', panel.kind === 'project' ? 'project-article' : `site-panel-${panels[active + 1].slug}`);
+    if (!projectOpen) skipLink.href = panel.kind === 'home' ? '#home-title' : panel.kind === 'about' ? '#about-title' : '#project-caption';
     updateBounds(root.classList.contains('is-moving') ? Math.round(destination) : active);
   }
 
@@ -438,12 +405,12 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     // Fetch the destination and its neighbors before they slide into view.
     // Distant covers stay lazy; thumbnails are small and remain eager.
     for (let i = Math.max(0, index - 1); i <= Math.min(last, index + 1); i++) {
-      if (slideImages[i].loading === 'lazy') slideImages[i].loading = 'eager';
+      if (slideImages[i]?.loading === 'lazy') slideImages[i].loading = 'eager';
     }
   }
 
   function render(value) {
-    const frame = galleryFrame(value, projects.length);
+    const frame = galleryFrame(value, panels.length);
     position = frame.position;
     const x = -position * (stageWidth - galleryInset);
     if (x !== renderedX) {
@@ -467,7 +434,11 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     }
     updateEnd(frame.endProgress, frame.links);
     updateActive(frame.project);
-    if (!root.classList.contains('is-moving') && !aboutTravel) followGalleryFavicon(position);
+    caption.hidden = frame.links || panels[active].kind !== 'project';
+    caption.inert = caption.hidden;
+    root.dataset.panel = String(frame.links ? end : active);
+    root.dataset.panelKind = frame.links ? 'links' : panels[active].kind;
+    if (!root.classList.contains('is-moving')) followGalleryFavicon(position);
   }
 
   function presentCards(value) {
@@ -526,85 +497,10 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     wheelPosition = null;
   }
 
-  function presentAbout(value) {
-    aboutTravel = Math.max(0, Math.min(stageWidth, value));
-    root.style.setProperty('--about-drag', `${aboutTravel}px`);
-    aboutPreview.hidden = aboutTravel === 0;
-    if (aboutTravel) {
-      stopHeaderPalette(siteHeader);
-      root.dataset.aboutSwipe = aboutCommitting ? 'entering' : 'preview';
-      const progress = aboutTravel / stageWidth;
-      const frame = aboutHeader(progress);
-      root.style.setProperty('--accent', frame.accent);
-      root.style.setProperty('--ink', frame.ink);
-      root.style.setProperty('--about-menu-opacity', String(frame.labelOpacity));
-      root.style.setProperty('--about-links-opacity', String(frame.linksOpacity));
-      const context = frame.about ? 'about' : 'home';
-      if (!aboutHeaderActive || menuContext !== context) {
-        setMenuContext(context, { immediate: true });
-        setMenuTitle(frame.about ? siteHeader.dataset.owner : projects[active].title, { immediate: true });
-      }
-      sectionLinks.previewAbout?.(progress);
-      aboutHeaderActive = true;
-    } else {
-      if (aboutHeaderActive) {
-        setMenuContext('home', { immediate: true });
-        updateGalleryIdentity({ immediate: true });
-        root.style.removeProperty('--about-menu-opacity');
-        root.style.removeProperty('--about-links-opacity');
-        sectionLinks.previewAbout?.(0);
-        selectGalleryFavicon(position);
-        // Settle the cancelled swipe before restoring ordinary palette transitions.
-        getComputedStyle(menu).backgroundColor;
-        aboutHeaderActive = false;
-      }
-      delete root.dataset.aboutSwipe;
-    }
-  }
-
-  function stopAbout({ reset = false } = {}) {
-    cancelAnimationFrame(aboutFrame);
-    aboutFrame = 0;
-    aboutVelocity = 0;
-    aboutCommitting = false;
-    if (!reset) return;
-    presentAbout(0);
-  }
-
   listen(document, 'portfolio:theme-change', () => {
     projectAbort?.abort();
     stopHeaderPalette(siteHeader);
-    aboutHeader = createAboutHeader(projects[0].palette, aboutTarget());
-    if (aboutTravel) presentAbout(aboutTravel);
   });
-
-  function animateAbout(target, { commit = false, velocity = aboutVelocity } = {}) {
-    stopAbout();
-    aboutCommitting = commit;
-    if (commit) updateFavicon(document.documentElement.dataset.theme === 'dark' ? aboutPreview.dataset.darkFavicon : aboutPreview.dataset.favicon);
-    const from = aboutTravel;
-    const finish = () => {
-      aboutFrame = 0;
-      aboutVelocity = 0;
-      presentAbout(target);
-      if (!commit || disposed) return;
-      document.dispatchEvent(new CustomEvent('portfolio:section-navigate', {
-        detail: { route: 'about', gallerySwipe: true }
-      }));
-    };
-    if (reducedMotion.matches || Math.abs(target - from) < .001) { finish(); return; }
-    const start = performance.now();
-    const spring = createMotionSpring({ from: from / stageWidth, to: target / stageWidth,
-      velocity: velocity / stageWidth, unit: stageWidth, response: commit ? 360 : 280 });
-    const frame = now => {
-      const state = spring.sample(now - start);
-      aboutVelocity = state.velocity * stageWidth;
-      presentAbout(state.position * stageWidth);
-      if (!state.done) aboutFrame = requestAnimationFrame(frame);
-      else finish();
-    };
-    aboutFrame = requestAnimationFrame(frame);
-  }
 
   function cancelDrag() {
     stopDragFrame();
@@ -614,7 +510,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   }
 
   function animateTo(value, { immediate = false, velocity = motionVelocity, response,
-    focusThumbnail = false, announceSelection = true } = {}) {
+    focusThumbnail = false, announceSelection = true, history = true, settled = () => {} } = {}) {
     stopAnimation();
     destination = clampPosition(value);
     prepareImages(Math.round(destination));
@@ -626,6 +522,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     const distance = Math.abs(destination - from);
     const finish = () => {
       render(destination);
+      alignSelectionFrame();
       selectGalleryFavicon(destination);
       root.classList.remove('is-moving');
       animationFrame = 0;
@@ -633,6 +530,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       slideEndsAt = 0;
       if (focusThumbnail) (endOpen ? endReturn : thumbnails[active]).focus({ preventScroll: true });
       if (announceSelection) announce();
+      if (history && !projectOpen && !projectRequests.busy) writeAddress(destination);
+      settled();
     };
     if (immediate || reducedMotion.matches || distance < .001) { finish(); return; }
     const spring = createMotionSpring({ from, to: destination, velocity, unit: stageWidth, response });
@@ -651,22 +550,69 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
 
   function select(index, options) {
     cancelDrag();
-    stopAbout({ reset: true });
     stopWheel();
     animateTo(index, options);
   }
 
   function measure() {
     stageWidth = stage.clientWidth || 1;
-    stride = thumbnails.length > 1 ? thumbnails[1].offsetLeft - thumbnails[0].offsetLeft : thumbnails[0].offsetWidth;
-    const railPadding = Math.max(0, (rail.clientWidth - thumbnails[0].offsetWidth) / 2);
+    const pixels = window.devicePixelRatio || 1;
+    const gap = Math.max(1, Math.round(4 * pixels));
+    const contentWidth = parseFloat(getComputedStyle(root).getPropertyValue('--thumb-width'));
+    const contentHeight = rail.clientHeight - 14;
+    rail.style.setProperty('--thumb-gap', `${gap / pixels}px`);
+    rail.style.setProperty('--thumb-box-width', `${(Math.round(contentWidth * pixels) + 2 * gap) / pixels}px`);
+    rail.style.setProperty('--thumb-box-height', `${(Math.round(contentHeight * pixels) + 2 * gap) / pixels}px`);
+    thumbnailGroup.style.paddingTop = '0px';
+    stride = parseFloat(getComputedStyle(thumbnails[0]).width);
+    railCenterPadding = Math.max(0, (rail.clientWidth - stride) / 2);
     const summaryHeight = menuToggle.getBoundingClientRect().height;
-    rail.style.setProperty('--rail-padding', `${railPadding}px`);
+    rail.style.setProperty('--rail-padding', `${railCenterPadding}px`);
     menu.style.setProperty('--menu-summary-height', `${summaryHeight}px`);
     // Changing padding can move the scroll position even if the target is equal.
     renderedScroll = NaN;
     if (menuNavigation.animating) animateMenu(menuNavigation.expanded);
     presentCards(lift);
+    alignSelectionFrame();
+  }
+
+  function alignSelectionFrame() {
+    if (active < 0 || endOpen || drag || Math.abs(position - Math.round(position)) > .001) return;
+    const scrollLeft = rail.scrollLeft;
+    rail.style.setProperty('--rail-padding', `${railCenterPadding}px`);
+    thumbnailGroup.style.paddingTop = '0px';
+    rail.scrollLeft = scrollLeft;
+    let tile = thumbnails[active].getBoundingClientRect();
+    // Native button backgrounds also round fractional layout origins in
+    // Firefox. Adjust layout rather than translating a half-pixel button.
+    rail.style.setProperty('--rail-padding', `${railCenterPadding + Math.round(tile.left) - tile.left}px`);
+    thumbnailGroup.style.paddingTop = `${Math.ceil(tile.top) - tile.top}px`;
+    rail.scrollLeft = scrollLeft;
+    tile = thumbnails[active].getBoundingClientRect();
+    const strip = selectionFrame.parentElement.getBoundingClientRect();
+    const pixels = window.devicePixelRatio || 1;
+    const left = Math.round(tile.left * pixels), top = Math.round(tile.top * pixels);
+    const border = Math.max(1, Math.round(2 * pixels));
+    const width = Math.round(tile.width * pixels) + 2 * border;
+    const height = Math.round(tile.height * pixels) + 2 * border;
+    const frameLeft = (left - border) / pixels, frameTop = (top - border) / pixels;
+    const anchorLeft = Math.floor(frameLeft), anchorTop = Math.floor(frameTop);
+    const viewportWidth = Math.ceil(width / pixels + frameLeft - anchorLeft);
+    const viewportHeight = Math.ceil(height / pixels + frameTop - anchorTop);
+    const offsetX = (frameLeft - anchorLeft) * pixels, offsetY = (frameTop - anchorTop) * pixels;
+    // Use whole painted pixels for the tile, its gap, and the SVG outline.
+    // No measurements or SVG updates run during horizontal drag frames.
+    Object.assign(selectionFrame.style, {
+      left: `${anchorLeft - strip.left}px`, top: `${anchorTop - strip.top}px`, bottom: 'auto',
+      width: `${viewportWidth}px`, height: `${viewportHeight}px`, transform: 'none'
+    });
+    // Integer CSS anchors also avoid Firefox rounding an SVG viewport origin.
+    selectionFrame.setAttribute('viewBox', `0 0 ${viewportWidth * pixels} ${viewportHeight * pixels}`);
+    const rounded = (x, y, w, h, r) => `M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
+    const radius = Math.round(8 * pixels);
+    selectionOutline.setAttribute('d', rounded(offsetX, offsetY, width, height, radius + border)
+      + rounded(offsetX + border, offsetY + border, width - 2 * border, height - 2 * border, radius));
+    selectionOutline.dataset.border = String(border);
   }
 
   function animateMenu(open, { focus = false, focusChoice = null } = {}) {
@@ -692,13 +638,13 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   });
 
   function fillProject(index) {
-    const project = projects[index];
+    const project = panels[index];
     setText('[data-detail-title]', project.title);
     setText('[data-detail-category]', project.category);
     setText('[data-detail-year]', project.year);
     setText('[data-detail-description]', project.description);
     setText('[data-detail-note]', project.note);
-    setText('[data-detail-number]', `${String(index + 1).padStart(2, '0')} / ${String(projects.length).padStart(2, '0')}`);
+    setText('[data-detail-number]', `${String(index - firstProjectPanel + 1).padStart(2, '0')} / ${String(panels.length - firstProjectPanel).padStart(2, '0')}`);
     // Article images are supplied explicitly; the gallery cover stays in the gallery.
     renderProjectMedia(detailMedia, project.articleMedia, { base: detailMedia.dataset.assetBase });
     caseStudy.render(project);
@@ -709,11 +655,14 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (disposed) return;
     if (projectRequests.pending) return;
     const target = menuNavigation.expanded
-      ? menu.querySelector(projectOpen ? `[data-menu-project="${active}"]` : '[data-action="gallery"]')
+      ? menu.querySelector(projectOpen ? `[data-menu-project="${articleIndex}"]` : '[data-action="gallery"]')
       : projectOpen ? projectView.querySelector('[data-detail-title]')
       : endOpen ? endReturn
+      : pendingPanel !== null || panels[active].kind !== 'project' ? slides[active].querySelector('h1')
       : siteHeader.contains(projectReturnFocus) ? menuToggle : projectReturnFocus;
-    (target?.isConnected ? target : captionButton).focus({ preventScroll: true });
+    const focus = target?.isConnected && !target.closest('[inert]') ? target : panels[active].kind === 'project' ? captionButton : menuToggle;
+    if (focus.tagName === 'H1') focus.tabIndex = -1;
+    focus.focus({ preventScroll: true });
   }
 
   async function transitionProject(opening, { replacing = false, sectionEntry = false } = {}) {
@@ -746,8 +695,8 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       root.classList.remove('is-project-transitioning', 'is-project-opening', 'is-project-replacing');
       projectPage.style.visibility = originalVisibility;
       root.classList.toggle('has-project', opening);
-      root.removeAttribute('data-section-project-entry');
-      skipLink.href = opening ? '#detail-title' : '#project-caption';
+      root.dataset.article = opening ? String(articleIndex) : '';
+      skipLink.href = opening ? '#detail-title' : panels[active].kind === 'home' ? '#home-title' : panels[active].kind === 'about' ? '#about-title' : '#project-caption';
       gallerySurfaces.forEach(surface => {
         surface.inert = opening;
         if (opening) surface.setAttribute('aria-hidden', 'true');
@@ -774,17 +723,18 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       cancelAnimationFrame(titleFrame);
       liftFrame = titleFrame = 0;
       root.classList.remove('is-lifting');
+      const direction = replacing ? Math.sign(request.index - articleIndex) || 1 : 1;
       articleIndex = request.index;
       fillProject(request.index);
-      updateGalleryIdentity({ index: articleIndex, links: false, immediate: request.sectionEntry });
-      updateFavicon(projects[articleIndex].favicon);
+      updateGalleryIdentity({ index: articleIndex, links: false, immediate: request.sectionEntry, direction });
+      updateFavicon(panels[articleIndex].favicon);
       if (replacing) projectOrigin = articleRevealOrigin(projectPage.querySelector('[data-detail-title]').getBoundingClientRect(),
         document.documentElement.clientWidth, projectView.clientHeight);
       await transitionProject(true, { replacing, sectionEntry: request.sectionEntry });
       // The solid article now conceals the gallery. Select its return slide here,
       // so opening never jumps to the cover but closing reveals the right project.
       if (!disposed) {
-        select(request.index, { immediate: true, announceSelection: false });
+        select(request.index, { immediate: true, announceSelection: false, history: false });
         finishTitle();
       }
     } finally {
@@ -801,51 +751,111 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       y: Math.max(0, Math.min(1, y / (projectView.clientHeight || root.clientHeight || 1))) };
   }
 
-  function requestProject(index, options = {}) {
-    const pendingAbout = aboutCommitting && menuContext === 'about';
-    cancelDrag();
-    stopAbout({ reset: true });
-    const selected = index === null ? null : clamp(index);
-    const fragment = selected === null ? '' : `#project=${encodeURIComponent(projects[selected].slug)}`;
-    // Astro moves to the destination URL after a section swap; its initial
-    // project fragment must not be written onto the outgoing section's URL.
-    if (!options.skipHistory) {
-      if (window.__PORTFOLIO_PREVIEW_FRAGMENT__ !== undefined) {
-        window.parent.postMessage({ type: 'portfolio-preview-fragment', fragment }, '*');
+  function writeAddress(index, { article = false, replace = false, anchor = '' } = {}) {
+    const address = galleryAddress(index, panels, { base: root.dataset.base, article, anchor });
+    if (address !== lastAddress) {
+      lastAddress = address;
+      if (window.__PORTFOLIO_PREVIEW_ADDRESS__ !== undefined) {
+        window.__PORTFOLIO_PREVIEW_ADDRESS__ = address;
+        window.parent.postMessage({ type: 'portfolio-preview-address', address, replace }, '*');
       } else {
-        const address = new URL(window.location.href);
-        address.hash = fragment;
-        window.history.replaceState(window.history.state, '', address);
+        const state = { ...window.history.state, portfolio: true };
+        window.history[replace ? 'replaceState' : 'pushState'](state, '', address);
       }
     }
-    if (pendingAbout) {
-      document.dispatchEvent(new CustomEvent('portfolio:section-navigate', {
-        detail: { route: 'projects', fragment: fragment.slice(1), replace: true }
-      }));
+    document.title = `${siteHeader.dataset.owner} — ${article ? panels[index].title : sectionForPanel(index) === 'home' ? 'Portfolio' : sectionForPanel(index) === 'about' ? 'About' : 'Projects'}`;
+  }
+
+  function navigatePanel(index, { skipHistory = false, immediate = false, focusThumbnail = false, focusContent = false } = {}) {
+    const target = Math.round(clampPosition(index));
+    if (menuNavigation.expanded) closeMenu({ focus: true });
+    if (!skipHistory) writeAddress(target);
+    if (projectOpen || projectRequests.busy) {
+      pendingPanel = target;
+      return projectRequests.request({ index: null, panel: target });
     }
+    pendingPanel = null;
+    select(target, { immediate, focusThumbnail, history: false, settled: () => {
+      if (focusContent) (endOpen ? endReturn : slides[active].querySelector('[data-profile-scroll]') || captionButton).focus({ preventScroll: true });
+    } });
+    return Promise.resolve();
+  }
+
+  function requestProject(index, options = {}) {
+    cancelDrag();
+    const selected = index === null ? null : Math.max(firstProjectPanel, Math.round(clamp(index)));
+    if (selected !== null) pendingPanel = null;
+    if (!options.skipHistory) writeAddress(selected === null ? Math.round(position) : selected, {
+      article: selected !== null, replace: selected === null
+    });
     return projectRequests.request({ index: selected, ...options });
   }
 
+  function scrollAnchor(anchor, { focus = true } = {}) {
+    const target = document.getElementById(anchor);
+    if (!target) return;
+    const scroller = target.closest('[data-profile-scroll]');
+    if (scroller && scroller.closest('[data-slide]') !== slides[active]) return;
+    if (scroller) scroller.scrollTo({ top: scroller.scrollTop + target.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 110, behavior: 'instant' });
+    else if (target === projectView.querySelector('[data-detail-title]')) projectView.scrollTop = 0;
+    if (focus) { if (!target.hasAttribute('tabindex')) target.tabIndex = -1; target.focus({ preventScroll: true }); }
+  }
+
+  function followAddress() {
+    const address = readAddress();
+    const key = address.pathname + address.hash;
+    if (key === lastAddress) return;
+    lastAddress = key;
+    const route = resolveGalleryLocation(address, panels);
+    const pending = route.article === null
+      ? navigatePanel(route.panel, { skipHistory: true, immediate: Boolean(route.anchor) })
+      : requestProject(route.article, { skipHistory: true });
+    Promise.resolve(pending).then(() => {
+      if (lastAddress !== key) return;
+      if (route.anchor) scrollAnchor(route.anchor);
+      document.title = `${siteHeader.dataset.owner} — ${route.article === null ? route.panel === 0 ? 'Portfolio' : route.panel === 1 ? 'About' : 'Projects' : panels[route.article].title}`;
+    });
+  }
+
   listen(root, 'click', event => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
     if (performance.now() < suppressClickUntil && event.detail !== 0 && (stage.contains(event.target) || rail.contains(event.target))) {
       event.preventDefault();
       event.stopImmediatePropagation();
       return;
     }
     const thumbnail = event.target.closest('[data-thumbnail]');
-    if (thumbnail && !hasDialog()) { select(Number(thumbnail.dataset.thumbnail), { focusThumbnail: true }); return; }
+    if (thumbnail && !hasDialog()) { navigatePanel(Number(thumbnail.dataset.thumbnail), { focusThumbnail: true }); return; }
     const step = event.target.closest('[data-step]');
-    if (step && !hasDialog()) { select(Math.round(destination) + Number(step.dataset.step)); return; }
-    if (event.target.closest('[data-end-return]') && !hasDialog()) { select(last, { focusThumbnail: true }); return; }
+    if (step && !hasDialog()) { navigatePanel(Math.round(destination) + Number(step.dataset.step)); return; }
+    if (event.target.closest('[data-end-return]') && !hasDialog()) { navigatePanel(last, { focusThumbnail: true }); return; }
     const choice = event.target.closest('[data-menu-project]');
     if (choice) {
+      event.preventDefault();
       const index = Number(choice.dataset.menuProject);
       closeMenu({ focus: true });
       requestProject(index, { origin: clickOrigin(event, choice), returnFocus: choice });
       return;
     }
+    const routeLink = event.target.closest('a[data-site-route]');
+    if (routeLink && (!routeLink.target || routeLink.target === '_self')) {
+      event.preventDefault();
+      const route = routeLink.dataset.siteRoute;
+      const target = route === 'home' ? 0 : route === 'about' ? 1 : projectOpen || projectRequests.busy ? Math.max(firstProjectPanel, articleIndex) : firstProjectPanel;
+      navigatePanel(target, { focusContent: event.detail === 0 });
+      return;
+    }
+    const anchorLink = event.target.closest('a[href^="#"]');
+    if (anchorLink && (anchorLink.closest('[data-profile-scroll]') || anchorLink === skipLink)) {
+      event.preventDefault();
+      let anchor; try { anchor = decodeURIComponent(anchorLink.hash.slice(1)); } catch { return; }
+      scrollAnchor(anchor);
+      if (anchorLink !== skipLink) writeAddress(active, { anchor });
+      return;
+    }
     const actionButton = event.target.closest('[data-action]');
     if (actionButton?.dataset.action === 'project') {
+      if (panels[active].kind !== 'project') { navigatePanel(active + 1); return; }
       closeMenu();
       requestProject(Number(actionButton.dataset.project ?? active), {
         origin: clickOrigin(event, actionButton), returnFocus: actionButton
@@ -854,7 +864,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (actionButton?.dataset.action === 'gallery') {
       event.preventDefault();
       closeMenu({ focus: true });
-      if (projectOpen || projectRequests.busy || aboutCommitting) requestProject(null);
+      if (projectOpen || projectRequests.busy) requestProject(null);
       else if (endOpen || destination > last) select(last);
     }
   });
@@ -864,29 +874,25 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     // A fresh press is intentional; only the click generated by the preceding drag is suppressed.
     suppressClickUntil = 0;
     if (event.target.closest('[data-end-link], [data-laser-control]')) return;
-    const aboutEligible = surface === stage && position < .001 && !animationFrame;
+    const profile = event.target.closest('[data-profile-scroll]');
+    if (profile && event.target.closest('a, button, summary, input, textarea, select, [contenteditable]')) return;
     stopDragFrame();
     stopWheel();
     stopAnimation();
-    stopAbout({ reset: !aboutEligible });
     destination = position;
     // Re-grabbing abandons the previous target and restores the visible card.
     selectGalleryFavicon(position);
     const capture = event.target.closest('button') || surface;
-    const about = aboutEligible ? createAboutSwipe(stageWidth) : null;
+    const pointerTouch = event.pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches;
     drag = {
-      id: event.pointerId, surface, capture, unit,
+      id: event.pointerId, surface, capture, unit, profile,
       x: event.clientX, y: event.clientY, start: position,
-      lastX: event.clientX, lastTime: performance.now(), velocity: 0, aboutVelocity: 0, moved: false,
-      about,
-      aboutStart: about?.distanceForTravel(aboutTravel) || 0,
-      touch: surface === stage && (event.pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches)
+      lastX: event.clientX, lastTime: performance.now(), velocity: 0, moved: false, axis: null, pointerTouch,
+      touch: surface === stage && pointerTouch
     };
-    capture.setPointerCapture(event.pointerId);
-    if (drag.about && !aboutWarmed && !window.__PORTFOLIO_PREVIEW_NAVIGATE__) {
-      aboutWarmed = true;
-      void fetch(aboutMenuButton.href, { signal: controller.signal }).catch(() => {});
-    }
+    // Mouse drags can leave the reading area; touch capture waits for a
+    // horizontal gesture so native vertical scrolling can still take over.
+    if (!profile || !pointerTouch) capture.setPointerCapture(event.pointerId);
   }
   function stopDragFrame() {
     cancelAnimationFrame(dragFrame);
@@ -899,7 +905,11 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (latest) moveDrag(latest);
   }
   function queueDrag(event) {
-    if (!drag || drag.id !== event.pointerId || aboutCommitting) return;
+    if (!drag || drag.id !== event.pointerId) return;
+    if (drag.pointerTouch && !drag.axis) {
+      const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) > 8) drag.axis = Math.abs(dy) >= Math.abs(dx) ? 'y' : 'x';
+    }
     // Mouse input can arrive several times per paint. Follow its latest sample
     // directly, retaining input time for velocity instead of adding smoothing.
     pendingDrag = { pointerId: event.pointerId, clientX: event.clientX,
@@ -907,38 +917,22 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (!dragFrame) dragFrame = requestAnimationFrame(flushDragFrame);
   }
   function moveDrag(event) {
-    if (!drag || drag.id !== event.pointerId || aboutCommitting) return;
+    if (!drag || drag.id !== event.pointerId) return;
     const dx = event.clientX - drag.x;
     const dy = event.clientY - drag.y;
+    if (drag.pointerTouch && drag.axis !== 'x') return;
     if (!drag.moved) {
-      if (Math.abs(dx) < 6 || Math.abs(dx) < Math.abs(dy)) return;
+      if (Math.abs(dx) < 6 || (!drag.pointerTouch && Math.abs(dx) < Math.abs(dy))) return;
+      if (!drag.capture.hasPointerCapture(drag.id)) drag.capture.setPointerCapture(drag.id);
       drag.moved = true;
       root.classList.add('is-dragging');
-      sectionLinks.hide();
-      animateLift(1);
+        animateLift(1);
     }
     const now = event.time;
     const elapsed = Math.max(1, now - drag.lastTime);
     drag.velocity = (drag.lastX - event.clientX) / (elapsed * drag.unit);
     drag.lastX = event.clientX;
     drag.lastTime = now;
-    if (drag.about) {
-      const distance = dx + drag.aboutStart;
-      const next = drag.about.move(distance);
-      drag.aboutVelocity = (next.travel - aboutTravel) / elapsed;
-      presentAbout(next.travel);
-      if (distance > 0) {
-        render(0);
-        if (next.commit) {
-          suppressClickUntil = performance.now() + 600;
-          animateLift(0, { duration: 180 });
-          animateAbout(stageWidth, { commit: true, velocity: drag.aboutVelocity });
-        }
-        return;
-      }
-      render(drag.start - distance / drag.unit);
-      return;
-    }
     const nextPosition = drag.start - dx / drag.unit;
     render(drag.surface === rail ? clamp(nextPosition) : nextPosition);
   }
@@ -951,14 +945,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     drag = null;
     root.classList.remove('is-dragging');
     if (finished.capture.hasPointerCapture(event.pointerId)) finished.capture.releasePointerCapture(event.pointerId);
-    if (aboutCommitting) return;
     const moving = performance.now() - finished.lastTime < 100 && !cancelled;
-    if (aboutTravel > 0) {
-      if (finished.moved) suppressClickUntil = performance.now() + 250;
-      animateLift(0);
-      animateAbout(0, { velocity: moving ? finished.aboutVelocity : 0 });
-      return;
-    }
     if (finished.moved) {
       suppressClickUntil = performance.now() + 250;
       const recentVelocity = moving ? finished.velocity : 0;
@@ -972,7 +959,10 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
   listen(stage, 'pointerdown', event => beginDrag(event, stage, stageWidth));
   listen(rail, 'pointerdown', event => beginDrag(event, rail, stride));
   [stage, rail].forEach(surface => {
-    listen(surface, 'selectstart', event => event.preventDefault());
+    listen(surface, 'selectstart', event => {
+      const target = event.target instanceof Element ? event.target : event.target.parentElement;
+      if (!target?.closest('a, button, summary, input, textarea, select, [contenteditable]')) event.preventDefault();
+    });
     listen(surface, 'pointermove', queueDrag);
     listen(surface, 'pointerup', event => endDrag(event));
     listen(surface, 'pointercancel', event => endDrag(event, true));
@@ -984,7 +974,6 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
     if (!delta) return;
     event.preventDefault();
-    stopAbout({ reset: true });
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rail.clientWidth : 1;
     wheelPosition = clamp((wheelPosition ?? position) + delta * unit / stride);
     animateTo(wheelPosition, { response: 140, announceSelection: false });
@@ -1005,7 +994,7 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
         event.preventDefault(); projectNavigation.set(false, { focus: true }); return;
       }
       if (event.key === 'ArrowRight' && event.target === projectsToggle) {
-        event.preventDefault(); projectNavigation.set(true); menuProjects[Math.max(0, active)]?.focus({ preventScroll: true }); return;
+        event.preventDefault(); projectNavigation.set(true); menuProjects[Math.max(0, active - firstProjectPanel)]?.focus({ preventScroll: true }); return;
       }
       if (event.key === 'Escape') { event.preventDefault(); closeMenu({ focus: true }); return; }
       if (menu.contains(event.target) && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
@@ -1022,28 +1011,18 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
       if (event.key === 'Escape') { event.preventDefault(); requestProject(null); }
       return;
     }
-    // The edge crossing commits to About. Keep its reveal steady while loading;
-    // normal section links can still choose a different destination.
-    if (aboutCommitting) {
-      if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(event.key)) event.preventDefault();
-      return;
-    }
-    if (event.key === 'Escape' && aboutTravel > 0) {
-      event.preventDefault(); cancelDrag(); stopAbout(); animateAbout(0); animateLift(0); return;
-    }
     if (event.key === 'Escape' && endOpen) {
       event.preventDefault(); select(last, { focusThumbnail: true }); return;
     }
     const directions = { ArrowLeft: Math.round(destination) - 1, ArrowRight: Math.round(destination) + 1, Home: 0, End: end };
     if (!(event.key in directions)) return;
     event.preventDefault();
-    select(directions[event.key], { focusThumbnail: rail.contains(event.target) });
+    navigatePanel(directions[event.key], { focusThumbnail: rail.contains(event.target), focusContent: !rail.contains(event.target) });
   });
 
   listen(window, 'resize', () => {
     projectAbort?.abort();
     cancelDrag();
-    stopAbout({ reset: true });
     animateLift(0);
     cancelAnimationFrame(resizeFrame);
     resizeFrame = requestAnimationFrame(measure);
@@ -1052,44 +1031,40 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     if (reducedMotion.matches) {
       projectAbort?.abort();
       setMenuContext(menuContext, { immediate: true });
-      setMenuTitle(desiredMenuTitle, { immediate: true });
+      menuTitleMotion.finish();
       projectNavigation.set(projectNavigation.expanded, { immediate: true });
     }
     if (reducedMotion.matches && titleFrame) finishTitle();
     if (reducedMotion.matches && liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
     if (reducedMotion.matches && animationFrame) animateTo(destination, { immediate: true });
-    if (reducedMotion.matches && aboutFrame) animateAbout(aboutCommitting ? stageWidth : 0, { commit: aboutCommitting });
     if (reducedMotion.matches && menuNavigation.animating) menuNavigation.set(menuNavigation.expanded, { immediate: true });
   });
   listen(document, 'visibilitychange', () => {
     if (!document.hidden) return;
     projectAbort?.abort();
     cancelDrag();
-    stopAbout({ reset: true });
     stopWheel();
     if (menuNavigation.animating) menuNavigation.set(menuNavigation.expanded, { immediate: true });
     if (animationFrame) animateTo(Math.round(destination), { immediate: true });
     if (titleFrame) finishTitle();
     if (liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
   });
-  listen(document, 'astro:before-preparation', event => {
-    // Finish the local reveal before handing off to section navigation.
-    projectAbort?.abort();
-    closeMenu({ immediate: true });
-    if (event.info?.gallerySwipe) return;
-    cancelDrag();
-    stopAbout({ reset: true });
-  });
-  listen(document, 'portfolio:preview-exit', () => closeMenu({ immediate: true }));
   measure();
-  updateFavicon(projects[Math.max(0, active)].favicon);
-  const entryDone = requestedIndex >= 0
-    ? requestProject(requestedIndex, { sectionEntry, skipHistory: true }) : Promise.resolve();
+  render(position);
+  alignSelectionFrame();
+  updateBounds(position);
+  updateFavicon(initial.panel === end ? endPanel.dataset.favicon : panels[initial.panel].favicon);
+  const entryDone = initial.article !== null
+    ? requestProject(initial.article, { skipHistory: true, sectionEntry: true }) : Promise.resolve();
+  writeAddress(initial.panel, { article: initial.article !== null, anchor: initial.anchor, replace: true });
+  if (initial.anchor) scrollAnchor(initial.anchor, { focus: false });
   root.dataset.ready = 'true';
-  listen(window, 'hashchange', () => {
-    if (window.location.hash && !new URLSearchParams(window.location.hash.slice(1)).has('project')) return;
-    const index = projectIndexFromHash(window.location.hash, projects);
-    requestProject(index >= 0 ? index : null);
+  listen(window, 'popstate', followAddress);
+  listen(window, 'hashchange', followAddress);
+  listen(window, 'message', event => {
+    if (event.source !== window.parent || event.data?.type !== 'portfolio-preview-navigate') return;
+    window.__PORTFOLIO_PREVIEW_ADDRESS__ = event.data.address;
+    followAddress();
   });
   const cleanup = () => {
     disposed = true;
@@ -1101,13 +1076,10 @@ export function mountPortfolio({ sectionLinks = { hide() {} },
     projectAbort?.abort();
     stopWheel();
     stopAnimation();
-    stopAbout();
     stopDragFrame();
     [liftFrame, titleFrame, resizeFrame].forEach(cancelAnimationFrame);
-    contextGeneration += 1;
-    menuTitleGeneration += 1;
-    contextAnimations.forEach(animation => animation.cancel());
-    menuTitleAnimation?.cancel();
+    contextMotion.destroy();
+    menuTitleMotion.destroy();
     menuNavigation.set(false, { immediate: true });
     projectNavigation.set(false, { immediate: true, remember: false });
     if (drag?.capture.hasPointerCapture(drag.id)) drag.capture.releasePointerCapture(drag.id);

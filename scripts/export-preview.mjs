@@ -3,14 +3,13 @@ import { resolve } from 'node:path';
 import { Script } from 'node:vm';
 import { build } from 'esbuild';
 import { initializeTheme, themeStorageKey, appearanceEnabled } from '../src/scripts/theme.js';
-import { sectionTiming } from '../src/data/section-motion.js';
+import { previewAddress, previewHash } from '../src/scripts/gallery-location.js';
 
 // Bundle the actual production pages into one offline, navigable review file.
-// Each route runs in a fresh frame, so gallery event listeners never accumulate.
+// One persistent frame uses the same gallery navigation as the production app.
 const routes = { home: 'index.html', about: 'about/index.html', projects: 'projects/index.html', resume: 'resume/index.html' };
 const pages = {};
 const assets = {};
-const projectSlugs = JSON.parse(await readFile(resolve('src/data/projects.json'), 'utf8')).map(project => project.slug);
 const embedded = new Map();
 const resources = new Map();
 const embedResource = (path, content) => {
@@ -52,7 +51,7 @@ for (const [route, file] of Object.entries(routes)) {
     await embedImage(path, publicPath);
   }
   for (const [path, token] of embedded) html = html.replaceAll(`="${path}"`, `="${token}"`);
-  if (route === 'projects') {
+  if (html.includes('id="portfolio-data"')) {
     const data = html.match(/<script\b[^>]*\bid="portfolio-data"[^>]*>([\s\S]*?)<\/script>/);
     const projects = JSON.parse(data[1]);
     const base = html.match(/\bdata-asset-base="([^"]*)"/)?.[1] || '/';
@@ -93,19 +92,13 @@ for (const [route, file] of Object.entries(routes)) {
   pages[route] = html;
 }
 
-function initializePreview({ pages, assets, resumePDF, projectSlugs, timing }) {
-  let themeChoice = window.__PORTFOLIO_THEME_STATE__?.choice || 'system';
-  const systemPreference = window.matchMedia('(prefers-color-scheme: dark)');
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  systemPreference.addEventListener('change', () => {
-    document.querySelectorAll('iframe').forEach(element => element.contentWindow?.postMessage({
-      type: 'portfolio-preview-system-theme', dark: systemPreference.matches
-    }, '*'));
-  });
-  let frame = document.querySelector('iframe');
-  let cancelHandoff = () => {};
+function initializePreview({ pages, assets, resumePDF }, addressFromHash, hashFromAddress) {
+  const frame = document.querySelector('iframe');
   const favicon = document.createElement('link');
   favicon.rel = 'icon'; favicon.type = 'image/svg+xml'; document.head.append(favicon);
+  const preference = window.matchMedia('(prefers-color-scheme: dark)');
+  let themeChoice = window.__PORTFOLIO_THEME_STATE__?.choice || 'system';
+  let currentAddress = addressFromHash(location.hash);
   const expanded = route => {
     let html = pages[route];
     for (const [token, value] of Object.entries(assets)) html = html.replaceAll(token, () => value);
@@ -117,118 +110,59 @@ function initializePreview({ pages, assets, resumePDF, projectSlugs, timing }) {
   let resume = expanded('resume').replace(/(<a\b[^>]*\bdata-resume-home\b[^>]*\bhref=")[^"]*(")/, `$1${home}$2`);
   if (pdfAddress) resume = resume.replace(/(<a\b[^>]*\bdata-resume-pdf\b[^>]*\bhref=")[^"]*(")/, `$1${pdfAddress}$2`);
   const resumeAddress = pdfAddress || URL.createObjectURL(new Blob([resume], { type: 'text/html' }));
-  let previousRoute = null;
-  let pendingHandoff = false;
-  let renderGeneration = 0;
-  const render = () => {
-    const generation = ++renderGeneration;
-    cancelHandoff();
-    const [requested, fragment = ''] = location.hash.slice(1).split('?');
-    const route = ['home', 'about', 'projects'].includes(requested) ? requested : 'home';
-    document.title = route === 'home' ? 'Derek Stone — Portfolio preview' : `Derek Stone — ${route === 'about' ? 'About' : 'Projects'} preview`;
-    let html = expanded(route);
-    const order = ['home', 'about', 'projects'];
-    const handoff = pendingHandoff;
-    const direction = previousRoute && !handoff ? Math.sign(order.indexOf(route) - order.indexOf(previousRoute)) : 0;
-    const projectEntry = direction && route === 'projects' && projectSlugs.includes(new URLSearchParams(fragment).get('project'));
-    pendingHandoff = false;
-    if (projectEntry) html = html.replace(/<main\b([^>]*\bid="portfolio"[^>]*)>/, '<main$1 data-section-project-entry>');
-    const setup = `<script>document.startViewTransition=undefined;window.__PORTFOLIO_PREVIEW_THEME_CHOICE__=${escapeScript(themeChoice)};window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=${systemPreference.matches};window.addEventListener('message',function(event){if(event.source===window.parent&&event.data?.type==='portfolio-preview-system-theme'){window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=!!event.data.dark;document.dispatchEvent(new Event('portfolio:preview-system-change'))}});window.__PORTFOLIO_PREVIEW_SET_THEME__=function(state){window.parent.postMessage({type:'portfolio-preview-theme',choice:state.choice,resolved:state.resolved},'*')};window.__PORTFOLIO_PREVIEW_FRAGMENT__=${escapeScript(fragment ? `#${fragment}` : '')};window.__PORTFOLIO_PREVIEW_SECTION_PROJECT_ENTRY__=${Boolean(projectEntry)};window.__PORTFOLIO_PREVIEW_NAVIGATE__=function(route,options){window.parent.postMessage({type:'portfolio-preview-route',route,fragment:options?.fragment||'',gallerySwipe:!!options?.gallerySwipe,replace:!!options?.replace},'*')};<\/script>`;
-    html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
-    html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*(")/, `$1${resumeAddress}$2`);
-    // Attributes can appear in either order in compiler output.
-    html = html.replace(/(<a\b[^>]*\bhref=")[^"]*("[^>]*\bdata-resume-link\b)/g, `$1${resumeAddress}$2`);
-    const navigation = `<script>document.addEventListener('click',function(event){
-      if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
-      const link=event.target.closest('a[data-site-route]');if(!link)return;
-      event.preventDefault();const fragment=link.getAttribute('href').split('#')[1]||'';
-      window.parent.postMessage({type:'portfolio-preview-route',route:link.dataset.siteRoute,fragment},'*');
-    });const icon=document.querySelector('[data-project-favicon]');
-    const syncIcon=function(){if(icon)window.parent.postMessage({type:'portfolio-preview-favicon',href:icon.href},'*')};
-    if(icon)new MutationObserver(syncIcon).observe(icon,{attributes:true,attributeFilter:['href']});syncIcon();
-    document.addEventListener('DOMContentLoaded',function(){
-      const id=window.__PORTFOLIO_PREVIEW_FRAGMENT__.slice(1);
-      if(id&&!id.startsWith('project='))document.getElementById(decodeURIComponent(id))?.scrollIntoView();
-    });<\/script>`;
-    html = html.replace('</body>', `${navigation}</body>`);
-    if (!previousRoute) { previousRoute = route; frame.srcdoc = html; return; }
-    // Keep the outgoing document fully painted until the replacement is ready.
-    // Fade this opaque frame over its painted successor, with no blank phase.
-    const outgoing = frame, incoming = document.createElement('iframe');
-    incoming.title = outgoing.title; incoming.dataset.staging = 'true';
-    incoming.inert = true; incoming.setAttribute('aria-hidden', 'true');
-    Object.assign(outgoing.style, { position: 'relative', zIndex: '1' });
-    Object.assign(incoming.style, { position: 'absolute', inset: '0', zIndex: '0' });
-    let paintFrame = 0, blend, committed = false, finished = false;
-    const cleanup = () => {
-      if (finished) return;
-      finished = true;
-      cancelAnimationFrame(paintFrame); blend?.cancel();
-      reducedMotion.removeEventListener('change', onMotionChange);
-      if (committed) {
-        outgoing.remove(); incoming.removeAttribute('style');
-      } else {
-        incoming.remove(); outgoing.removeAttribute('style');
-      }
-      if (cancelHandoff === cleanup) cancelHandoff = () => {};
-    };
-    const onMotionChange = event => { if (event.matches && committed) cleanup(); };
-    reducedMotion.addEventListener('change', onMotionChange);
-    cancelHandoff = cleanup;
-    incoming.addEventListener('load', () => {
-      if (generation !== renderGeneration) return;
-      paintFrame = requestAnimationFrame(() => {
-        paintFrame = requestAnimationFrame(() => {
-          if (generation !== renderGeneration) return;
-          outgoing.contentWindow?.__PORTFOLIO_PREVIEW_EXIT__?.();
-          committed = true; previousRoute = route; frame = incoming;
-          outgoing.inert = true; outgoing.setAttribute('aria-hidden', 'true');
-          outgoing.style.pointerEvents = 'none';
-          delete incoming.dataset.staging; incoming.inert = false; incoming.removeAttribute('aria-hidden');
-          const icon = incoming.contentDocument?.querySelector('[data-project-favicon]');
-          if (icon) favicon.href = icon.href;
-          incoming.contentWindow.focus();
-          if (handoff || reducedMotion.matches) { cleanup(); return; }
-          blend = outgoing.animate([{ opacity: 1 }, { opacity: 0 }], {
-            duration: timing.enter, easing: timing.easing, fill: 'both'
-          });
-          blend.finished.then(cleanup, cleanup);
-        });
-      });
-    }, { once: true });
-    incoming.srcdoc = html; document.body.append(incoming);
+  const route = new URL(currentAddress, 'https://portfolio.invalid').pathname.split('/')[1] || 'home';
+  let html = expanded(route);
+  const setup = `<script>window.__PORTFOLIO_PREVIEW_ADDRESS__=${escapeScript(currentAddress)};window.__PORTFOLIO_PREVIEW_THEME_CHOICE__=${escapeScript(themeChoice)};window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=${preference.matches};window.addEventListener('message',function(event){if(event.source===window.parent&&event.data?.type==='portfolio-preview-system-theme'){window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=!!event.data.dark;document.dispatchEvent(new Event('portfolio:preview-system-change'))}});window.__PORTFOLIO_PREVIEW_SET_THEME__=function(state){window.parent.postMessage({type:'portfolio-preview-theme',choice:state.choice,resolved:state.resolved},'*')};<\/script>`;
+  html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
+  html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*("[^>]*>)/g, `$1${resumeAddress}$2`)
+    .replace(/(<a\b[^>]*\bhref=")[^"]*("[^>]*\bdata-resume-link\b)/g, `$1${resumeAddress}$2`);
+  const synchronize = `<script>const icon=document.querySelector('[data-project-favicon]');const title=document.querySelector('title');const sync=function(){if(icon)window.parent.postMessage({type:'portfolio-preview-favicon',href:icon.href},'*');window.parent.postMessage({type:'portfolio-preview-title',title:document.title},'*')};if(icon)new MutationObserver(sync).observe(icon,{attributes:true,attributeFilter:['href']});if(title)new MutationObserver(sync).observe(title,{childList:true,subtree:true,characterData:true});sync();<\/script>`;
+  html = html.replace('</body>', `${synchronize}</body>`);
+  // Load the app once. Every section, project, and Back/Forward change stays in
+  // this same frame, using the production gallery controller.
+  frame.srcdoc = html;
+  const followHistory = () => {
+    const address = addressFromHash(location.hash);
+    if (address === currentAddress) return;
+    currentAddress = address;
+    frame.contentWindow.postMessage({ type: 'portfolio-preview-navigate', address }, '*');
   };
+  frame.addEventListener('load', () => {
+    // An address change before the child mounted may have arrived too early.
+    // Always synchronize the latest address once that single frame is ready.
+    currentAddress = addressFromHash(location.hash);
+    frame.contentWindow.postMessage({ type: 'portfolio-preview-navigate', address: currentAddress }, '*');
+  }, { once: true });
   window.addEventListener('message', event => {
     if (event.source !== frame.contentWindow) return;
-    if (event.data?.type === 'portfolio-preview-theme' && ['system', 'light', 'dark'].includes(event.data.choice)) {
-      themeChoice = event.data.choice;
-      document.documentElement.dataset.theme = event.data.resolved === 'dark' ? 'dark' : 'light';
+    const data = event.data;
+    if (data?.type === 'portfolio-preview-address' && typeof data.address === 'string' && data.address.startsWith('/') && !data.address.startsWith('//')) {
+      currentAddress = data.address;
+      const hash = hashFromAddress(currentAddress);
+      if (location.hash !== hash) history[data.replace ? 'replaceState' : 'pushState'](null, '', hash);
+    }
+    if (data?.type === 'portfolio-preview-title' && typeof data.title === 'string') document.title = data.title + ' — Preview';
+    if (data?.type === 'portfolio-preview-favicon' && typeof data.href === 'string' && data.href.startsWith('data:image/')) favicon.href = data.href;
+    if (data?.type === 'portfolio-preview-theme' && ['system', 'light', 'dark'].includes(data.choice)) {
+      themeChoice = data.choice;
+      document.documentElement.dataset.theme = data.resolved === 'dark' ? 'dark' : 'light';
       window.__PORTFOLIO_THEME_STATE__ = { choice: themeChoice, resolved: document.documentElement.dataset.theme };
     }
-    if (event.data?.type === 'portfolio-preview-route' && ['home', 'about', 'projects'].includes(event.data.route)) {
-      pendingHandoff = Boolean(event.data.gallerySwipe);
-      const hash = `#${event.data.route}${event.data.fragment ? `?${event.data.fragment}` : ''}`;
-      if (event.data.replace) { history.replaceState(history.state, '', hash); render(); }
-      else location.hash = hash;
-    }
-    if (event.data?.type === 'portfolio-preview-favicon' && typeof event.data.href === 'string' && event.data.href.startsWith('data:image/')) {
-      favicon.href = event.data.href;
-    }
-    if (event.data?.type === 'portfolio-preview-fragment') {
-      history.replaceState(null, '', `#projects${event.data.fragment ? `?${event.data.fragment.slice(1)}` : ''}`);
-    }
   });
-  window.addEventListener('hashchange', render);
+  preference.addEventListener('change', () => {
+    frame.contentWindow?.postMessage({ type: 'portfolio-preview-system-theme', dark: preference.matches }, '*');
+  });
+  window.addEventListener('popstate', followHistory);
+  window.addEventListener('hashchange', followHistory);
   window.addEventListener('pagehide', event => {
     if (!event.persisted) {
       URL.revokeObjectURL(resumeAddress);
-      if (pdfAddress && pdfAddress !== resumeAddress) URL.revokeObjectURL(pdfAddress);
+      if (pdfAddress) URL.revokeObjectURL(pdfAddress);
     }
   });
-  render();
 }
-const payload = JSON.stringify({ pages, assets, resumePDF, projectSlugs, timing: sectionTiming }).replaceAll('<', '\\u003c');
-const loader = `(${initializePreview.toString()})(JSON.parse(document.getElementById('preview-data').textContent));`;
+const payload = JSON.stringify({ pages, assets, resumePDF }).replaceAll('<', '\\u003c');
+const loader = `(${initializePreview.toString()})(JSON.parse(document.getElementById('preview-data').textContent),${previewAddress.toString()},${previewHash.toString()});`;
 new Script(loader, { filename: 'preview-navigation.js' });
 const startup = `(${initializeTheme.toString()})(${JSON.stringify(themeStorageKey)},${appearanceEnabled});`;
 new Script(startup, { filename: 'preview-theme-startup.js' });

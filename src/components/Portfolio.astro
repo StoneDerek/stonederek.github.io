@@ -1,0 +1,138 @@
+---
+import Layout from '../layouts/Layout.astro';
+import projects from '../data/projects.json';
+import site from '../data/site.json';
+import SiteHeader from './SiteHeader.astro';
+import ExternalLinkIcon from './ExternalLinkIcon.astro';
+import { projectIcon } from '../data/project-icons.js';
+import HomeContent from './HomeContent.astro';
+import AboutContent from './AboutContent.astro';
+import ProfileFooter from './ProfileFooter.astro';
+import { galleryPanels, firstProjectPanel } from '../data/gallery-panels.js';
+import { resumeURL } from '../data/resume.js';
+import { linksPalette } from '../data/section-palettes.js';
+const base = import.meta.env.BASE_URL;
+const url = (path) => `${base}${path}`;
+const { section = 'home' } = Astro.props;
+const panels = galleryPanels(projects);
+const selected = section === 'home' ? 0 : section === 'about' ? 1 : firstProjectPanel;
+const palette = panels[selected].palette;
+const first = projects[0];
+const linksLogo = ['      _', '     | |', '   __| |___', '  / _` / __|', ' | (_| \\__ \\_', '  \\__,_|___(_)'].join('\n');
+const serialized = JSON.stringify(panels.map(panel => ({ ...panel, favicon: projectIcon(panel.palette) }))).replace(/</g, '\\u003c');
+---
+<Layout title={`${site.name} — ${section === 'home' ? 'Portfolio' : section === 'about' ? 'About' : 'Projects'}`} description={section === 'projects' ? `Projects, experiments, and work in progress by ${site.name}.` : section === 'about' ? `About ${site.name}.` : site.description} favicon={projectIcon(palette)}>
+  <main id="portfolio" class="portfolio" data-base={base} data-panel-kind={panels[selected].kind} data-initial-panel={selected} style={`--accent:${palette.accent};--ink:${palette.ink};--caption-color:${palette.caption || palette.accent}`}>
+    <a class="skip-link" href={section === 'home' ? '#home-title' : section === 'about' ? '#about-title' : '#project-caption'}>Skip to content</a>
+
+    <SiteHeader page={section} unified />
+
+
+    <section class="carousel" aria-roledescription="carousel" aria-label="Home, About, and selected projects" tabindex="0">
+      <div class="artwork-stage" data-stage>
+        <div class="artwork-visual">
+        <div class="artwork-track" data-gallery-track style={`transform:translateX(${-selected * 100}%)`}>
+        {panels.map((panel, index) => (
+          <section id={`site-panel-${panel.slug}`} class:list={['artwork-slide', { 'is-active': index === selected, 'profile-panel': panel.kind !== 'project' }]} data-slide={index} data-panel-kind={panel.kind} aria-label={panel.title} aria-roledescription="slide" aria-hidden={index !== selected} inert={index !== selected} style={`--gallery-order:${index}`}>
+            <div class="artwork-card">
+            {panel.kind === 'project' ? (
+              <img src={url(panel.image)} alt={panel.imageAlt} width="1920" height="1200" style={`object-position:${panel.position}`} loading={index < firstProjectPanel + 2 ? 'eager' : 'lazy'} fetchpriority={index === selected ? 'high' : 'auto'} decoding="async" draggable="false" />
+            ) : (
+              <div class:list={['profile-scroll', 'profile-shell', `${panel.kind}-shell`]} data-profile-scroll tabindex="-1">
+                <div class:list={['profile-main', `${panel.kind}-main`]}>
+                  {panel.kind === 'home' ? <HomeContent /> : <AboutContent />}
+                </div>
+                <ProfileFooter page={panel.kind} />
+              </div>
+            )}
+            </div>
+          </section>
+        ))}
+        <div id="gallery-end" class="artwork-slide gallery-end" data-gallery-end data-favicon={projectIcon(linksPalette)} role="group" aria-label="Links and credits" aria-hidden="true" tabindex="-1" style={`--gallery-order:${panels.length}`} inert>
+          <div class="artwork-card gallery-end-card">
+            <div class="gallery-end-space" data-ascii-space>
+              <div class="laser-experiment" data-laser-experiment role="group" aria-label="ASCII laser puzzle: turn two mirrors to reach the target at the right">
+                <canvas class="laser-canvas" aria-hidden="true"></canvas>
+                <pre class="laser-logo" aria-hidden="true">{linksLogo}</pre>
+                <button type="button" class="laser-control" data-laser-control="mirror" data-mirror="0" aria-label="Rotate first mirror" aria-describedby="laser-instructions"></button>
+                <button type="button" class="laser-control" data-laser-control="mirror" data-mirror="1" aria-label="Rotate second mirror" aria-describedby="laser-instructions"></button>
+                <div class="laser-hint" id="laser-instructions"><span data-laser-status role="status" aria-live="polite">Drag the mirrors to reach the target.</span><span class="sr-only"> Drag sideways or vertically to turn a mirror, or click to turn it by five degrees. Arrow keys turn it by one degree; Shift and arrow keys turn it by five degrees; Alt and arrow keys make a quarter-degree adjustment.</span><button type="button" data-laser-control="trophy" hidden>View trophy</button><button type="button" data-laser-control="reset">Reset</button></div>
+                <dialog class="victory-dialog" data-laser-victory data-laser-control="victory" aria-labelledby="laser-victory-title">
+                  <h2 id="laser-victory-title">You got a trophy!</h2>
+                  <canvas class="trophy-canvas" data-trophy-canvas aria-hidden="true"></canvas>
+                  <button type="button" class="victory-close" data-victory-close autofocus>Back to puzzle</button>
+                </dialog>
+              </div>
+            </div>
+            <footer class="gallery-end-footer">
+              <button type="button" class="gallery-end-return" data-end-return aria-label="Back to last project"><svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="m7 3-5 5 5 5M2 8h12" /></svg></button>
+              <details class="credits" data-credits data-end-link>
+                <summary aria-controls="credits-panel">Credits</summary>
+                <section class="credits-panel" id="credits-panel" aria-labelledby="credits-heading" tabindex="0">
+                  <h2 id="credits-heading">Credits</h2>
+                  <ul>
+                    <li><a href="https://bd85bd85.com/" target="_blank" rel="noopener noreferrer">https://bd85bd85.com/<ExternalLinkIcon /></a><p>primary reference for gallery view</p><p>original designed by Ben Lee, developed by <a href="https://geminiservic.es/" target="_blank" rel="noopener noreferrer">geminiservic.es<ExternalLinkIcon /></a></p></li>
+                    <li><a href="https://emojicombos.com/cat" target="_blank" rel="noopener noreferrer">https://emojicombos.com/cat<ExternalLinkIcon /></a><p>source of cat kaomoji featured on dropdown menu (original author unknown)</p></li>
+                    <li><a href="https://asciigenerators.com/" target="_blank" rel="noopener noreferrer">https://asciigenerators.com/<ExternalLinkIcon /></a><p>inspiration for ascii character processing</p></li>
+                  </ul>
+                </section>
+              </details>
+              <nav class="gallery-end-links" aria-label="Professional links">
+                <a href={site.linkedin} data-end-link target="_blank" rel="noopener noreferrer">LinkedIn</a>
+                <a href={resumeURL(base)} data-end-link data-resume-link target="_blank" rel="noopener" aria-label="Resume PDF (opens in a new tab)" title="Resume PDF — opens in a new tab">Resume</a>
+                <a href={`mailto:${site.email}`} data-end-link>Email</a>
+              </nav>
+            </footer>
+          </div>
+        </div>
+        </div>
+        </div>
+        <div id="project-caption" class="project-caption" tabindex="-1" hidden={selected < firstProjectPanel}>
+          <div>
+          <h1 aria-label={first.title}><button type="button" class="caption-link" data-action="project" data-project={firstProjectPanel} aria-controls="project-article" aria-label={`View ${first.title}`}><span class="caption-word"><span class="caption-metrics" data-title-metrics aria-hidden="true">{first.title}</span><span class="caption-letters" data-title aria-hidden="true">{first.title}</span></span><svg class="caption-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button></h1>
+          </div>
+        </div>
+      </div>
+      <p class="sr-only" data-announcement aria-live="polite" aria-atomic="true"></p>
+    </section>
+
+    <footer class="filmstrip" aria-label="Site panels">
+      <div class="thumbnail-rail" role="group" aria-label="Choose a section or project">
+        <div class="thumbnail-track">
+          <div class="thumbnail-group">
+            {panels.map((panel, index) => (
+              <button type="button" class:list={['thumbnail', { 'is-active': index === selected, 'thumbnail-section': panel.kind !== 'project' }]} data-thumbnail={index} tabindex={index === selected ? 0 : -1} aria-pressed={index === selected} aria-label={`Show ${panel.title}`} title={panel.title} style={`--thumbnail-accent:${panel.palette.accent};--thumbnail-ink:${panel.palette.ink}`}>
+                {panel.kind === 'project' ? <img src={url(panel.thumbnail)} alt="" width="320" height="200" draggable="false" /> : <span>{panel.title}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <svg class="selection-frame" viewBox="0 0 92 62" aria-hidden="true" focusable="false"><path data-selection-outline fill-rule="evenodd" /></svg>
+    </footer>
+
+    <nav class="mobile-controls" aria-label="Panel controls">
+      <button type="button" class="mobile-arrow" data-step="-1" aria-label="Previous panel" disabled={selected === 0}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" /></svg></button>
+      <button type="button" class="mobile-inspect" data-action="project" aria-controls={selected < firstProjectPanel ? `site-panel-${panels[selected + 1].slug}` : 'project-article'}><span class="mobile-inspect-label"><span data-mobile-action-label>{selected < firstProjectPanel ? selected === 0 ? 'About me' : 'Explore projects' : 'View project'}</span> <svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 12 12 4M5 4h7v7" /></svg></span><span class="mobile-count" data-mobile-count>{String(selected + 1).padStart(2, '0')} / {String(panels.length).padStart(2, '0')}</span></button>
+      <button type="button" class="mobile-arrow" data-step="1" aria-label="Next panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7" /></svg></button>
+    </nav>
+
+    <section id="project-article" class="project-view" data-project-view aria-labelledby="detail-title" hidden>
+      <article class="project-page">
+        <header class="project-toolbar"><button type="button" class="back-button" data-action="gallery" aria-label="Back to gallery"><svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m7 3-5 5 5 5M2 8h12" /></svg> Selected work</button><span class="project-view-meta"><span data-detail-category>{first.category}</span> / <span data-detail-year>{first.year}</span></span><span class="project-view-number" data-detail-number>01 / {String(projects.length).padStart(2, '0')}</span></header>
+        <section class="project-story">
+          <div><p class="dialog-eyebrow">Placeholder project</p><h1 id="detail-title" data-detail-title tabindex="-1">{first.title}</h1></div>
+          <div class="project-prose"><p class="detail-description" data-detail-description>{first.description}</p><p class="detail-note" data-detail-note>{first.note}</p></div>
+        </section>
+        <div class="project-media" data-detail-media data-asset-base={base} hidden></div>
+        <div class="project-case-study" data-detail-case-study hidden></div>
+      </article>
+    </section>
+
+
+
+    <script type="application/json" id="portfolio-data" set:html={serialized}></script>
+    <noscript><div class="noscript-message">Enable JavaScript to browse all panels and project articles.</div></noscript>
+  </main>
+</Layout>
+
