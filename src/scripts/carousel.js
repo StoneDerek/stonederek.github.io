@@ -2,11 +2,12 @@ import { settleTiles, canAnimateTiles, captureProjectBackdrop, articleRevealOrig
 import { mountProjectMenu } from './project-menu.js';
 import { mountSiteMenu } from './site-menu.js';
 import { mountMenuLabel } from './menu-label.js';
+import { mountProjectCaption } from './project-caption.js';
 import { createProjectRequests } from './project-navigation.js';
 import { mountProjectFavicon } from './favicon.js';
 import { resolveGalleryLocation, galleryAddress, sectionForPanel } from './gallery-location.js';
 import { firstProjectPanel } from '../data/gallery-panels.js';
-import { galleryFrame, settleProjectSwipe } from './section-state.js';
+import { galleryFrame, galleryCaptionFrame, settleProjectSwipe } from './section-state.js';
 import { createMotionSpring } from './motion-spring.js';
 import { mountLaser } from './ascii-laser.js';
 import { linksPalette } from '../data/section-palettes.js';
@@ -34,9 +35,6 @@ export function mountPortfolio() {
   const slideImages = slides.map(slide => slide.querySelector('img'));
   const captionButton = root.querySelector('.caption-link');
   const caption = root.querySelector('.project-caption');
-  const captionWord = captionButton.querySelector('.caption-word');
-  const titleText = captionButton.querySelector('[data-title]');
-  const titleMetrics = captionButton.querySelector('[data-title-metrics]');
   const thumbnails = [...root.querySelectorAll('[data-thumbnail]')];
   const rail = root.querySelector('.thumbnail-rail');
   const thumbnailGroup = thumbnails[0].parentElement;
@@ -66,7 +64,6 @@ export function mountPortfolio() {
   const visibleMenuChoices = () => menuChoices.filter(choice => choice === projectsToggle || !projectsMenu.contains(choice) || projectNavigation.expanded);
   const previousButton = root.querySelector('[data-step="-1"]');
   const nextButton = root.querySelector('[data-step="1"]');
-  const captionHeading = root.querySelector('.project-caption h1');
   const mobileInspect = root.querySelector('.mobile-inspect');
   const detailMedia = root.querySelector('[data-detail-media]');
   const caseStudy = mountProjectCaseStudy(root.querySelector('[data-detail-case-study]'), {
@@ -104,18 +101,14 @@ export function mountPortfolio() {
   let dragFrame = 0;
   let pendingDrag = null;
   let suppressClickUntil = 0;
-  let titleFrame = 0;
-  let titleSlots = [];
   let slideEndsAt = 0;
+  const captionMotion = mountProjectCaption(caption, root, reducedMotion, { endsAt: () => slideEndsAt });
   let projectOpen = false;
   let articleIndex = -1;
   let projectAbort = null;
   let projectOrigin = { x: .5, y: .5 };
   let projectReturnFocus = captionButton;
   let menuContext = null;
-  const titleMeasure = document.createElement('canvas').getContext('2d');
-  let measuredFont = '';
-  const glyphWidths = new Map();
   let renderedX = NaN;
   let renderedScroll = NaN;
   let focusedPosition = NaN;
@@ -237,11 +230,6 @@ export function mountPortfolio() {
     }
     if (endPanel.inert !== !links) endPanel.inert = !links;
     if (endPanel.getAttribute('aria-hidden') !== String(!links)) endPanel.setAttribute('aria-hidden', String(!links));
-    if (caption.getAttribute('aria-hidden') !== String(links)) caption.setAttribute('aria-hidden', String(links));
-    // Keep a held caption's pointer capture alive until its drag ends.
-    const captionInert = links && drag?.capture !== captionButton;
-    if (captionButton.inert !== captionInert) captionButton.inert = captionInert;
-    if (caption.inert !== captionInert) caption.inert = captionInert;
     const surfacesHidden = links || projectOpen || projectRequests.busy;
     laser.setActive(links && !projectOpen && !projectRequests.busy);
     if (!links && credits.open) credits.open = false;
@@ -258,112 +246,6 @@ export function mountPortfolio() {
     updateGalleryIdentity({ direction: projectOpen || projectRequests.busy ? -1 : links ? 1 : -1 });
   }
 
-  function finishTitle() {
-    cancelAnimationFrame(titleFrame);
-    titleFrame = 0;
-    titleSlots = [];
-    titleText.textContent = panels[active].title;
-    titleMetrics.textContent = panels[active].title;
-    captionWord.style.width = '';
-    root.classList.remove('is-scrambling');
-  }
-
-  function scrambleTitle(next, { immediate = false, direction = 1 } = {}) {
-    cancelAnimationFrame(titleFrame);
-    titleFrame = 0;
-    if (immediate || reducedMotion.matches) { finishTitle(); return; }
-    // On a reversal, begin with the glyphs and widths currently on screen.
-    const oldLetters = titleSlots.length
-      ? titleSlots.map(slot => slot.glyph.textContent)
-      : Array.from(titleText.textContent);
-    const oldSizes = titleSlots.length ? titleSlots.map(slot => slot.size) : null;
-    const oldWidth = captionWord.getBoundingClientRect().width;
-    const font = getComputedStyle(titleText);
-    const fontKey = `${font.fontWeight} ${font.fontSize} ${font.fontFamily}`;
-    if (fontKey !== measuredFont) {
-      titleMeasure.font = fontKey;
-      measuredFont = fontKey;
-      glyphWidths.clear();
-    }
-    const width = text => {
-      if (!glyphWidths.has(text)) glyphWidths.set(text, titleMeasure.measureText(text).width);
-      return glyphWidths.get(text);
-    };
-    const letters = Array.from(next);
-    titleMetrics.textContent = next;
-    const newWidth = titleMetrics.getBoundingClientRect().width;
-    const count = Math.max(oldLetters.length, letters.length);
-    const pool = [...new Set((oldLetters.join('') + next).toLowerCase().replace(/\s/g, ''))];
-    const lowerPool = pool.map(letter => ({ letter, width: width(letter) }));
-    const upperPool = pool.map(letter => ({ letter: letter.toUpperCase(), width: width(letter.toUpperCase()) }));
-    const oldTotal = oldSizes ? oldWidth : oldLetters.reduce((total, letter) => total + width(letter), 0);
-    const newTotal = letters.reduce((total, letter) => total + width(letter), 0);
-    const fragment = document.createDocumentFragment();
-    titleSlots = Array.from({ length: count }, (_, i) => {
-      const slot = document.createElement('span');
-      const glyph = document.createElement('span');
-      slot.className = 'caption-slot';
-      glyph.className = 'caption-glyph';
-      slot.append(glyph);
-      fragment.append(slot);
-      const old = oldLetters[i] || '';
-      const target = letters[i] || '';
-      const oldSize = oldSizes ? oldSizes[i] || 0 : width(old) * oldWidth / (oldTotal || 1);
-      const newSize = width(target) * newWidth / (newTotal || 1);
-      // Increasing gallery position brings the image in from the right.
-      const ordinal = (direction > 0 ? count - 1 - i : i) / Math.max(1, count - 1);
-      glyph.textContent = old;
-      return { slot, glyph, old, target, oldSize, newSize, size: oldSize,
-        renderedX: NaN, renderedSize: NaN,
-        pool: target && target === target.toUpperCase() ? upperPool : lowerPool,
-        begin: ordinal * .2, resolve: .32 + ordinal * .5, nextChange: 0, swaps: 0 };
-    });
-    titleText.replaceChildren(fragment);
-    const start = performance.now();
-    const duration = slideEndsAt > start ? Math.max(180, Math.min(420, slideEndsAt - start)) : 360;
-    let renderedWidth = NaN;
-    root.classList.add('is-scrambling');
-    const frame = now => {
-      const elapsed = now - start;
-      const progress = Math.min(1, elapsed / duration);
-      if (progress === 1) { finishTitle(); return; }
-      const blend = progress * progress * (3 - 2 * progress);
-      let x = 0;
-      for (let i = 0; i < titleSlots.length; i++) {
-        const s = titleSlots[i];
-        s.size = s.oldSize + (s.newSize - s.oldSize) * blend;
-        if (x !== s.renderedX) {
-          s.slot.style.left = `${x}px`;
-          s.renderedX = x;
-        }
-        if (s.size !== s.renderedSize) {
-          s.slot.style.width = `${s.size}px`;
-          s.renderedSize = s.size;
-        }
-        x += s.size;
-        let replacement;
-        if (s.old === s.target || s.target === ' ' || progress >= s.resolve) {
-          replacement = s.target;
-        } else if (progress < s.begin) {
-          replacement = s.old;
-        } else if (elapsed >= s.nextChange) {
-          const compatible = s.pool.filter(candidate => candidate.width <= s.size + .5);
-          replacement = compatible.length ? compatible[(i * 5 + s.swaps * 3) % compatible.length].letter : s.target;
-          s.swaps++;
-          s.nextChange = elapsed + 28 + progress * progress * 90 + (i % 4) * 7;
-        }
-        if (replacement !== undefined && s.glyph.textContent !== replacement) s.glyph.textContent = replacement;
-      }
-      if (x !== renderedWidth) {
-        captionWord.style.width = `${x}px`;
-        renderedWidth = x;
-      }
-      titleFrame = requestAnimationFrame(frame);
-    };
-    // Lay out the starting slots before the next paint.
-    frame(start);
-  }
-
   function updateActive(index) {
     if (active === index) return;
     const previous = active;
@@ -374,11 +256,6 @@ export function mountPortfolio() {
     prepareImages(active);
     const panel = panels[active];
     root.dataset.panelKind = panel.kind;
-    captionButton.dataset.project = String(active);
-    captionButton.setAttribute('aria-label', `View ${panel.title}`);
-    captionHeading.setAttribute('aria-label', panel.title);
-    if (panel.kind === 'project') scrambleTitle(panel.title, { immediate: previous < 0, direction: Math.sign(index - previous) });
-    else finishTitle();
     if (focusedThumbnail) thumbnails[active].focus({ preventScroll: true });
     slides.forEach((slide, i) => {
       slide.classList.toggle('is-active', i === active);
@@ -411,6 +288,7 @@ export function mountPortfolio() {
 
   function render(value) {
     const frame = galleryFrame(value, panels.length);
+    const initialRender = active < 0;
     position = frame.position;
     const x = -position * (stageWidth - galleryInset);
     if (x !== renderedX) {
@@ -434,8 +312,12 @@ export function mountPortfolio() {
     }
     updateEnd(frame.endProgress, frame.links);
     updateActive(frame.project);
-    caption.hidden = frame.links || panels[active].kind !== 'project';
-    caption.inert = caption.hidden;
+    const captionFrame = galleryCaptionFrame(frame, firstProjectPanel);
+    captionMotion.present(captionFrame, {
+      title: panels[captionFrame.project].title,
+      immediate: initialRender,
+      holdPointer: drag?.capture === captionButton
+    });
     root.dataset.panel = String(frame.links ? end : active);
     root.dataset.panelKind = frame.links ? 'links' : panels[active].kind;
     if (!root.classList.contains('is-moving')) followGalleryFavicon(position);
@@ -720,8 +602,8 @@ export function mountPortfolio() {
       stopWheel();
       stopAnimation();
       cancelAnimationFrame(liftFrame);
-      cancelAnimationFrame(titleFrame);
-      liftFrame = titleFrame = 0;
+      captionMotion.pause();
+      liftFrame = 0;
       root.classList.remove('is-lifting');
       const direction = replacing ? Math.sign(request.index - articleIndex) || 1 : 1;
       articleIndex = request.index;
@@ -735,7 +617,7 @@ export function mountPortfolio() {
       // so opening never jumps to the cover but closing reveals the right project.
       if (!disposed) {
         select(request.index, { immediate: true, announceSelection: false, history: false });
-        finishTitle();
+        captionMotion.finish();
       }
     } finally {
       outgoing?.cancel();
@@ -1034,7 +916,7 @@ export function mountPortfolio() {
       menuTitleMotion.finish();
       projectNavigation.set(projectNavigation.expanded, { immediate: true });
     }
-    if (reducedMotion.matches && titleFrame) finishTitle();
+    if (reducedMotion.matches && captionMotion.animating) captionMotion.finish();
     if (reducedMotion.matches && liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
     if (reducedMotion.matches && animationFrame) animateTo(destination, { immediate: true });
     if (reducedMotion.matches && menuNavigation.animating) menuNavigation.set(menuNavigation.expanded, { immediate: true });
@@ -1046,7 +928,7 @@ export function mountPortfolio() {
     stopWheel();
     if (menuNavigation.animating) menuNavigation.set(menuNavigation.expanded, { immediate: true });
     if (animationFrame) animateTo(Math.round(destination), { immediate: true });
-    if (titleFrame) finishTitle();
+    if (captionMotion.animating) captionMotion.finish();
     if (liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
   });
   measure();
@@ -1077,7 +959,8 @@ export function mountPortfolio() {
     stopWheel();
     stopAnimation();
     stopDragFrame();
-    [liftFrame, titleFrame, resizeFrame].forEach(cancelAnimationFrame);
+    [liftFrame, resizeFrame].forEach(cancelAnimationFrame);
+    captionMotion.destroy();
     contextMotion.destroy();
     menuTitleMotion.destroy();
     menuNavigation.set(false, { immediate: true });
