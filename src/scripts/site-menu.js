@@ -1,5 +1,5 @@
-// Animate the native disclosure, then fully remove its body from layout/paint.
-// Measuring before cancellation lets a rapid reversal continue from its frame.
+// Lay out the open menu once, then reveal its clip instead of reflowing the
+// full-screen reading area on every animation frame.
 export function mountSiteMenu(details, reducedMotion, { onChange = () => {}, signal } = {}) {
   const toggle = details.querySelector('summary');
   const body = details.querySelector('.menu-body');
@@ -16,10 +16,16 @@ export function mountSiteMenu(details, reducedMotion, { onChange = () => {}, sig
     if (animation) { animation.onfinish = null; animation.cancel(); animation = null; }
     contentAnimation?.cancel();
     contentAnimation = null;
+    delete details.dataset.animating;
   };
   function set(open, { immediate = false, focus = false } = {}) {
     const current = ++generation;
-    const fromHeight = details.getBoundingClientRect().height;
+    const boxHeight = details.getBoundingClientRect().height;
+    const clip = animation && getComputedStyle(details).clipPath;
+    const inset = clip && /^inset\(([^)]+)\)/.exec(clip)?.[1].split(' round ')[0].trim().split(/\s+/);
+    const clippedBottom = inset ? parseFloat(inset[inset.length > 2 ? 2 : 0]) || 0 : 0;
+    const fromHeight = boxHeight - clippedBottom;
+    const wasClosed = !details.open;
     const style = details.open && !body.hidden ? getComputedStyle(body) : null;
     const fromOpacity = style?.opacity || '0';
     const fromTransform = style?.transform || 'translateY(-6px)';
@@ -35,6 +41,7 @@ export function mountSiteMenu(details, reducedMotion, { onChange = () => {}, sig
       details.open = open;
       cancel();
       details.style.height = '';
+      details.style.clipPath = '';
       body.style.opacity = '';
       body.style.transform = '';
       sync();
@@ -42,15 +49,18 @@ export function mountSiteMenu(details, reducedMotion, { onChange = () => {}, sig
     if (!open && !details.open) { finish(); return; }
     body.hidden = false;
     details.open = true;
+    if (open && wasClosed) body.scrollTop = 0;
     details.style.height = '';
     const summaryHeight = toggle.getBoundingClientRect().height;
     details.style.setProperty('--menu-summary-height', `${summaryHeight}px`);
-    const toHeight = open ? details.getBoundingClientRect().height : summaryHeight;
+    const fullHeight = details.getBoundingClientRect().height;
+    const toHeight = open ? fullHeight : summaryHeight;
     if (immediate || reducedMotion.matches || typeof details.animate !== 'function' || typeof body.animate !== 'function' || Math.abs(fromHeight - toHeight) < .5) {
       finish(); return;
     }
-    details.style.height = `${fromHeight}px`;
-    animation = details.animate([{ height: `${fromHeight}px` }, { height: `${toHeight}px` }], {
+    details.dataset.animating = '';
+    const reveal = height => `inset(0px 0px ${Math.max(0, fullHeight - height)}px 0px round 8px)`;
+    animation = details.animate([{ clipPath: reveal(fromHeight) }, { clipPath: reveal(toHeight) }], {
       duration: open ? 340 : 240, easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'both'
     });
     contentAnimation = body.animate([

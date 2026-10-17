@@ -24,9 +24,7 @@ function scene({ reduced = false, unsupported = null } = {}) {
     open: false, dataset: {}, style: { height: '', setProperty(name, value) { this[name] = value; } },
     querySelector: selector => selector === 'summary' ? toggle : body,
     addEventListener: (name, callback) => events.set(name, callback),
-    getBoundingClientRect() {
-      return { height: activeHeight?.drawnHeight ?? (parseFloat(this.style.height) || (this.open ? 800 : 64)) };
-    }
+    getBoundingClientRect() { return { height: parseFloat(this.style.height) || (this.open ? 800 : 64) }; }
   };
   for (const [name, node] of [['details', details], ['body', body]]) {
     if (name === unsupported) continue;
@@ -42,7 +40,12 @@ function scene({ reduced = false, unsupported = null } = {}) {
     };
   }
   Object.assign(globalThis, {
-    document: { activeElement: null }, getComputedStyle: node => ({ opacity: node.opacity, transform: node.transform })
+    document: { activeElement: null }, getComputedStyle: node => ({
+      opacity: node.opacity, transform: node.transform,
+      clipPath: node === details && activeHeight
+        ? activeHeight.drawnHeight === null ? activeHeight.frames[0].clipPath
+          : `inset(0px 0px ${800 - activeHeight.drawnHeight}px 0px round 8px)` : 'none'
+    })
   });
   const preference = { matches: reduced };
   let changes = 0;
@@ -67,7 +70,12 @@ test('the complete menu body is hidden after closing and all animation fills are
     s.navigation.set(true);
     assert.equal(s.body.hidden, false);
     assert.equal(s.body.inert, false);
-    assert.deepEqual(s.animations[0].frames.map(frame => frame.height), ['64px', '800px']);
+    assert.deepEqual(s.animations[0].frames.map(frame => frame.clipPath), [
+      'inset(0px 0px 736px 0px round 8px)', 'inset(0px 0px 0px 0px round 8px)'
+    ]);
+    assert.equal(s.details.style.height, '', 'animation must not resize the full menu every frame');
+    assert.equal(s.details.getBoundingClientRect().height, 800);
+    assert.equal(s.details.dataset.animating, '');
     s.animations[0].finish();
     assert.equal(s.details.style.height, '');
     s.navigation.set(false);
@@ -82,6 +90,7 @@ test('the complete menu body is hidden after closing and all animation fills are
     assert.equal(s.body.style.transform, '');
     assert.ok(s.animations.every(animation => animation.cancelled));
     assert.equal(s.navigation.animating, false);
+    assert.equal(s.details.dataset.animating, undefined);
   } finally { s.restore(); }
 });
 
@@ -109,12 +118,12 @@ test('rapid reversals retain the drawn frame and stale completions cannot hide t
     s.body.transform = 'matrix(1, 0, 0, 1, 0, -2)';
     s.navigation.set(false);
     const staleClose = s.animations[2].onfinish;
-    assert.equal(s.animations[2].frames[0].height, '276px');
+    assert.equal(s.animations[2].frames[0].clipPath, 'inset(0px 0px 524px 0px round 8px)');
     assert.equal(s.animations[3].frames[0].opacity, '.6');
     assert.equal(s.animations[3].frames[0].transform, s.body.transform);
     s.animations[2].drawnHeight = 100;
     s.navigation.set(true);
-    assert.equal(s.animations[4].frames[0].height, '100px');
+    assert.equal(s.animations[4].frames[0].clipPath, 'inset(0px 0px 700px 0px round 8px)');
     staleOpen();
     staleClose();
     assert.equal(s.details.open, true);
@@ -187,5 +196,24 @@ test('native toggles expose the body while nested disclosure events leave the ma
     assert.equal(s.body.hidden, true);
     assert.equal(s.body.inert, true);
     assert.equal(s.navigation.expanded, false);
+  } finally { s.restore(); }
+});
+
+test('reopening starts at the navigation links, while reversing a close retains the current scroll', () => {
+  const s = scene();
+  try {
+    s.body.scrollTop = 280;
+    s.navigation.set(true);
+    assert.equal(s.body.scrollTop, 0);
+    s.animations[0].finish();
+    s.body.scrollTop = 180;
+    s.navigation.set(false);
+    s.animations[2].drawnHeight = 400;
+    s.navigation.set(true);
+    assert.equal(s.body.scrollTop, 180);
+    s.animations[4].finish();
+    s.navigation.set(false, { immediate: true });
+    s.navigation.set(true, { immediate: true });
+    assert.equal(s.body.scrollTop, 0);
   } finally { s.restore(); }
 });
