@@ -39,6 +39,9 @@ export function mountPortfolio() {
   const titleMetrics = captionButton.querySelector('[data-title-metrics]');
   const thumbnails = [...root.querySelectorAll('[data-thumbnail]')];
   const rail = root.querySelector('.thumbnail-rail');
+  const thumbnailGroup = thumbnails[0].parentElement;
+  const selectionFrame = root.querySelector('.selection-frame');
+  const selectionOutline = selectionFrame.querySelector('[data-selection-outline]');
   const galleryTrack = root.querySelector('[data-gallery-track]');
   const stage = root.querySelector('[data-stage]');
   const menu = root.querySelector('[data-menu]');
@@ -91,6 +94,7 @@ export function mountPortfolio() {
   let lift = 0;
   let liftFrame = 0;
   let stride = 1;
+  let railCenterPadding = 0;
   let animationFrame = 0;
   let motionVelocity = 0;
   let resizeFrame = 0;
@@ -167,13 +171,15 @@ export function mountPortfolio() {
     siteHeader.dataset.page = section || 'home';
   }
 
-  function setMenuContext(next, { immediate = false } = {}) {
+  function setMenuContext(next, { immediate = false, direction } = {}) {
     const section = sectionForPanel(active);
     const context = typeof next === 'boolean' ? next ? 'project' : section === 'projects' ? 'gallery' : section : next;
     if (menuContext === context && !immediate) return;
+    const order = ['home', 'about', 'gallery', 'project'];
+    direction ??= Math.sign(order.indexOf(context) - order.indexOf(menuContext)) || 1;
     menuContext = context;
     updateMenuName();
-    contextMotion.set({ home: 'Home:', about: 'About:', gallery: 'Projects:', project: 'Project:' }[context], { immediate });
+    contextMotion.set({ home: 'Home:', about: 'About:', gallery: 'Projects:', project: 'Project:' }[context], { immediate, direction });
   }
 
   function setMenuTitle(title, options) {
@@ -195,7 +201,7 @@ export function mountPortfolio() {
     nextButton.setAttribute('aria-label', index >= last ? 'Show professional links' : 'Next panel');
   }
 
-  function updateGalleryIdentity({ immediate = false, index = active, links = endOpen } = {}) {
+  function updateGalleryIdentity({ immediate = false, index = active, links = endOpen, direction = 1 } = {}) {
     const from = readHeaderPalette(siteHeader);
     const project = panels[Math.max(0, index)];
     const palette = links ? linksPalette : project.palette;
@@ -208,7 +214,7 @@ export function mountPortfolio() {
       if (!links && Number(button.dataset.menuProject) === index) button.setAttribute('aria-current', 'true');
       else button.removeAttribute('aria-current');
     });
-    setMenuTitle(links ? 'Links' : project.kind === 'home' ? 'Introduction' : project.kind === 'about' ? siteHeader.dataset.owner : project.title, { immediate });
+    setMenuTitle(links ? 'Links' : project.kind === 'home' ? 'Introduction' : project.kind === 'about' ? siteHeader.dataset.owner : project.title, { immediate, direction });
   }
 
   function selectGalleryFavicon(index) {
@@ -249,7 +255,7 @@ export function mountPortfolio() {
     endOpen = links;
     root.dataset.atGalleryEnd = String(links);
     skipLink.href = links ? '#gallery-end' : '#project-caption';
-    updateGalleryIdentity();
+    updateGalleryIdentity({ direction: projectOpen || projectRequests.busy ? -1 : links ? 1 : -1 });
   }
 
   function finishTitle() {
@@ -361,6 +367,7 @@ export function mountPortfolio() {
   function updateActive(index) {
     if (active === index) return;
     const previous = active;
+    const direction = projectOpen || projectRequests.busy ? -1 : Math.sign(index - previous) || 1;
     const focusedThumbnail = previous >= 0 && document.activeElement === thumbnails[previous];
     if (previous >= 0 && slides[previous].contains(document.activeElement)) root.querySelector('.carousel').focus({ preventScroll: true });
     active = index;
@@ -383,8 +390,8 @@ export function mountPortfolio() {
       button.setAttribute('aria-pressed', String(i === active));
       button.tabIndex = i === active ? 0 : -1;
     });
-    if (!projectOpen && !projectRequests.busy) setMenuContext(panel.kind === 'project' ? 'gallery' : panel.kind, { immediate: previous < 0 });
-    updateGalleryIdentity({ immediate: previous < 0 });
+    if (!projectOpen && !projectRequests.busy) setMenuContext(panel.kind === 'project' ? 'gallery' : panel.kind, { immediate: previous < 0, direction });
+    updateGalleryIdentity({ immediate: previous < 0, direction });
     setText('[data-mobile-count]', `${String(active + 1).padStart(2, '0')} / ${String(panels.length).padStart(2, '0')}`);
     const action = panel.kind === 'home' ? 'About me' : panel.kind === 'about' ? 'Explore projects' : 'View project';
     setText('[data-mobile-action-label]', action);
@@ -515,6 +522,7 @@ export function mountPortfolio() {
     const distance = Math.abs(destination - from);
     const finish = () => {
       render(destination);
+      alignSelectionFrame();
       selectGalleryFavicon(destination);
       root.classList.remove('is-moving');
       animationFrame = 0;
@@ -548,15 +556,63 @@ export function mountPortfolio() {
 
   function measure() {
     stageWidth = stage.clientWidth || 1;
-    stride = thumbnails.length > 1 ? thumbnails[1].offsetLeft - thumbnails[0].offsetLeft : thumbnails[0].offsetWidth;
-    const railPadding = Math.max(0, (rail.clientWidth - thumbnails[0].offsetWidth) / 2);
+    const pixels = window.devicePixelRatio || 1;
+    const gap = Math.max(1, Math.round(4 * pixels));
+    const contentWidth = parseFloat(getComputedStyle(root).getPropertyValue('--thumb-width'));
+    const contentHeight = rail.clientHeight - 14;
+    rail.style.setProperty('--thumb-gap', `${gap / pixels}px`);
+    rail.style.setProperty('--thumb-box-width', `${(Math.round(contentWidth * pixels) + 2 * gap) / pixels}px`);
+    rail.style.setProperty('--thumb-box-height', `${(Math.round(contentHeight * pixels) + 2 * gap) / pixels}px`);
+    thumbnailGroup.style.paddingTop = '0px';
+    stride = parseFloat(getComputedStyle(thumbnails[0]).width);
+    railCenterPadding = Math.max(0, (rail.clientWidth - stride) / 2);
     const summaryHeight = menuToggle.getBoundingClientRect().height;
-    rail.style.setProperty('--rail-padding', `${railPadding}px`);
+    rail.style.setProperty('--rail-padding', `${railCenterPadding}px`);
     menu.style.setProperty('--menu-summary-height', `${summaryHeight}px`);
     // Changing padding can move the scroll position even if the target is equal.
     renderedScroll = NaN;
     if (menuNavigation.animating) animateMenu(menuNavigation.expanded);
     presentCards(lift);
+    alignSelectionFrame();
+  }
+
+  function alignSelectionFrame() {
+    if (active < 0 || endOpen || drag || Math.abs(position - Math.round(position)) > .001) return;
+    const scrollLeft = rail.scrollLeft;
+    rail.style.setProperty('--rail-padding', `${railCenterPadding}px`);
+    thumbnailGroup.style.paddingTop = '0px';
+    rail.scrollLeft = scrollLeft;
+    let tile = thumbnails[active].getBoundingClientRect();
+    // Native button backgrounds also round fractional layout origins in
+    // Firefox. Adjust layout rather than translating a half-pixel button.
+    rail.style.setProperty('--rail-padding', `${railCenterPadding + Math.round(tile.left) - tile.left}px`);
+    thumbnailGroup.style.paddingTop = `${Math.ceil(tile.top) - tile.top}px`;
+    rail.scrollLeft = scrollLeft;
+    tile = thumbnails[active].getBoundingClientRect();
+    const strip = selectionFrame.parentElement.getBoundingClientRect();
+    const pixels = window.devicePixelRatio || 1;
+    const left = Math.round(tile.left * pixels), top = Math.round(tile.top * pixels);
+    const border = Math.max(1, Math.round(2 * pixels));
+    const width = Math.round(tile.width * pixels) + 2 * border;
+    const height = Math.round(tile.height * pixels) + 2 * border;
+    const frameLeft = (left - border) / pixels, frameTop = (top - border) / pixels;
+    const anchorLeft = Math.floor(frameLeft), anchorTop = Math.floor(frameTop);
+    const viewportWidth = Math.ceil(width / pixels + frameLeft - anchorLeft);
+    const viewportHeight = Math.ceil(height / pixels + frameTop - anchorTop);
+    const offsetX = (frameLeft - anchorLeft) * pixels, offsetY = (frameTop - anchorTop) * pixels;
+    // Use whole painted pixels for the tile, its gap, and the SVG outline.
+    // No measurements or SVG updates run during horizontal drag frames.
+    Object.assign(selectionFrame.style, {
+      left: `${anchorLeft - strip.left}px`, top: `${anchorTop - strip.top}px`, bottom: 'auto',
+      width: `${viewportWidth}px`, height: `${viewportHeight}px`, transform: 'none'
+    });
+    // Integer CSS anchors also avoid Firefox rounding an SVG viewport origin.
+    selectionFrame.setAttribute('viewBox', `0 0 ${viewportWidth * pixels} ${viewportHeight * pixels}`);
+    const rounded = (x, y, w, h, r) => `M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
+    const radius = Math.round(8 * pixels);
+    selectionOutline.setAttribute('d', rounded(offsetX, offsetY, width, height, radius + border)
+      + rounded(offsetX + border, offsetY + border, width - 2 * border, height - 2 * border, radius));
+    selectionOutline.dataset.border = String(border);
   }
 
   function animateMenu(open, { focus = false, focusChoice = null } = {}) {
@@ -667,9 +723,10 @@ export function mountPortfolio() {
       cancelAnimationFrame(titleFrame);
       liftFrame = titleFrame = 0;
       root.classList.remove('is-lifting');
+      const direction = replacing ? Math.sign(request.index - articleIndex) || 1 : 1;
       articleIndex = request.index;
       fillProject(request.index);
-      updateGalleryIdentity({ index: articleIndex, links: false, immediate: request.sectionEntry });
+      updateGalleryIdentity({ index: articleIndex, links: false, immediate: request.sectionEntry, direction });
       updateFavicon(panels[articleIndex].favicon);
       if (replacing) projectOrigin = articleRevealOrigin(projectPage.querySelector('[data-detail-title]').getBoundingClientRect(),
         document.documentElement.clientWidth, projectView.clientHeight);
@@ -994,6 +1051,7 @@ export function mountPortfolio() {
   });
   measure();
   render(position);
+  alignSelectionFrame();
   updateBounds(position);
   updateFavicon(initial.panel === end ? endPanel.dataset.favicon : panels[initial.panel].favicon);
   const entryDone = initial.article !== null

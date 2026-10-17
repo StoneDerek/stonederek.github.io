@@ -1,4 +1,4 @@
-// Both header columns use one upward text transition, including reversals.
+// Both header columns follow the same direction and interruption rules.
 export function mountMenuLabel(label, reducedMotion) {
   let desired = label.textContent;
   let animation = null;
@@ -6,7 +6,7 @@ export function mountMenuLabel(label, reducedMotion) {
   let destroyed = false;
   const clear = () => { label.style.opacity = ''; label.style.transform = ''; };
 
-  async function set(text, { immediate = false } = {}) {
+  async function set(text, { immediate = false, direction = 1 } = {}) {
     if (destroyed || (desired === text && !immediate)) return;
     desired = text;
     const current = ++generation;
@@ -17,7 +17,8 @@ export function mountMenuLabel(label, reducedMotion) {
     animation = null;
     if (instant) { label.textContent = text; clear(); return; }
 
-    const outgoing = label.animate([start, { opacity: 0, transform: 'translateY(-100%)' }], {
+    const travel = direction < 0 ? -100 : 100;
+    const outgoing = label.animate([start, { opacity: 0, transform: `translateY(${-travel}%)` }], {
       duration: 120, easing: 'ease-in', fill: 'forwards'
     });
     animation = outgoing;
@@ -26,7 +27,7 @@ export function mountMenuLabel(label, reducedMotion) {
     outgoing.cancel();
     label.textContent = text;
     const incoming = label.animate([
-      { opacity: 0, transform: 'translateY(100%)' }, { opacity: 1, transform: 'translateY(0)' }
+      { opacity: 0, transform: `translateY(${travel}%)` }, { opacity: 1, transform: 'translateY(0)' }
     ], { duration: 200, easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'both' });
     animation = incoming;
     await incoming.finished.catch(() => {});

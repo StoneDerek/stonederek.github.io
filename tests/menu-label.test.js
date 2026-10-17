@@ -29,12 +29,14 @@ function scene({ reduced = false, supported = true } = {}) {
 test('section changes in either direction keep the old text until it exits and clean up the new label', async () => {
   const s = scene();
   try {
-    for (const [previous, next] of [['Home:', 'About:'], ['About:', 'Home:']]) {
+    for (const [previous, next, direction] of [['Home:', 'About:', 1], ['About:', 'Home:', -1]]) {
       const offset = s.animations.length;
-      const pending = s.motion.set(next);
+      const pending = s.motion.set(next, { direction });
       assert.equal(s.label.textContent, previous);
+      assert.equal(s.animations[offset].frames[1].transform, `translateY(${-100 * direction}%)`);
       s.animations[offset].finish(); await tick();
       assert.equal(s.label.textContent, next);
+      assert.equal(s.animations[offset + 1].frames[0].transform, `translateY(${100 * direction}%)`);
       s.animations[offset + 1].finish(); await pending;
       assert.ok(s.animations.every(animation => animation.cancelled));
       assert.deepEqual(s.label.style, { opacity: '', transform: '' });
@@ -61,15 +63,15 @@ test('a newer request during the outgoing phase prevents stale text from being i
   } finally { s.restore(); }
 });
 
-test('interrupting an incoming label continues upward from its drawn position', async () => {
+test('reversing an incoming label changes direction from its drawn position', async () => {
   const s = scene();
   try {
     const stale = s.motion.set('About:');
     s.animations[0].finish(); await tick();
     s.label.drawn = { opacity: '.55', transform: 'matrix(1, 0, 0, 1, 0, 9)' };
-    const latest = s.motion.set('Home:');
+    const latest = s.motion.set('Home:', { direction: -1 });
     assert.deepEqual(s.animations[2].frames[0], s.label.drawn);
-    assert.equal(s.animations[2].frames[1].transform, 'translateY(-100%)');
+    assert.equal(s.animations[2].frames[1].transform, 'translateY(100%)');
     s.animations[1].finish(); await tick();
     assert.equal(s.label.textContent, 'About:');
     s.animations[2].finish(); await tick();
