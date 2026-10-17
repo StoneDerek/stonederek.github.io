@@ -43,32 +43,26 @@ test('gallery settling retains momentum and does not limit long drags to one pro
   assert.equal(settleProjectSwipe({ start: 0, position: 2.2, deltaX: -858, unit: 390, touch: true }), 2);
 });
 
-test('caption entry progresses continuously from the selection midpoint to the first project', () => {
-  const positions = [1.5, 1.5001, 1.55, 1.6, 1.75, 1.9, 1.9999];
-  let previous = -1;
-  for (const position of positions) {
-    const caption = galleryCaptionFrame(galleryFrame(position, 7), 2);
-    assert.ok(caption.reveal >= previous && caption.reveal < 1);
-    assert.equal(caption.project, 2);
-    previous = caption.reveal;
-  }
-  assert.equal(galleryCaptionFrame(galleryFrame(1.5, 7), 2).reveal, 0);
-  assert.equal(galleryCaptionFrame(galleryFrame(1.75, 7), 2).reveal, .5);
-});
-
-test('the midpoint does not request a completed title and reversing uses the same progress', () => {
-  const before = galleryCaptionFrame(galleryFrame(1.4999, 7), 2);
-  const after = galleryCaptionFrame(galleryFrame(1.5001, 7), 2);
+test('the profile/project selection boundary triggers one caption request, without a second progress clock', () => {
+  const before = galleryCaptionFrame(galleryFrame(1.499, 7), 2);
+  const after = galleryCaptionFrame(galleryFrame(1.501, 7), 2);
   assert.equal(before.visible, false); assert.equal(after.visible, true);
   assert.equal(before.project, after.project);
-  assert.equal(before.reveal, 0); assert.ok(after.reveal < .001);
-  for (const position of [0, .5, 1, 1.499]) assert.equal(galleryCaptionFrame(galleryFrame(position, 7), 2).visible, false);
+  assert.equal('reveal' in after, false);
+  assert.deepEqual(after, galleryCaptionFrame(galleryFrame(1.9, 7), 2));
 });
 
-test('settled projects use normal title transitions and Links keeps its existing end visibility', () => {
-  for (const position of [2, 2.49, 2.51, 3, 4.8, 6, 6.49]) {
+test('profile panels leave caption interaction disabled', () => {
+  for (const position of [0, .5, 1, 1.499]) {
     const caption = galleryCaptionFrame(galleryFrame(position, 7), 2);
-    assert.equal(caption.reveal, null); assert.equal(caption.visible, true); assert.equal(caption.interactive, true);
+    assert.equal(caption.visible, false); assert.equal(caption.interactive, false);
+  }
+});
+
+test('selected project captions and Links retain their existing visibility destinations', () => {
+  for (const position of [1.5, 2, 2.49, 2.51, 3, 4.8, 6, 6.49]) {
+    const caption = galleryCaptionFrame(galleryFrame(position, 7), 2);
+    assert.equal(caption.visible, true); assert.equal(caption.interactive, true);
   }
   for (const position of [6.5, 7]) {
     const caption = galleryCaptionFrame(galleryFrame(position, 7), 2);

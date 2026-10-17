@@ -6,15 +6,12 @@ export function galleryFrame(value, projectCount) {
     endProgress: Math.max(0, position - last), links: position >= last + .5 };
 }
 
-// Entry grows from no characters at the selection boundary to the full title
-// at the settled first project. It uses position, so dragging can rewind it.
+// Selection triggers a caption request; the caption owns its animation clock.
 export function galleryCaptionFrame(frame, firstProject) {
-  const reveal = Math.max(0, Math.min(1, (frame.position - firstProject + .5) * 2));
   return {
     project: Math.max(firstProject, frame.project),
-    visible: !frame.links && reveal > 0,
+    visible: !frame.links && frame.project >= firstProject,
     interactive: !frame.links && frame.project >= firstProject,
-    reveal: frame.position < firstProject ? reveal : null,
     links: frame.links
   };
 }

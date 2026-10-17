@@ -12,7 +12,8 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
   let measuredFont = '';
   let destroyed = false;
   let project = -1;
-  let revealing = false;
+  let interactive = false;
+  let pointerHeld = false;
   const glyphWidths = new Map();
 
   function finish() {
@@ -22,15 +23,14 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
     titleText.textContent = desired;
     titleMetrics.textContent = desired;
     captionWord.style.width = '';
-    button.style.opacity = '';
-    revealing = false;
+    button.style.opacity = desired ? '' : '0';
+    if (!desired && !pointerHeld) caption.hidden = true;
     root.classList.remove('is-scrambling');
+    syncInteraction();
   }
 
   function set(next, { immediate = false, direction = 1 } = {}) {
     if (destroyed) return;
-    revealing = false;
-    button.style.opacity = '';
     const entering = caption.hidden;
     // Hidden captions have no layout width. Reveal before measuring, then build
     // the initial glyph frame synchronously so no completed title flashes.
@@ -44,6 +44,8 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
       ? titleSlots.map(slot => slot.glyph.textContent)
       : Array.from(titleText.textContent);
     const oldSizes = !entering && titleSlots.length ? titleSlots.map(slot => slot.size) : null;
+    const fromEmpty = !oldLetters.some(letter => letter);
+    const toEmpty = next.length === 0;
     const oldWidth = entering ? 0 : captionWord.getBoundingClientRect().width;
     const font = getComputedStyle(titleText);
     const fontKey = `${font.fontWeight} ${font.fontSize} ${font.fontFamily}`;
@@ -60,6 +62,7 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
     titleMetrics.textContent = next;
     const newWidth = titleMetrics.getBoundingClientRect().width;
     const count = Math.max(oldLetters.length, letters.length);
+    if (!count) { finish(); return; }
     const pool = [...new Set((oldLetters.join('') + next).toLowerCase().replace(/\s/g, ''))];
     const lowerPool = pool.map(letter => ({ letter, width: width(letter) }));
     const upperPool = pool.map(letter => ({ letter: letter.toUpperCase(), width: width(letter.toUpperCase()) }));
@@ -76,16 +79,15 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
       const old = oldLetters[i] || '';
       const target = letters[i] || '';
       const newSize = width(target) * newWidth / (newTotal || 1);
-      // An entry starts with blank glyphs in full-size slots. Zero-width slots
-      // would clip the scramble and make the resolved title appear all at once.
-      const oldSize = entering ? newSize : oldSizes ? oldSizes[i] || 0 : width(old) * oldWidth / (oldTotal || 1);
+      const oldSize = oldSizes ? oldSizes[i] || 0 : width(old) * oldWidth / (oldTotal || 1);
       // Increasing gallery position brings the image in from the right.
       const ordinal = (direction > 0 ? count - 1 - i : i) / Math.max(1, count - 1);
       glyph.textContent = old;
       return { slot, glyph, old, target, oldSize, newSize, size: oldSize,
         renderedX: NaN, renderedSize: NaN,
         pool: target && target === target.toUpperCase() ? upperPool : lowerPool,
-        begin: ordinal * .2, resolve: .32 + ordinal * .5, nextChange: 0, swaps: 0 };
+        begin: ordinal * (fromEmpty ? .68 : .2),
+        disappear: .18 + ordinal * .64, resolve: .32 + ordinal * .5, nextChange: 0, swaps: 0 };
     });
     titleText.replaceChildren(fragment);
     const start = performance.now();
@@ -101,7 +103,12 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
       let x = 0;
       for (let i = 0; i < titleSlots.length; i++) {
         const s = titleSlots[i];
-        s.size = s.oldSize + (s.newSize - s.oldSize) * blend;
+        const alive = fromEmpty ? progress > s.begin : toEmpty ? progress < s.disappear : true;
+        // New characters get their readable width when their scramble starts.
+        // Existing project-to-project width interpolation stays continuous.
+        s.size = fromEmpty ? alive ? s.newSize : 0
+          : toEmpty ? alive ? s.oldSize : 0
+          : s.oldSize + (s.newSize - s.oldSize) * blend;
         if (x !== s.renderedX) {
           s.slot.style.left = `${x}px`;
           s.renderedX = x;
@@ -112,7 +119,9 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
         }
         x += s.size;
         let replacement;
-        if (progress === 0) {
+        if (!alive) {
+          replacement = '';
+        } else if (progress === 0) {
           replacement = s.old;
         } else if (s.old === s.target || s.target === ' ' || progress >= s.resolve) {
           replacement = s.target;
@@ -130,37 +139,22 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
         captionWord.style.width = `${x}px`;
         renderedWidth = x;
       }
+      button.style.opacity = x > 0 ? '' : '0';
+      syncInteraction();
       titleFrame = requestAnimationFrame(frame);
     };
     // Lay out the starting slots before the next paint.
     frame(start);
   }
 
-  function reveal(next, progress) {
-    cancelAnimationFrame(titleFrame);
-    titleFrame = 0;
-    titleSlots = [];
-    desired = next;
-    revealing = true;
-    const letters = Array.from(next);
-    const count = Math.floor(Math.max(0, Math.min(1, progress)) * letters.length);
-    const pool = [...new Set(next.toLowerCase().replace(/\s/g, ''))];
-    const phase = Math.floor(progress * 24);
-    const displayed = letters.slice(letters.length - count).map((target, offset) => {
-      const index = letters.length - count + offset;
-      const ordinal = (letters.length - 1 - index) / Math.max(1, letters.length - 1);
-      if (target === ' ' || progress >= .32 + ordinal * .5) return target;
-      const glyph = pool[(index * 5 + phase * 3) % pool.length];
-      return target === target.toUpperCase() ? glyph.toUpperCase() : glyph;
-    }).join('');
-    // Native text width grows with the actual number of drawn characters.
-    // Full-width invisible placeholders would hide the count transition.
-    if (titleText.textContent !== displayed) titleText.textContent = displayed;
-    if (titleMetrics.textContent !== displayed) titleMetrics.textContent = displayed;
-    captionWord.style.width = '';
-    button.style.opacity = count ? '' : '0';
-    if (count && progress < 1) root.classList.add('is-scrambling');
-    else root.classList.remove('is-scrambling');
+  function syncInteraction() {
+    const accessible = interactive && titleText.textContent.length > 0;
+    const inert = !accessible && !pointerHeld;
+    if (caption.inert !== inert) caption.inert = inert;
+    if (button.inert !== inert) button.inert = inert;
+    if (caption.getAttribute('aria-hidden') !== String(!accessible)) {
+      caption.setAttribute('aria-hidden', String(!accessible));
+    }
   }
 
   return {
@@ -168,44 +162,34 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
     finish,
     present(state, { title, immediate = false, holdPointer = false } = {}) {
       if (destroyed) return;
-      if (state.visible || state.links || holdPointer) {
-        if (state.reveal !== null && !reducedMotion.matches && !state.links) {
-          reveal(title, state.reveal);
-          caption.hidden = false;
-        } else if (project !== state.project) {
+      interactive = state.interactive;
+      pointerHeld = holdPointer;
+      if (state.visible || state.links) {
+        if (project !== state.project || desired !== title) {
           const direction = Math.sign(state.project - project) || 1;
           set(title, { immediate: immediate || state.links, direction });
-        } else {
-          if (revealing) finish();
-          caption.hidden = false;
-        }
-        if (project !== state.project) {
           button.dataset.project = String(state.project);
           button.setAttribute('aria-label', `View ${title}`);
           heading.setAttribute('aria-label', title);
           project = state.project;
-        }
-        if (!state.visible && !holdPointer) caption.hidden = true;
-      } else {
-        this.hide();
+        } else caption.hidden = false;
+        if (!state.visible && !pointerHeld) caption.hidden = true;
+      } else if (caption.hidden) {
         project = -1;
-      }
-      // Crossing the selection midpoint must not remove a held drag target.
-      const accessible = state.interactive && titleText.textContent.length > 0;
-      const inert = !accessible && !holdPointer;
-      if (caption.inert !== inert) caption.inert = inert;
-      if (button.inert !== inert) button.inert = inert;
-      if (caption.getAttribute('aria-hidden') !== String(!accessible)) {
-        caption.setAttribute('aria-hidden', String(!accessible));
-      }
+      } else if (desired) {
+        // Depart through the same clock as entry, rather than hiding the label
+        // immediately when the selected panel changes back to Home/About.
+        set('', { immediate, direction: -1 });
+      } else if (!titleFrame) finish();
+      syncInteraction();
     },
     pause() { cancelAnimationFrame(titleFrame); titleFrame = 0; },
     hide() {
-      if (!caption.hidden || titleFrame || titleSlots.length || revealing) finish();
+      if (!caption.hidden || titleFrame || titleSlots.length) finish();
       caption.hidden = true;
       project = -1;
     },
-    get animating() { return titleFrame !== 0 || revealing; },
+    get animating() { return titleFrame !== 0; },
     destroy() { finish(); destroyed = true; }
   };
 }
