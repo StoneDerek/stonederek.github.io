@@ -7,7 +7,7 @@ import { createProjectRequests } from './project-navigation.js';
 import { mountProjectFavicon } from './favicon.js';
 import { resolveGalleryLocation, galleryAddress, sectionForPanel } from './gallery-location.js';
 import { firstProjectPanel } from '../data/gallery-panels.js';
-import { galleryFrame, settleProjectSwipe } from './section-state.js';
+import { galleryFrame, galleryCaptionFrame, settleProjectSwipe } from './section-state.js';
 import { createMotionSpring } from './motion-spring.js';
 import { mountLaser } from './ascii-laser.js';
 import { linksPalette } from '../data/section-palettes.js';
@@ -64,7 +64,6 @@ export function mountPortfolio() {
   const visibleMenuChoices = () => menuChoices.filter(choice => choice === projectsToggle || !projectsMenu.contains(choice) || projectNavigation.expanded);
   const previousButton = root.querySelector('[data-step="-1"]');
   const nextButton = root.querySelector('[data-step="1"]');
-  const captionHeading = root.querySelector('.project-caption h1');
   const mobileInspect = root.querySelector('.mobile-inspect');
   const detailMedia = root.querySelector('[data-detail-media]');
   const caseStudy = mountProjectCaseStudy(root.querySelector('[data-detail-case-study]'), {
@@ -231,11 +230,6 @@ export function mountPortfolio() {
     }
     if (endPanel.inert !== !links) endPanel.inert = !links;
     if (endPanel.getAttribute('aria-hidden') !== String(!links)) endPanel.setAttribute('aria-hidden', String(!links));
-    if (caption.getAttribute('aria-hidden') !== String(links)) caption.setAttribute('aria-hidden', String(links));
-    // Keep a held caption's pointer capture alive until its drag ends.
-    const captionInert = links && drag?.capture !== captionButton;
-    if (captionButton.inert !== captionInert) captionButton.inert = captionInert;
-    if (caption.inert !== captionInert) caption.inert = captionInert;
     const surfacesHidden = links || projectOpen || projectRequests.busy;
     laser.setActive(links && !projectOpen && !projectRequests.busy);
     if (!links && credits.open) credits.open = false;
@@ -262,11 +256,6 @@ export function mountPortfolio() {
     prepareImages(active);
     const panel = panels[active];
     root.dataset.panelKind = panel.kind;
-    captionButton.dataset.project = String(active);
-    captionButton.setAttribute('aria-label', `View ${panel.title}`);
-    captionHeading.setAttribute('aria-label', panel.title);
-    if (panel.kind === 'project') captionMotion.set(panel.title, { immediate: previous < 0, direction: Math.sign(index - previous) });
-    else captionMotion.hide();
     if (focusedThumbnail) thumbnails[active].focus({ preventScroll: true });
     slides.forEach((slide, i) => {
       slide.classList.toggle('is-active', i === active);
@@ -299,6 +288,7 @@ export function mountPortfolio() {
 
   function render(value) {
     const frame = galleryFrame(value, panels.length);
+    const initialRender = active < 0;
     position = frame.position;
     const x = -position * (stageWidth - galleryInset);
     if (x !== renderedX) {
@@ -322,8 +312,12 @@ export function mountPortfolio() {
     }
     updateEnd(frame.endProgress, frame.links);
     updateActive(frame.project);
-    caption.hidden = frame.links || panels[active].kind !== 'project';
-    caption.inert = caption.hidden;
+    const captionFrame = galleryCaptionFrame(frame, firstProjectPanel);
+    captionMotion.present(captionFrame, {
+      title: panels[captionFrame.project].title,
+      immediate: initialRender,
+      holdPointer: drag?.capture === captionButton
+    });
     root.dataset.panel = String(frame.links ? end : active);
     root.dataset.panelKind = frame.links ? 'links' : panels[active].kind;
     if (!root.classList.contains('is-moving')) followGalleryFavicon(position);

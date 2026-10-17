@@ -3,12 +3,16 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
   const captionWord = caption.querySelector('.caption-word');
   const titleText = caption.querySelector('[data-title]');
   const titleMetrics = caption.querySelector('[data-title-metrics]');
+  const button = caption.querySelector('.caption-link');
+  const heading = caption.querySelector('h1');
   const titleMeasure = caption.ownerDocument.createElement('canvas').getContext('2d');
   let desired = titleText.textContent;
   let titleFrame = 0;
   let titleSlots = [];
   let measuredFont = '';
   let destroyed = false;
+  let project = -1;
+  let revealing = false;
   const glyphWidths = new Map();
 
   function finish() {
@@ -18,11 +22,15 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
     titleText.textContent = desired;
     titleMetrics.textContent = desired;
     captionWord.style.width = '';
+    button.style.opacity = '';
+    revealing = false;
     root.classList.remove('is-scrambling');
   }
 
   function set(next, { immediate = false, direction = 1 } = {}) {
     if (destroyed) return;
+    revealing = false;
+    button.style.opacity = '';
     const entering = caption.hidden;
     // Hidden captions have no layout width. Reveal before measuring, then build
     // the initial glyph frame synchronously so no completed title flashes.
@@ -128,15 +136,76 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
     frame(start);
   }
 
+  function reveal(next, progress) {
+    cancelAnimationFrame(titleFrame);
+    titleFrame = 0;
+    titleSlots = [];
+    desired = next;
+    revealing = true;
+    const letters = Array.from(next);
+    const count = Math.floor(Math.max(0, Math.min(1, progress)) * letters.length);
+    const pool = [...new Set(next.toLowerCase().replace(/\s/g, ''))];
+    const phase = Math.floor(progress * 24);
+    const displayed = letters.slice(letters.length - count).map((target, offset) => {
+      const index = letters.length - count + offset;
+      const ordinal = (letters.length - 1 - index) / Math.max(1, letters.length - 1);
+      if (target === ' ' || progress >= .32 + ordinal * .5) return target;
+      const glyph = pool[(index * 5 + phase * 3) % pool.length];
+      return target === target.toUpperCase() ? glyph.toUpperCase() : glyph;
+    }).join('');
+    // Native text width grows with the actual number of drawn characters.
+    // Full-width invisible placeholders would hide the count transition.
+    if (titleText.textContent !== displayed) titleText.textContent = displayed;
+    if (titleMetrics.textContent !== displayed) titleMetrics.textContent = displayed;
+    captionWord.style.width = '';
+    button.style.opacity = count ? '' : '0';
+    if (count && progress < 1) root.classList.add('is-scrambling');
+    else root.classList.remove('is-scrambling');
+  }
+
   return {
     set,
     finish,
+    present(state, { title, immediate = false, holdPointer = false } = {}) {
+      if (destroyed) return;
+      if (state.visible || state.links || holdPointer) {
+        if (state.reveal !== null && !reducedMotion.matches && !state.links) {
+          reveal(title, state.reveal);
+          caption.hidden = false;
+        } else if (project !== state.project) {
+          const direction = Math.sign(state.project - project) || 1;
+          set(title, { immediate: immediate || state.links, direction });
+        } else {
+          if (revealing) finish();
+          caption.hidden = false;
+        }
+        if (project !== state.project) {
+          button.dataset.project = String(state.project);
+          button.setAttribute('aria-label', `View ${title}`);
+          heading.setAttribute('aria-label', title);
+          project = state.project;
+        }
+        if (!state.visible && !holdPointer) caption.hidden = true;
+      } else {
+        this.hide();
+        project = -1;
+      }
+      // Crossing the selection midpoint must not remove a held drag target.
+      const accessible = state.interactive && titleText.textContent.length > 0;
+      const inert = !accessible && !holdPointer;
+      if (caption.inert !== inert) caption.inert = inert;
+      if (button.inert !== inert) button.inert = inert;
+      if (caption.getAttribute('aria-hidden') !== String(!accessible)) {
+        caption.setAttribute('aria-hidden', String(!accessible));
+      }
+    },
     pause() { cancelAnimationFrame(titleFrame); titleFrame = 0; },
     hide() {
-      if (!caption.hidden || titleFrame || titleSlots.length) finish();
+      if (!caption.hidden || titleFrame || titleSlots.length || revealing) finish();
       caption.hidden = true;
+      project = -1;
     },
-    get animating() { return titleFrame !== 0; },
+    get animating() { return titleFrame !== 0 || revealing; },
     destroy() { finish(); destroyed = true; }
   };
 }

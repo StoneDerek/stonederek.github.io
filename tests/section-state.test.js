@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { galleryFrame, settleProjectSwipe } from '../src/scripts/section-state.js';
+import { galleryFrame, galleryCaptionFrame, settleProjectSwipe } from '../src/scripts/section-state.js';
 
 test('the links space is reachable beyond the final project without inventing another project', () => {
   for (let position = -1; position < 8; position += .05) {
@@ -41,4 +41,37 @@ test('slow desktop swipes commit without travelling halfway across the screen', 
 test('gallery settling retains momentum and does not limit long drags to one project', () => {
   assert.equal(settleProjectSwipe({ start: 0, position: .3, velocity: .003, deltaX: -117, unit: 390 }), 1);
   assert.equal(settleProjectSwipe({ start: 0, position: 2.2, deltaX: -858, unit: 390, touch: true }), 2);
+});
+
+test('caption entry progresses continuously from the selection midpoint to the first project', () => {
+  const positions = [1.5, 1.5001, 1.55, 1.6, 1.75, 1.9, 1.9999];
+  let previous = -1;
+  for (const position of positions) {
+    const caption = galleryCaptionFrame(galleryFrame(position, 7), 2);
+    assert.ok(caption.reveal >= previous && caption.reveal < 1);
+    assert.equal(caption.project, 2);
+    previous = caption.reveal;
+  }
+  assert.equal(galleryCaptionFrame(galleryFrame(1.5, 7), 2).reveal, 0);
+  assert.equal(galleryCaptionFrame(galleryFrame(1.75, 7), 2).reveal, .5);
+});
+
+test('the midpoint does not request a completed title and reversing uses the same progress', () => {
+  const before = galleryCaptionFrame(galleryFrame(1.4999, 7), 2);
+  const after = galleryCaptionFrame(galleryFrame(1.5001, 7), 2);
+  assert.equal(before.visible, false); assert.equal(after.visible, true);
+  assert.equal(before.project, after.project);
+  assert.equal(before.reveal, 0); assert.ok(after.reveal < .001);
+  for (const position of [0, .5, 1, 1.499]) assert.equal(galleryCaptionFrame(galleryFrame(position, 7), 2).visible, false);
+});
+
+test('settled projects use normal title transitions and Links keeps its existing end visibility', () => {
+  for (const position of [2, 2.49, 2.51, 3, 4.8, 6, 6.49]) {
+    const caption = galleryCaptionFrame(galleryFrame(position, 7), 2);
+    assert.equal(caption.reveal, null); assert.equal(caption.visible, true); assert.equal(caption.interactive, true);
+  }
+  for (const position of [6.5, 7]) {
+    const caption = galleryCaptionFrame(galleryFrame(position, 7), 2);
+    assert.equal(caption.visible, false); assert.equal(caption.interactive, false); assert.equal(caption.links, true);
+  }
 });
