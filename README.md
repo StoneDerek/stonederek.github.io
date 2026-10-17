@@ -68,6 +68,12 @@ The case-study facts and sections are optional. Empty entries are omitted, and s
 
 Edit `src/data/site.json` for the name, header domain, email, LinkedIn URL, default title, and description. Styling lives in `src/styles/portfolio.css`; the shared app starts in `src/scripts/app.js` and uses `carousel.js`. Existing project transitions, menus, case-study rendering, favicons, and puzzle modules remain separate.
 
+## Sharing previews
+
+Home, About, Projects, and Résumé include page-specific descriptions, canonical URLs, Open Graph tags, and large-image card metadata. Their shared 1200 × 630 image is `public/social-preview.png`; the editable vector source is `src/assets/social-preview.svg`. After editing the vector, export its full canvas to that PNG. Keep the image dimensions and alternative text in `src/layouts/Layout.astro` in sync if the artwork changes.
+
+Canonical and image URLs use the configured production origin and base path, including custom domains and project-repository hosting. Project links use URL fragments, so sharing services receive the Projects page's preview rather than an individual article's title or artwork. Existing browser-tab titles still follow navigation within the gallery. Actual sharing-service cards cannot be checked until this revision is deployed.
+
 ## Try it locally
 
 Use Node.js 24 or newer:

@@ -21,7 +21,7 @@ const first = projects[0];
 const linksLogo = ['      _', '     | |', '   __| |___', '  / _` / __|', ' | (_| \\__ \\_', '  \\__,_|___(_)'].join('\n');
 const serialized = JSON.stringify(panels.map(panel => ({ ...panel, favicon: projectIcon(panel.palette) }))).replace(/</g, '\\u003c');
 ---
-<Layout title={`${site.name} — ${section === 'home' ? 'Portfolio' : section === 'about' ? 'About' : 'Projects'}`} description={section === 'projects' ? "Projects, experiments, and work in progress by Derek Stone." : "Lorem ipsum dolor sit amet, consectetur adipiscing elit."} favicon={projectIcon(palette)}>
+<Layout title={`${site.name} — ${section === 'home' ? 'Portfolio' : section === 'about' ? 'About' : 'Projects'}`} description={section === 'projects' ? `Projects, experiments, and work in progress by ${site.name}.` : section === 'about' ? `About ${site.name}.` : site.description} favicon={projectIcon(palette)}>
   <main id="portfolio" class="portfolio" data-base={base} data-panel-kind={panels[selected].kind} data-initial-panel={selected} style={`--accent:${palette.accent};--ink:${palette.ink};--caption-color:${palette.caption || palette.accent}`}>
     <a class="skip-link" href={section === 'home' ? '#home-title' : section === 'about' ? '#about-title' : '#project-caption'}>Skip to content</a>
 
