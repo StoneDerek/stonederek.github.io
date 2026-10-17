@@ -873,7 +873,7 @@ export function mountPortfolio() {
     suppressClickUntil = 0;
     if (event.target.closest('[data-end-link], [data-laser-control]')) return;
     const profile = event.target.closest('[data-profile-scroll]');
-    if (profile && (event.pointerType === 'mouse' || event.target.closest('a, button, summary, input, textarea, select'))) return;
+    if (profile && event.target.closest('a, button, summary, input, textarea, select, [contenteditable]')) return;
     stopDragFrame();
     stopWheel();
     stopAnimation();
@@ -888,7 +888,9 @@ export function mountPortfolio() {
       lastX: event.clientX, lastTime: performance.now(), velocity: 0, moved: false, axis: null, pointerTouch,
       touch: surface === stage && pointerTouch
     };
-    if (!profile) capture.setPointerCapture(event.pointerId);
+    // Mouse drags can leave the reading area; touch capture waits for a
+    // horizontal gesture so native vertical scrolling can still take over.
+    if (!profile || !pointerTouch) capture.setPointerCapture(event.pointerId);
   }
   function stopDragFrame() {
     cancelAnimationFrame(dragFrame);
@@ -957,7 +959,7 @@ export function mountPortfolio() {
   [stage, rail].forEach(surface => {
     listen(surface, 'selectstart', event => {
       const target = event.target instanceof Element ? event.target : event.target.parentElement;
-      if (!target?.closest('[data-profile-scroll]')) event.preventDefault();
+      if (!target?.closest('a, button, summary, input, textarea, select, [contenteditable]')) event.preventDefault();
     });
     listen(surface, 'pointermove', queueDrag);
     listen(surface, 'pointerup', event => endDrag(event));
