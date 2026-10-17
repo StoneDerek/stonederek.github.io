@@ -16,12 +16,7 @@ const location = gallery ? projects[0].title : page === 'about' ? site.name : 'I
     <summary aria-label={`Open navigation. ${page === 'home' ? 'Home' : gallery ? 'Projects' : 'About'}: ${location}`} aria-controls="project-navigation">
       <span class="menu-name">{site.header}</span>
       <span class="menu-status-row"><span class="menu-status"><span class="menu-location"><span class="menu-context">
-        {[
-          ['home', 'Home:', page === 'home'],
-          ['about', 'About:', page === 'about'],
-          ['work', 'Projects:', gallery],
-          ['project', 'Project:', false]
-        ].map(([context, label, current]) => <span class="menu-context-row" data-menu-context={context} aria-hidden={!current} style={`opacity:${current ? 1 : 0};transform:translateY(${current ? 0 : -100}%)`}>{label}</span>)}
+        <span class="menu-context-row" data-menu-context>{page === 'home' ? 'Home:' : gallery ? 'Projects:' : 'About:'}</span>
       </span><span class="menu-title-window"><span data-menu-title>{location}</span></span></span><span class="menu-open-label" aria-hidden="true">Menu</span></span><svg class="menu-icon" viewBox="0 0 16 16" aria-hidden="true"><path class="menu-bars" d="M3 4h10M3 8h10M3 12h10" /><path class="menu-cross" d="m4 4 8 8m0-8-8 8" /></svg></span>
     </summary>
     <div class="menu-body">

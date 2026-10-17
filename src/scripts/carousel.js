@@ -1,6 +1,7 @@
 import { settleTiles, canAnimateTiles, captureProjectBackdrop, articleRevealOrigin } from './project-transition.js';
 import { mountProjectMenu } from './project-menu.js';
 import { mountSiteMenu } from './site-menu.js';
+import { mountMenuLabel } from './menu-label.js';
 import { createProjectRequests } from './project-navigation.js';
 import { mountProjectFavicon } from './favicon.js';
 import { resolveGalleryLocation, galleryAddress, sectionForPanel } from './gallery-location.js';
@@ -53,12 +54,11 @@ export function mountPortfolio() {
   const projectPage = projectView.querySelector('.project-page');
   const gallerySurfaces = [...root.querySelectorAll('.carousel, .filmstrip, .mobile-controls')];
   const endSurfaces = gallerySurfaces.filter(surface => surface.classList.contains('filmstrip') || surface.classList.contains('mobile-controls'));
-  const homeLabel = menu.querySelector('[data-menu-context="home"]');
-  const workLabel = menu.querySelector('[data-menu-context="work"]');
-  const projectLabel = menu.querySelector('[data-menu-context="project"]');
-  const aboutLabel = menu.querySelector('[data-menu-context="about"]');
+  const contextLabel = menu.querySelector('[data-menu-context]');
   const menuTitle = menu.querySelector('[data-menu-title]');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const contextMotion = mountMenuLabel(contextLabel, reducedMotion);
+  const menuTitleMotion = mountMenuLabel(menuTitle, reducedMotion);
   const projectNavigation = mountProjectMenu(projectsMenu, reducedMotion, { signal: controller.signal, persist: true });
   const visibleMenuChoices = () => menuChoices.filter(choice => choice === projectsToggle || !projectsMenu.contains(choice) || projectNavigation.expanded);
   const previousButton = root.querySelector('[data-step="-1"]');
@@ -109,11 +109,6 @@ export function mountPortfolio() {
   let projectOrigin = { x: .5, y: .5 };
   let projectReturnFocus = captionButton;
   let menuContext = null;
-  let contextAnimations = [];
-  let contextGeneration = 0;
-  let menuTitleAnimation = null;
-  let menuTitleGeneration = 0;
-  let desiredMenuTitle = menuTitle.textContent;
   const titleMeasure = document.createElement('canvas').getContext('2d');
   let measuredFont = '';
   const glyphWidths = new Map();
@@ -176,64 +171,14 @@ export function mountPortfolio() {
     const section = sectionForPanel(active);
     const context = typeof next === 'boolean' ? next ? 'project' : section === 'projects' ? 'gallery' : section : next;
     if (menuContext === context && !immediate) return;
-    const labels = [homeLabel, aboutLabel, workLabel, projectLabel];
-    const selected = ['home', 'about', 'gallery', 'project'].indexOf(context);
-    const generation = ++contextGeneration;
-    const starts = labels.map(label => {
-      const style = getComputedStyle(label);
-      return { opacity: style.opacity, transform: style.transform };
-    });
-    contextAnimations.forEach(animation => animation.cancel());
-    contextAnimations = [];
     menuContext = context;
-    labels.forEach((label, i) => label.setAttribute('aria-hidden', String(i !== selected)));
     updateMenuName();
-    const ends = labels.map((_, i) => ({ opacity: i === selected ? '1' : '0',
-      transform: i === selected ? 'translateY(0)' : `translateY(${i < selected ? '-100%' : '100%'})` }));
-    const finish = () => {
-      if (generation !== contextGeneration) return;
-      labels.forEach((label, i) => Object.assign(label.style, ends[i]));
-      contextAnimations.forEach(animation => animation.cancel());
-      contextAnimations = [];
-    };
-    if (immediate || reducedMotion.matches || typeof menuTitle.animate !== 'function') { finish(); return; }
-    contextAnimations = labels.map((label, i) => label.animate([starts[i], ends[i]], {
-      duration: i === selected ? 260 : 220,
-      delay: (context === 'project' ? 100 : 50) + (i === selected ? 30 : 0),
-      easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'both'
-    }));
-    Promise.all(contextAnimations.map(animation => animation.finished.catch(() => {}))).then(finish);
+    contextMotion.set({ home: 'Home:', about: 'About:', gallery: 'Projects:', project: 'Project:' }[context], { immediate });
   }
 
-  async function setMenuTitle(title, { immediate = false } = {}) {
-    if (desiredMenuTitle === title && !immediate) return;
-    desiredMenuTitle = title;
-    const generation = ++menuTitleGeneration;
-    const style = getComputedStyle(menuTitle);
-    const start = { opacity: style.opacity, transform: style.transform };
-    menuTitleAnimation?.cancel();
-    menuTitleAnimation = null;
+  function setMenuTitle(title, options) {
     updateMenuName();
-    if (immediate || reducedMotion.matches || typeof menuTitle.animate !== 'function') {
-      menuTitle.textContent = title;
-      menuTitle.style.opacity = '';
-      menuTitle.style.transform = '';
-      return;
-    }
-    menuTitleAnimation = menuTitle.animate([start, { opacity: 0, transform: 'translateY(-100%)' }], {
-      duration: 120, easing: 'ease-in', fill: 'forwards'
-    });
-    await menuTitleAnimation.finished.catch(() => {});
-    if (generation !== menuTitleGeneration) return;
-    menuTitleAnimation.cancel();
-    menuTitle.textContent = title;
-    menuTitleAnimation = menuTitle.animate([
-      { opacity: 0, transform: 'translateY(100%)' }, { opacity: 1, transform: 'translateY(0)' }
-    ], { duration: 200, easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'both' });
-    await menuTitleAnimation.finished.catch(() => {});
-    if (generation !== menuTitleGeneration) return;
-    menuTitleAnimation.cancel();
-    menuTitleAnimation = null;
+    return menuTitleMotion.set(title, options);
   }
 
   function announce() {
@@ -1029,7 +974,7 @@ export function mountPortfolio() {
     if (reducedMotion.matches) {
       projectAbort?.abort();
       setMenuContext(menuContext, { immediate: true });
-      setMenuTitle(desiredMenuTitle, { immediate: true });
+      menuTitleMotion.finish();
       projectNavigation.set(projectNavigation.expanded, { immediate: true });
     }
     if (reducedMotion.matches && titleFrame) finishTitle();
@@ -1075,10 +1020,8 @@ export function mountPortfolio() {
     stopAnimation();
     stopDragFrame();
     [liftFrame, titleFrame, resizeFrame].forEach(cancelAnimationFrame);
-    contextGeneration += 1;
-    menuTitleGeneration += 1;
-    contextAnimations.forEach(animation => animation.cancel());
-    menuTitleAnimation?.cancel();
+    contextMotion.destroy();
+    menuTitleMotion.destroy();
     menuNavigation.set(false, { immediate: true });
     projectNavigation.set(false, { immediate: true, remember: false });
     if (drag?.capture.hasPointerCapture(drag.id)) drag.capture.releasePointerCapture(drag.id);
