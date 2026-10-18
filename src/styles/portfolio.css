@@ -237,7 +237,11 @@ dialog::backdrop { background: #050b1bc9; }
   .filmstrip { bottom: calc(78px + env(safe-area-inset-bottom)); height: 70px; }
   .mobile-controls { position: absolute; z-index: 2; bottom: calc(12px + env(safe-area-inset-bottom)); left: max(12px, calc((100% - 320px) / 2)); display: grid; grid-template-columns: 48px minmax(0, 1fr) 48px; gap: 8px; width: min(320px, calc(100% - 24px)); }
   .mobile-controls button { min-height: 48px; border-radius: 6px; background: var(--accent); color: var(--ink); transition: background-color 320ms ease, color 320ms ease; }
-  .mobile-arrow { display: grid; place-items: center; padding: 0; }
+  .mobile-arrow { grid-row: 1; display: grid; place-items: center; padding: 0; }
+  .mobile-arrow[data-step="-1"] { grid-column: 1; }
+  .mobile-arrow[data-step="1"] { grid-column: 3; }
+  .mobile-inspect, .mobile-panel-count { grid-area: 1 / 2; }
+  .mobile-panel-count { align-self: center; justify-self: center; color: var(--muted); }
   .mobile-arrow svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .mobile-arrow:disabled { opacity: .35; cursor: default; }
   .mobile-controls button:active:not(:disabled) { transform: scale(.96); }
