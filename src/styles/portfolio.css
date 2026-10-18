@@ -20,7 +20,9 @@ button { font: inherit; cursor: pointer; border: 0; }
 .site-menu { transition: background-color 320ms ease; }
 .site-header[data-palette-motion], .site-header[data-palette-motion] .site-menu { transition: none; }
 .site-menu:not([open]) > .menu-body { display: none; }
-.menu-body { display: flex; flex-direction: column; height: calc(var(--menu-height) - var(--menu-summary-height, 64px)); overflow-y: auto; overscroll-behavior: contain; }
+.menu-body { display: flex; flex-direction: column; height: calc(var(--menu-height) - var(--menu-summary-height, 64px)); overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; touch-action: pan-y pinch-zoom; }
+.site-menu[data-animating] { will-change: clip-path; }
+.site-menu[data-animating] > .menu-body { will-change: opacity, transform; }
 .site-menu > summary { position: relative; display: flex; flex-direction: column; justify-content: center; flex: 0 0 auto; min-height: 64px; padding: 11px 14px; list-style: none; cursor: pointer; font: inherit; }
 .site-menu summary::-webkit-details-marker { display: none; }
 .menu-name { font: inherit; font-weight: 700; }
@@ -143,7 +145,7 @@ h1 { margin: 0; font-size: 14px; line-height: 1.25; font-weight: 600; }
 .caption-link:focus-visible::before { opacity: 1; }
 @media (hover: hover) { .caption-link:hover { color: var(--ink); } .caption-link:hover::before { opacity: 1; } .caption-link:hover .caption-arrow { transform: translate(1px, -1px); } }
 .filmstrip { position: absolute; z-index: 2; bottom: max(24px, env(safe-area-inset-bottom)); left: var(--strip-inset); right: var(--strip-inset); height: 64px; }
-.thumbnail-rail { position: relative; width: 100%; height: 100%; padding-block: 3px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; overscroll-behavior-x: contain; touch-action: pan-y pinch-zoom; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.thumbnail-rail { position: relative; width: 100%; height: 100%; padding-block: 3px; overflow: hidden; overflow-anchor: none; scrollbar-width: none; overscroll-behavior-x: contain; touch-action: pan-y pinch-zoom; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .thumbnail-rail::-webkit-scrollbar { display: none; }
 .thumbnail-track { width: max-content; height: 100%; padding-inline: var(--rail-padding, calc((100vw - var(--strip-inset) * 2 - var(--thumb-width)) / 2)); }
 .thumbnail-group { display: flex; align-items: flex-start; gap: 0; height: 100%; }
@@ -356,7 +358,8 @@ dialog::backdrop { background: #050b1bc9; }
 }
 /* Home and About are ordinary gallery panels with native vertical scrolling. */
 body:has(#portfolio) { overflow: hidden; }
-.portfolio:is([data-panel-kind="home"], [data-panel-kind="about"])::after { content: ''; position: absolute; z-index: 1; inset: auto 0 0; height: 120px; background: var(--canvas); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); -webkit-mask-image: linear-gradient(transparent, rgb(0 0 0 / .06) 8px, rgb(0 0 0 / .22) 16px, rgb(0 0 0 / .58) 24px, #000 32px); mask-image: linear-gradient(transparent, rgb(0 0 0 / .06) 8px, rgb(0 0 0 / .22) 16px, rgb(0 0 0 / .58) 24px, #000 32px); pointer-events: none; }
+/* Keep the reading fade inside the same clipped, transformed card as its text. */
+.profile-panel > .artwork-card::after { content: ''; position: absolute; z-index: 1; inset: auto 0 0; height: 120px; background: var(--canvas); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); -webkit-mask-image: linear-gradient(transparent, rgb(0 0 0 / .06) 8px, rgb(0 0 0 / .22) 16px, rgb(0 0 0 / .58) 24px, #000 32px); mask-image: linear-gradient(transparent, rgb(0 0 0 / .06) 8px, rgb(0 0 0 / .22) 16px, rgb(0 0 0 / .58) 24px, #000 32px); pointer-events: none; }
 .profile-panel { color: var(--page-text); }
 .profile-scroll { width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; padding-bottom: 140px; cursor: grab; -webkit-touch-callout: default; touch-action: pan-y pinch-zoom; background: var(--canvas); }
 .profile-panel .profile-main { padding-top: 150px; }
@@ -372,12 +375,12 @@ body:has(#portfolio) { overflow: hidden; }
 @media (max-width: 600px), (pointer: coarse) and (max-height: 500px) {
   .profile-scroll { padding-bottom: calc(200px + env(safe-area-inset-bottom)); }
   .profile-panel .profile-main { padding-top: 130px; }
-  .portfolio:is([data-panel-kind="home"], [data-panel-kind="about"])::after { height: calc(180px + env(safe-area-inset-bottom)); }
+  .profile-panel > .artwork-card::after { height: calc(180px + env(safe-area-inset-bottom)); }
 }
 @media (max-height: 480px) {
   .profile-panel .profile-main { padding-top: 96px; }
-  .portfolio:is([data-panel-kind="home"], [data-panel-kind="about"])::after { height: 108px; }
+  .profile-panel > .artwork-card::after { height: 108px; }
 }
 @media (max-width: 600px) and (max-height: 480px), (pointer: coarse) and (max-height: 480px) {
-  .portfolio:is([data-panel-kind="home"], [data-panel-kind="about"])::after { height: calc(166px + env(safe-area-inset-bottom)); }
+  .profile-panel > .artwork-card::after { height: calc(166px + env(safe-area-inset-bottom)); }
 }

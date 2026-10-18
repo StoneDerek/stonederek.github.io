@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { galleryFrame, settleProjectSwipe } from '../src/scripts/section-state.js';
+import { galleryFrame, galleryCaptionFrame, settleProjectSwipe } from '../src/scripts/section-state.js';
 
 test('the links space is reachable beyond the final project without inventing another project', () => {
   for (let position = -1; position < 8; position += .05) {
@@ -41,4 +41,31 @@ test('slow desktop swipes commit without travelling halfway across the screen', 
 test('gallery settling retains momentum and does not limit long drags to one project', () => {
   assert.equal(settleProjectSwipe({ start: 0, position: .3, velocity: .003, deltaX: -117, unit: 390 }), 1);
   assert.equal(settleProjectSwipe({ start: 0, position: 2.2, deltaX: -858, unit: 390, touch: true }), 2);
+});
+
+test('the profile/project selection boundary triggers one caption request, without a second progress clock', () => {
+  const before = galleryCaptionFrame(galleryFrame(1.499, 7), 2);
+  const after = galleryCaptionFrame(galleryFrame(1.501, 7), 2);
+  assert.equal(before.visible, false); assert.equal(after.visible, true);
+  assert.equal(before.project, after.project);
+  assert.equal('reveal' in after, false);
+  assert.deepEqual(after, galleryCaptionFrame(galleryFrame(1.9, 7), 2));
+});
+
+test('profile panels leave caption interaction disabled', () => {
+  for (const position of [0, .5, 1, 1.499]) {
+    const caption = galleryCaptionFrame(galleryFrame(position, 7), 2);
+    assert.equal(caption.visible, false); assert.equal(caption.interactive, false);
+  }
+});
+
+test('selected project captions and Links retain their existing visibility destinations', () => {
+  for (const position of [1.5, 2, 2.49, 2.51, 3, 4.8, 6, 6.49]) {
+    const caption = galleryCaptionFrame(galleryFrame(position, 7), 2);
+    assert.equal(caption.visible, true); assert.equal(caption.interactive, true);
+  }
+  for (const position of [6.5, 7]) {
+    const caption = galleryCaptionFrame(galleryFrame(position, 7), 2);
+    assert.equal(caption.visible, false); assert.equal(caption.interactive, false); assert.equal(caption.links, true);
+  }
 });
