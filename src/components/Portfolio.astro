@@ -113,7 +113,8 @@ const serialized = JSON.stringify(panels.map(panel => ({ ...panel, favicon: proj
 
     <nav class="mobile-controls" aria-label="Panel controls">
       <button type="button" class="mobile-arrow" data-step="-1" aria-label="Previous panel" disabled={selected === 0}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" /></svg></button>
-      <button type="button" class="mobile-inspect" data-action="project" aria-controls={selected < firstProjectPanel ? `site-panel-${panels[selected + 1].slug}` : 'project-article'}><span class="mobile-inspect-label"><span data-mobile-action-label>{selected < firstProjectPanel ? selected === 0 ? 'About me' : 'Explore projects' : 'View project'}</span> <svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 12 12 4M5 4h7v7" /></svg></span><span class="mobile-count" data-mobile-count>{String(selected + 1).padStart(2, '0')} / {String(panels.length).padStart(2, '0')}</span></button>
+      <span class="mobile-count mobile-panel-count" data-mobile-panel-count hidden={selected >= firstProjectPanel}>{String(selected + 1).padStart(2, '0')} / {String(panels.length).padStart(2, '0')}</span>
+      <button type="button" class="mobile-inspect" data-action="project" aria-controls="project-article" aria-label={`View ${first.title}`} hidden={selected < firstProjectPanel}><span class="mobile-inspect-label">View project <svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 12 12 4M5 4h7v7" /></svg></span><span class="mobile-count" data-mobile-count>{String(selected + 1).padStart(2, '0')} / {String(panels.length).padStart(2, '0')}</span></button>
       <button type="button" class="mobile-arrow" data-step="1" aria-label="Next panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7" /></svg></button>
     </nav>
 

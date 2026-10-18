@@ -66,6 +66,7 @@ export function mountPortfolio() {
   const previousButton = root.querySelector('[data-step="-1"]');
   const nextButton = root.querySelector('[data-step="1"]');
   const mobileInspect = root.querySelector('.mobile-inspect');
+  const mobilePanelCount = root.querySelector('[data-mobile-panel-count]');
   const detailMedia = root.querySelector('[data-detail-media]');
   const caseStudy = mountProjectCaseStudy(root.querySelector('[data-detail-case-study]'), {
     base: detailMedia.dataset.assetBase, reducedMotion
@@ -272,11 +273,14 @@ export function mountPortfolio() {
     });
     if (!projectOpen && !projectRequests.busy) setMenuContext(panel.kind === 'project' ? 'gallery' : panel.kind, { immediate: previous < 0, direction });
     updateGalleryIdentity({ immediate: previous < 0, direction });
-    setText('[data-mobile-count]', `${String(active + 1).padStart(2, '0')} / ${String(panels.length).padStart(2, '0')}`);
-    const action = panel.kind === 'home' ? 'About me' : panel.kind === 'about' ? 'Explore projects' : 'View project';
-    setText('[data-mobile-action-label]', action);
-    mobileInspect.setAttribute('aria-label', panel.kind === 'project' ? `View ${panel.title}` : action);
-    mobileInspect.setAttribute('aria-controls', panel.kind === 'project' ? 'project-article' : `site-panel-${panels[active + 1].slug}`);
+    const count = `${String(active + 1).padStart(2, '0')} / ${String(panels.length).padStart(2, '0')}`;
+    setText('[data-mobile-count]', count);
+    setText('[data-mobile-panel-count]', count);
+    const hasProjectAction = panel.kind === 'project';
+    if (!hasProjectAction && mobileInspect.contains(document.activeElement)) root.querySelector('.carousel').focus({ preventScroll: true });
+    mobileInspect.hidden = !hasProjectAction;
+    mobilePanelCount.hidden = hasProjectAction;
+    if (hasProjectAction) mobileInspect.setAttribute('aria-label', `View ${panel.title}`);
     if (!projectOpen) skipLink.href = panel.kind === 'home' ? '#home-title' : panel.kind === 'about' ? '#about-title' : '#project-caption';
     updateBounds(root.classList.contains('is-moving') ? Math.round(destination) : active);
   }
@@ -749,7 +753,7 @@ export function mountPortfolio() {
     }
     const actionButton = event.target.closest('[data-action]');
     if (actionButton?.dataset.action === 'project') {
-      if (panels[active].kind !== 'project') { navigatePanel(active + 1); return; }
+      if (panels[active].kind !== 'project') return;
       closeMenu();
       requestProject(Number(actionButton.dataset.project ?? active), {
         origin: clickOrigin(event, actionButton), returnFocus: actionButton
