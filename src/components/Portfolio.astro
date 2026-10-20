@@ -36,7 +36,7 @@ const serialized = JSON.stringify(panels.map(panel => ({ ...panel, favicon: proj
           <section id={`site-panel-${panel.slug}`} class:list={['artwork-slide', { 'is-active': index === selected, 'profile-panel': panel.kind !== 'project' }]} data-slide={index} data-panel-kind={panel.kind} aria-label={panel.title} aria-roledescription="slide" aria-hidden={index !== selected} inert={index !== selected} style={`--gallery-order:${index}`}>
             <div class="artwork-card">
             {panel.kind === 'project' ? (
-              <img src={url(panel.image)} alt={panel.imageAlt} width="1920" height="1200" style={`object-position:${panel.position}`} loading={index < firstProjectPanel + 2 ? 'eager' : 'lazy'} fetchpriority={index === selected ? 'high' : 'auto'} decoding="async" draggable="false" />
+              <img src={url(panel.image)} alt={panel.imageAlt} width="1920" height="1200" style={`object-position:${panel.position}`} loading={Math.abs(index - selected) <= 1 ? 'eager' : 'lazy'} fetchpriority={index === selected ? 'high' : 'auto'} decoding="async" draggable="false" />
             ) : (
               <div class:list={['profile-scroll', 'profile-shell', `${panel.kind}-shell`]} data-profile-scroll tabindex="-1">
                 <div class:list={['profile-main', `${panel.kind}-main`]}>

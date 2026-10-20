@@ -1,4 +1,14 @@
-# Portfolio continuation — 7 October 2026
+# Portfolio continuation
+
+## Current reliability checkpoint
+
+Use `README.md` and the current source for the active navigation model: Home → About → five project panels → hidden Links, in one persistent gallery. The earlier section-navigation notes below describe superseded implementations.
+
+The reliability pass fixes interrupted swipes on resize/visibility changes, an incorrect return URL when closing an article before it finishes opening, and intermediate thumbnail-wheel positions entering browser history. Initial cover loading now follows the actual entry panel and adjacent covers. Content, artwork, palettes, and animation timings are preserved.
+
+Validation: 136 unit tests plus 15 production-DOM flow tests, production build, and offline export. The flow suite covers routes, controls, touch cancellation, menu focus, articles, history, anchors, preview navigation, compiled local references, and image warming. `npm run test:flows` builds then runs that suite. The deployment workflow runs both test suites before publishing. DOM geometry is simulated; this pass does not include fresh browser rendering or physical-device verification.
+
+## Historical checkpoint — 7 October 2026
 
 Repository: `StoneDerek/stonederek.github.io`. Live URL: https://stonederek.github.io/. A push to `main` runs the existing GitHub Pages workflow; check deployment before reporting a change as live.
 

@@ -7,6 +7,7 @@
     "dev": "astro dev --host 0.0.0.0",
     "build": "astro build",
     "test": "node --test",
+    "test:flows": "npm run build && node --test checks/portfolio-flows.mjs",
     "bench:transition": "node scripts/benchmark-transition.mjs",
     "preview": "astro preview --host 0.0.0.0",
     "export:preview": "node scripts/export-preview.mjs"
@@ -18,6 +19,7 @@
     "node": ">=24"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "happy-dom": "21.0.3"
   }
 }

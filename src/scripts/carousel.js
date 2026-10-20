@@ -683,7 +683,10 @@ export function mountPortfolio() {
     cancelDrag();
     const selected = index === null ? null : Math.max(firstProjectPanel, Math.round(clamp(index)));
     if (selected !== null) pendingPanel = null;
-    if (!options.skipHistory) writeAddress(selected === null ? Math.round(position) : selected, {
+    // During opening, the outgoing panel stays visible until the article covers
+    // it. Closing must address the article's return cover, not that old panel.
+    const returnPanel = pendingPanel ?? (hasDialog() ? articleIndex : Math.round(position));
+    if (!options.skipHistory) writeAddress(selected === null ? returnPanel : selected, {
       article: selected !== null, replace: selected === null
     });
     return projectRequests.request({ index: selected, ...options });
@@ -876,7 +879,7 @@ export function mountPortfolio() {
     event.preventDefault();
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rail.clientWidth : 1;
     wheelPosition = clamp((wheelPosition ?? position) + delta * unit / stride);
-    animateTo(wheelPosition, { response: 140, announceSelection: false });
+    animateTo(wheelPosition, { response: 140, announceSelection: false, history: false });
     clearTimeout(wheelTimer);
     wheelTimer = setTimeout(() => {
       const next = Math.round(wheelPosition);
@@ -922,8 +925,12 @@ export function mountPortfolio() {
 
   listen(window, 'resize', () => {
     projectAbort?.abort();
+    const interrupted = Boolean(drag) || wheelPosition !== null;
+    const target = Math.round(drag ? position : destination);
     cancelDrag();
-    animateLift(0);
+    stopWheel();
+    if (interrupted) animateTo(target, { velocity: 0 });
+    else animateLift(0);
     cancelAnimationFrame(resizeFrame);
     resizeFrame = requestAnimationFrame(measure);
   });
@@ -942,10 +949,12 @@ export function mountPortfolio() {
   listen(document, 'visibilitychange', () => {
     if (!document.hidden) return;
     projectAbort?.abort();
+    const interrupted = Boolean(drag) || wheelPosition !== null || Boolean(animationFrame);
+    const target = Math.round(drag ? position : destination);
     cancelDrag();
     stopWheel();
     if (menuNavigation.animating) menuNavigation.set(menuNavigation.expanded, { immediate: true });
-    if (animationFrame) animateTo(Math.round(destination), { immediate: true });
+    if (interrupted) animateTo(target, { immediate: true });
     if (captionMotion.animating) captionMotion.finish();
     if (liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
   });
