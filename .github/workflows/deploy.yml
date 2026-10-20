@@ -24,6 +24,10 @@ jobs:
         uses: withastro/action@v6
         with:
           node-version: 24
+      - name: Check portfolio behavior before publishing
+        run: |
+          npm test
+          node --test checks/portfolio-flows.mjs
 
   deploy:
     needs: build

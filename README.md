@@ -88,6 +88,7 @@ For production validation and a downloadable preview:
 ```sh
 npm test
 npm run build
+npm run test:flows
 npm run export:preview
 ```
 
@@ -108,6 +109,10 @@ The existing repository is `StoneDerek/stonederek.github.io`, published at `http
 `astro.config.mjs` derives the base path for a user-site or project repository. `PORTFOLIO_SITE` and `PORTFOLIO_BASE` support a custom domain/base path. Dependencies are pinned in `package-lock.json`; no backend or paid services are required.
 
 ## Verification and performance
+
+The reliability pass adds 15 production-DOM flow tests to the 136 existing unit tests. Run `npm run test:flows` to rebuild and exercise direct panel/article URLs, thumbnails, mobile controls, keyboard navigation, menu focus and dismissal, touch direction and cancellation, About anchors and retained scroll positions, article replacement and interrupted closing, rapid requests, Back/Forward, offline navigation messages, local asset/reference integrity, and image warming. These tests use Happy DOM with supplied geometry and timing; they do not establish browser rendering, real-device gesture feel, canvas rendering, or measured network performance. The existing GitHub Pages workflow runs both suites after building and before deployment.
+
+Resizing or hiding the page during a held swipe now settles the nearest panel instead of leaving the track stranded between panels. Closing during an article opening uses that article's return-cover URL. Thumbnail wheel gestures write history only once they settle, keeping intermediate positions out of Back navigation. Initial cover loading is scoped to the entry panel and its neighbors; Home no longer explicitly requests two distant covers eagerly, and the existing controller warms covers as their destination approaches. Native lazy-loading thresholds still depend on the browser.
 
 All 136 automated tests pass, covering panel/URL round trips, base paths, direct articles and About anchors, preview addresses, native touch ownership and pointer cancellation, gesture direction locking, tap preservation, final release coordinates, pinch/cancellation/reset/cleanup, panel and strip settling, timed character entry/exit for clicks and drags, caption entry/measurement/reversals/cleanup, menu clipping/reversal/scroll reset, menu/request interruption, header-label reversals and cleanup, article masks and cleanup, palette contrast, deferred appearance, and the puzzle. The exporter also parses generated scripts to reject invalid embedded JavaScript.
 
