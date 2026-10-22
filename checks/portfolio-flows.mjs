@@ -110,9 +110,69 @@ test('all direct panel and article URLs mount one persistent portfolio with matc
       assert.equal(s.panel, panel, address);
       assert.equal(s.find('[data-project-view]').hidden, article === null, address);
       assert.equal(s.document.querySelectorAll('#portfolio').length, 1);
+      assert.equal(s.document.querySelector('link[rel="icon"]').getAttribute('href'), '/favicon.svg', address);
       if (article !== null) assert.equal(Number(s.article), article, address);
     } finally { await s.close(); }
   }
+});
+
+test('the static favicon stays untouched across gallery, article and Links navigation', async () => {
+  const s = await scene();
+  const icon = s.document.querySelector('link[rel="icon"]');
+  const mutations = [];
+  const observer = new s.window.MutationObserver(records => mutations.push(...records));
+  observer.observe(icon, { attributes: true });
+  try {
+    for (let index = 0; index < s.panels.length; index++) s.click(`[data-thumbnail="${index}"]`);
+    s.click('.caption-link'); await s.flush();
+    s.click('[data-menu-project="2"]'); await s.flush();
+    s.click('.back-button'); await s.flush();
+    s.key('End'); s.key('Home');
+    mutations.push(...observer.takeRecords());
+    assert.equal(s.document.querySelector('link[rel="icon"]'), icon);
+    assert.equal(icon.getAttribute('href'), '/favicon.svg');
+    assert.equal(mutations.length, 0, 'navigation must not rewrite the browser tab icon');
+  } finally { observer.disconnect(); await s.close(); }
+});
+
+test('a held drag and its settling animation update panel state only when selection changes', async () => {
+  const s = await scene('/projects/', { reduced: false });
+  const mutations = [];
+  const observer = new s.window.MutationObserver(records => mutations.push(...records));
+  observer.observe(s.root, { attributes: true, attributeFilter: ['data-panel', 'data-panel-kind'] });
+  try {
+    s.pointer('pointerdown', 330, '.caption-link');
+    s.pointer('pointermove', 80, '.caption-link');
+    await s.tick(112);
+    s.pointer('pointerup', 80, '.caption-link');
+    await s.tick();
+    mutations.push(...observer.takeRecords());
+    assert.equal(s.panel, 3);
+    assert.equal(s.find('[data-gallery-track]').style.transform, 'translateX(-1170px)');
+    assert.equal(s.find('.caption-link').getAttribute('aria-label'), `View ${s.panels[3].title}`);
+    assert.equal(s.find('.project-caption').inert, false);
+    assert.equal(s.frames, 0, 'both movement and lift must finish');
+    assert.equal(mutations.filter(record => record.attributeName === 'data-panel').length, 1);
+    assert.equal(mutations.filter(record => record.attributeName === 'data-panel-kind').length, 0);
+  } finally { observer.disconnect(); await s.close(); }
+});
+
+test('resizing a settled gallery realigns the rail when thumbnail sizing changes', async () => {
+  const s = await scene('/projects/');
+  try {
+    assert.equal(s.find('.thumbnail-rail').scrollLeft, 176);
+    const previousStyle = globalThis.getComputedStyle;
+    globalThis.getComputedStyle = node => new Proxy(previousStyle(node), { get(target, key) {
+      return key === 'width' && node.matches('.thumbnail') ? '104px' : Reflect.get(target, key);
+    } });
+    Object.defineProperty(s.find('[data-stage]'), 'clientWidth', { value: 640, configurable: true });
+    s.window.dispatchEvent(new s.window.Event('resize'));
+    await s.tick();
+    assert.equal(s.panel, 2);
+    assert.equal(s.find('.thumbnail-rail').scrollLeft, 208);
+    assert.equal(s.find('[data-gallery-track]').style.transform, 'translateX(-1280px)');
+    assert.equal(s.frames, 0);
+  } finally { await s.close(); }
 });
 
 test('thumbnails, mobile controls and keyboard traverse all panels without remounting', async () => {

@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import { initializeTheme, mountTheme, themeStorageKey } from '../src/scripts/theme.js';
 
 function bootstrap({ saved = null, dark = false, blocked = false, preview, previewSystem, mediaMissing = false, enabled = true } = {}) {
-  const meta = {}, icon = { dataset: { themeLightFavicon: 'light-icon', themeDarkFavicon: 'dark-icon' } };
+  const meta = {}, icon = { href: '/favicon.svg' };
   const document = { documentElement: { dataset: {} }, querySelector: selector => selector.includes('meta') ? meta : icon };
   const window = { localStorage: { getItem() { if (blocked) throw new Error('blocked'); return saved; } },
     ...(mediaMissing ? {} : { matchMedia: () => ({ matches: dark }) }), __PORTFOLIO_PREVIEW_THEME_CHOICE__: preview, __PORTFOLIO_PREVIEW_SYSTEM_DARK__: previewSystem };
@@ -19,7 +19,7 @@ test('the inline startup resolves system and saved preferences before painting',
     const expected = ['light', 'dark'].includes(saved) ? saved : dark ? 'dark' : 'light';
     assert.equal(s.document.documentElement.dataset.theme, expected);
     assert.equal(s.meta.content, expected === 'dark' ? '#17171b' : '#ffffff');
-    assert.equal(s.icon.href, `${expected}-icon`);
+    assert.equal(s.icon.href, '/favicon.svg');
   }
 });
 
@@ -29,7 +29,7 @@ test('deferred appearance stays light despite saved, system, or preview dark pre
     assert.equal(s.document.documentElement.dataset.theme, 'light');
     assert.equal(s.document.documentElement.dataset.themePreference, 'light');
     assert.equal(s.meta.content, '#ffffff');
-    assert.equal(s.icon.href, 'light-icon');
+    assert.equal(s.icon.href, '/favicon.svg');
   }
 });
 
