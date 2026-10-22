@@ -4,7 +4,6 @@ import { mountSiteMenu } from './site-menu.js';
 import { mountMenuLabel } from './menu-label.js';
 import { mountProjectCaption } from './project-caption.js';
 import { createProjectRequests } from './project-navigation.js';
-import { mountProjectFavicon } from './favicon.js';
 import { resolveGalleryLocation, galleryAddress, sectionForPanel } from './gallery-location.js';
 import { firstProjectPanel } from '../data/gallery-panels.js';
 import { galleryFrame, galleryCaptionFrame, settleProjectSwipe } from './section-state.js';
@@ -31,7 +30,6 @@ export function mountPortfolio() {
   const initial = resolveGalleryLocation(readAddress(), panels);
   let lastAddress = readAddress().pathname + readAddress().hash;
   let pendingPanel = null;
-  const updateFavicon = mountProjectFavicon(document.querySelector('[data-project-favicon]'));
   const slides = [...root.querySelectorAll('[data-slide]')];
   const slideImages = slides.map(slide => slide.querySelector('img'));
   const captionButton = root.querySelector('.caption-link');
@@ -84,7 +82,6 @@ export function mountPortfolio() {
   };
   const hasDialog = () => projectOpen || projectRequests.busy;
   let active = -1;
-  let faviconIndex = initial.panel;
   let endOpen = false;
   let position = initial.panel;
   let destination = position;
@@ -213,17 +210,6 @@ export function mountPortfolio() {
     setMenuTitle(links ? 'Links' : project.kind === 'home' ? 'Introduction' : project.kind === 'about' ? siteHeader.dataset.owner : project.title, { immediate, direction });
   }
 
-  function selectGalleryFavicon(index) {
-    faviconIndex = Math.round(clampPosition(index));
-    updateFavicon(faviconIndex === end ? endPanel.dataset.favicon : panels[faviconIndex].favicon);
-  }
-
-  function followGalleryFavicon(value) {
-    // The incoming card wins after 55% travel; reversing must pass back below
-    // 45%. Small movements around the midpoint cannot flash the tab icon.
-    if (Math.abs(value - faviconIndex) > .55) selectGalleryFavicon(value);
-  }
-
   function updateEnd(progress, links) {
     if (progress > 0) laser.prepare();
     const focused = document.activeElement;
@@ -258,7 +244,6 @@ export function mountPortfolio() {
     active = index;
     prepareImages(active);
     const panel = panels[active];
-    root.dataset.panelKind = panel.kind;
     if (focusedThumbnail) thumbnails[active].focus({ preventScroll: true });
     slides.forEach((slide, i) => {
       slide.classList.toggle('is-active', i === active);
@@ -293,15 +278,19 @@ export function mountPortfolio() {
     }
   }
 
-  function render(value) {
-    const frame = galleryFrame(value, panels.length);
-    const initialRender = active < 0;
-    position = frame.position;
+  function positionTrack() {
     const x = -position * (stageWidth - galleryInset);
     if (x !== renderedX) {
       galleryTrack.style.transform = `translateX(${x}px)`;
       renderedX = x;
     }
+  }
+
+  function render(value) {
+    const frame = galleryFrame(value, panels.length);
+    const initialRender = active < 0;
+    position = frame.position;
+    positionTrack();
     const scroll = Math.min(last, position) * stride;
     if (scroll !== renderedScroll) {
       rail.scrollLeft = scroll;
@@ -325,9 +314,10 @@ export function mountPortfolio() {
       immediate: initialRender,
       holdPointer: drag?.capture === captionButton || Boolean(drag?.nativeTouch && captionButton.contains(drag.target))
     });
-    root.dataset.panel = String(frame.links ? end : active);
-    root.dataset.panelKind = frame.links ? 'links' : panels[active].kind;
-    if (!root.classList.contains('is-moving')) followGalleryFavicon(position);
+    const panel = String(frame.links ? end : active);
+    const kind = frame.links ? 'links' : panels[active].kind;
+    if (root.dataset.panel !== panel) root.dataset.panel = panel;
+    if (root.dataset.panelKind !== kind) root.dataset.panelKind = kind;
   }
 
   function presentCards(value) {
@@ -348,8 +338,10 @@ export function mountPortfolio() {
       galleryTrack.style.setProperty('--gallery-radius', `${radius}px`);
       renderedRadius = radius;
     }
-    // A pending pointer sample will render with the new lift in this frame.
-    if (!dragFrame) render(position);
+    // Lift changes geometry only. Keep selection, captions and accessibility
+    // updates on the gallery's movement clock instead of running them twice.
+    // A pending pointer sample will position the track with this new inset.
+    if (!dragFrame) positionTrack();
   }
 
   function animateLift(target, { duration = 220 } = {}) {
@@ -414,14 +406,11 @@ export function mountPortfolio() {
     prepareImages(Math.round(destination));
     updateBounds(Math.round(destination));
     animateLift(0, { duration: immediate ? 0 : 280 });
-    // A click or released swipe has a known destination before the spring runs.
-    selectGalleryFavicon(destination);
     const from = position;
     const distance = Math.abs(destination - from);
     const finish = () => {
       render(destination);
       alignSelectionFrame();
-      selectGalleryFavicon(destination);
       root.classList.remove('is-moving');
       animationFrame = 0;
       motionVelocity = 0;
@@ -471,6 +460,8 @@ export function mountPortfolio() {
     renderedScroll = NaN;
     if (menuNavigation.animating) animateMenu(menuNavigation.expanded);
     presentCards(lift);
+    // A resize can change the thumbnail stride without moving the gallery.
+    render(position);
     alignSelectionFrame();
   }
 
@@ -625,7 +616,6 @@ export function mountPortfolio() {
       articleIndex = request.index;
       fillProject(request.index);
       updateGalleryIdentity({ index: articleIndex, links: false, immediate: request.sectionEntry, direction });
-      updateFavicon(panels[articleIndex].favicon);
       if (replacing) projectOrigin = articleRevealOrigin(projectPage.querySelector('[data-detail-title]').getBoundingClientRect(),
         document.documentElement.clientWidth, projectView.clientHeight);
       await transitionProject(true, { replacing, sectionEntry: request.sectionEntry });
@@ -781,8 +771,6 @@ export function mountPortfolio() {
     stopWheel();
     stopAnimation();
     destination = position;
-    // Re-grabbing abandons the previous target and restores the visible card.
-    selectGalleryFavicon(position);
     const capture = event.nativeTouch ? null : event.target.closest('button') || surface;
     const pointerTouch = event.pointerType === 'touch';
     drag = {
@@ -959,10 +947,7 @@ export function mountPortfolio() {
     if (liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
   });
   measure();
-  render(position);
-  alignSelectionFrame();
   updateBounds(position);
-  updateFavicon(initial.panel === end ? endPanel.dataset.favicon : panels[initial.panel].favicon);
   const entryDone = initial.article !== null
     ? requestProject(initial.article, { skipHistory: true, sectionEntry: true }) : Promise.resolve();
   writeAddress(initial.panel, { article: initial.article !== null, anchor: initial.anchor, replace: true });

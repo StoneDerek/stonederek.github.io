@@ -4,13 +4,11 @@ import projects from '../data/projects.json';
 import site from '../data/site.json';
 import SiteHeader from './SiteHeader.astro';
 import ExternalLinkIcon from './ExternalLinkIcon.astro';
-import { projectIcon } from '../data/project-icons.js';
 import HomeContent from './HomeContent.astro';
 import AboutContent from './AboutContent.astro';
 import ProfileFooter from './ProfileFooter.astro';
 import { galleryPanels, firstProjectPanel } from '../data/gallery-panels.js';
 import { resumeURL } from '../data/resume.js';
-import { linksPalette } from '../data/section-palettes.js';
 const base = import.meta.env.BASE_URL;
 const url = (path) => `${base}${path}`;
 const { section = 'home' } = Astro.props;
@@ -19,9 +17,9 @@ const selected = section === 'home' ? 0 : section === 'about' ? 1 : firstProject
 const palette = panels[selected].palette;
 const first = projects[0];
 const linksLogo = ['      _', '     | |', '   __| |___', '  / _` / __|', ' | (_| \\__ \\_', '  \\__,_|___(_)'].join('\n');
-const serialized = JSON.stringify(panels.map(panel => ({ ...panel, favicon: projectIcon(panel.palette) }))).replace(/</g, '\\u003c');
+const serialized = JSON.stringify(panels).replace(/</g, '\\u003c');
 ---
-<Layout title={`${site.name} — ${section === 'home' ? 'Portfolio' : section === 'about' ? 'About' : 'Projects'}`} description={section === 'projects' ? `Projects, experiments, and work in progress by ${site.name}.` : section === 'about' ? `About ${site.name}.` : site.description} favicon={projectIcon(palette)}>
+<Layout title={`${site.name} — ${section === 'home' ? 'Portfolio' : section === 'about' ? 'About' : 'Projects'}`} description={section === 'projects' ? `Projects, experiments, and work in progress by ${site.name}.` : section === 'about' ? `About ${site.name}.` : site.description}>
   <main id="portfolio" class="portfolio" data-base={base} data-panel-kind={panels[selected].kind} data-initial-panel={selected} style={`--accent:${palette.accent};--ink:${palette.ink};--caption-color:${palette.caption || palette.accent}`}>
     <a class="skip-link" href={section === 'home' ? '#home-title' : section === 'about' ? '#about-title' : '#project-caption'}>Skip to content</a>
 
@@ -48,7 +46,7 @@ const serialized = JSON.stringify(panels.map(panel => ({ ...panel, favicon: proj
             </div>
           </section>
         ))}
-        <div id="gallery-end" class="artwork-slide gallery-end" data-gallery-end data-favicon={projectIcon(linksPalette)} role="group" aria-label="Links and credits" aria-hidden="true" tabindex="-1" style={`--gallery-order:${panels.length}`} inert>
+        <div id="gallery-end" class="artwork-slide gallery-end" data-gallery-end role="group" aria-label="Links and credits" aria-hidden="true" tabindex="-1" style={`--gallery-order:${panels.length}`} inert>
           <div class="artwork-card gallery-end-card">
             <div class="gallery-end-space" data-ascii-space>
               <div class="laser-experiment" data-laser-experiment role="group" aria-label="ASCII laser puzzle: turn two mirrors to reach the target at the right">

@@ -1,10 +1,8 @@
 ---
 import site from '../data/site.json';
 import '../styles/portfolio.css';
-import { projectIcon } from '../data/project-icons.js';
-import { homePalette, darkHomePalette } from '../data/section-palettes.js';
 import { initializeTheme, themeStorageKey, appearanceEnabled } from '../scripts/theme.js';
-const { title = site.title, description = site.description, favicon = projectIcon(homePalette), darkFavicon = Astro.props.favicon ? favicon : projectIcon(darkHomePalette) } = Astro.props;
+const { title = site.title, description = site.description } = Astro.props;
 const themeStartup = `(${initializeTheme.toString()})(${JSON.stringify(themeStorageKey)},${appearanceEnabled});`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const sharingImage = new URL(`${import.meta.env.BASE_URL}social-preview.png`, Astro.site);
@@ -34,7 +32,7 @@ const sharingImageAlt = `${site.name} — Portfolio`;
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={sharingImage} />
     <meta name="twitter:image:alt" content={sharingImageAlt} />
-    <link rel="icon" href={favicon} type="image/svg+xml" data-project-favicon data-theme-light-favicon={favicon} data-theme-dark-favicon={darkFavicon} />
+    <link rel="icon" href={`${import.meta.env.BASE_URL}favicon.svg`} type="image/svg+xml" />
     <script is:inline set:html={themeStartup} />
   </head>
   <body>

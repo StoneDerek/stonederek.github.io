@@ -1,12 +1,14 @@
 # Portfolio continuation
 
-## Current reliability checkpoint
+## Current performance and reliability checkpoint
 
 Use `README.md` and the current source for the active navigation model: Home → About → five project panels → hidden Links, in one persistent gallery. The earlier section-navigation notes below describe superseded implementations.
 
 The reliability pass fixes interrupted swipes on resize/visibility changes, an incorrect return URL when closing an article before it finishes opening, and intermediate thumbnail-wheel positions entering browser history. Initial cover loading now follows the actual entry panel and adjacent covers. Content, artwork, palettes, and animation timings are preserved.
 
-Validation: 136 unit tests plus 15 production-DOM flow tests, production build, and offline export. The flow suite covers routes, controls, touch cancellation, menu focus, articles, history, anchors, preview navigation, compiled local references, and image warming. `npm run test:flows` builds then runs that suite. The deployment workflow runs both test suites before publishing. DOM geometry is simulated; this pass does not include fresh browser rendering or physical-device verification.
+The tab icon is now a single static black-on-white `ds.` SVG on all routes and in the offline preview. Palette-specific icon payloads, theme/icon mutations, and preview favicon messages/observers are removed. Card lift updates only track geometry; selection metadata changes only when selection changes. Preserve the existing animation timings and appearance. Resizing explicitly re-renders the current position so changes to thumbnail sizing still align the rail.
+
+Validation: 136 unit tests plus 18 production-DOM flow tests, production build, and offline export. The flow suite covers routes, controls, touch cancellation, menu focus, articles, history, anchors, preview navigation, compiled local references, image warming, a stable favicon, selection-update counts, and settled resizing. The representative simulated project swipe now makes one selection-attribute write instead of 103; this does not measure real-device speed. `npm run test:flows` builds then runs that suite. The deployment workflow runs both test suites before publishing. Fresh desktop Chromium and 390 × 844 browser-frame checks cover project dragging, articles, menu navigation, mobile controls, and offline navigation/history. Physical-device verification remains outstanding.
 
 ## Historical checkpoint — 7 October 2026
 

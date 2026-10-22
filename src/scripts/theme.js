@@ -22,10 +22,6 @@ export function initializeTheme(key = 'derek-stone-theme', enabled = true) {
   document.documentElement.dataset.themePreference = choice;
   const color = document.querySelector('meta[name="theme-color"]');
   if (color) color.content = resolved === 'dark' ? '#17171b' : '#ffffff';
-  const icon = document.querySelector('[data-project-favicon]');
-  if (icon && icon.dataset.themeLightFavicon !== icon.dataset.themeDarkFavicon) {
-    icon.href = resolved === 'dark' ? icon.dataset.themeDarkFavicon : icon.dataset.themeLightFavicon;
-  }
   return window.__PORTFOLIO_THEME_STATE__;
 }
 
@@ -44,11 +40,6 @@ export function mountTheme({ enabled = true } = {}) {
     doc.documentElement.dataset.themePreference = state.choice;
     const color = doc.querySelector('meta[name="theme-color"]');
     if (color) color.content = state.resolved === 'dark' ? '#17171b' : '#ffffff';
-    const icon = doc.querySelector('[data-project-favicon]');
-    // Gallery icons follow their selected project, rather than the page theme.
-    if (icon && icon.dataset.themeLightFavicon !== icon.dataset.themeDarkFavicon) {
-      icon.href = state.resolved === 'dark' ? icon.dataset.themeDarkFavicon : icon.dataset.themeLightFavicon;
-    }
     doc.querySelectorAll('[data-theme-control]').forEach(control => {
       control.hidden = false;
       control.querySelector('[data-theme-switch]').setAttribute('aria-checked', String(state.resolved === 'dark'));
