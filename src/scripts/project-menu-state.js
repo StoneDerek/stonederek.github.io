@@ -1,9 +1,19 @@
 const key = 'portfolio-projects-expanded';
 
-// Keep the persistent offline app's preference in its outer document as well
-// as sessionStorage. Blocked storage is harmless.
+// Legacy same-origin preview frames can share their outer preference. Restricted
+// attachment viewers and direct previews keep the state in their own document.
 export function projectMenuPreference(scope = window) {
-  const owner = scope.__PORTFOLIO_PREVIEW_ADDRESS__ !== undefined ? scope.parent : scope;
+  let owner = scope;
+  if (scope.__PORTFOLIO_PREVIEW_ADDRESS__ !== undefined && typeof scope.__PORTFOLIO_PREVIEW_SET_ADDRESS__ !== 'function') {
+    try {
+      const parent = scope.parent;
+      if (parent) {
+        // Accessing this property throws for an opaque/cross-origin parent.
+        void parent.__PORTFOLIO_PROJECTS_EXPANDED__;
+        owner = parent;
+      }
+    } catch { /* Keep a local preference when the host window is inaccessible. */ }
+  }
   return {
     read(fallback) {
       if (typeof owner.__PORTFOLIO_PROJECTS_EXPANDED__ === 'boolean') return owner.__PORTFOLIO_PROJECTS_EXPANDED__;

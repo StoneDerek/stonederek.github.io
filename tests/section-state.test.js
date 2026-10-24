@@ -43,19 +43,29 @@ test('gallery settling retains momentum and does not limit long drags to one pro
   assert.equal(settleProjectSwipe({ start: 0, position: 2.2, deltaX: -858, unit: 390, touch: true }), 2);
 });
 
-test('the profile/project selection boundary triggers one caption request, without a second progress clock', () => {
-  const before = galleryCaptionFrame(galleryFrame(1.499, 7), 2);
-  const after = galleryCaptionFrame(galleryFrame(1.501, 7), 2);
-  assert.equal(before.visible, false); assert.equal(after.visible, true);
-  assert.equal(before.project, after.project);
-  assert.equal('reveal' in after, false);
-  assert.deepEqual(after, galleryCaptionFrame(galleryFrame(1.9, 7), 2));
+test('a held gesture supplies only an enter/exit trigger, never fractional caption progress', () => {
+  const positions = [1, 1.1, 1.25, 1.5, 1.75, 1.9, 2];
+  const frames = positions.map(position => galleryCaptionFrame(galleryFrame(position, 7), 2));
+  assert.deepEqual(frames.map(frame => frame.boundaryVisible), [false, false, false, true, true, true, true]);
+  for (const [index, position] of positions.entries()) {
+    assert.deepEqual(galleryCaptionFrame(galleryFrame(position, 7), 2), frames[index]);
+  }
+  assert.equal(galleryCaptionFrame(galleryFrame(3, 7), 2).boundaryVisible, null);
 });
 
-test('profile panels leave caption interaction disabled', () => {
-  for (const position of [0, .5, 1, 1.499]) {
+test('click and release destinations start caption entry or exit before the selection midpoint', () => {
+  assert.equal(galleryCaptionFrame(galleryFrame(1, 7), 2, 2).boundaryVisible, true);
+  assert.equal(galleryCaptionFrame(galleryFrame(2, 7), 2, 1).boundaryVisible, false);
+  assert.equal(galleryCaptionFrame(galleryFrame(1.4, 7), 2, 1).boundaryVisible, false);
+  assert.equal(galleryCaptionFrame(galleryFrame(1.4, 7), 2, 2).boundaryVisible, true);
+  assert.equal(galleryCaptionFrame(galleryFrame(1.4, 7), 2, 1.6).boundaryVisible, true);
+});
+
+test('profile panels keep caption interaction disabled during early visual entry', () => {
+  for (const position of [0, .5, 1, 1.3, 1.499]) {
     const caption = galleryCaptionFrame(galleryFrame(position, 7), 2);
-    assert.equal(caption.visible, false); assert.equal(caption.interactive, false);
+    assert.equal(caption.interactive, false);
+    assert.equal(caption.visible, false);
   }
 });
 

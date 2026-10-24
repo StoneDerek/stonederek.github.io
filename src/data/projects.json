@@ -154,5 +154,218 @@
       "accent": "#ffc46b",
       "ink": "#352110"
     }
+  },
+  {
+    "slug": "art",
+    "title": "Art",
+    "category": "Personal collection",
+    "year": "",
+    "eyebrow": "A personal collection",
+    "caption": "Acrylic, ink, printmaking, and watercolor. Mostly birds.",
+    "description": "Until I compiled this collection of some of my more polished pieces some time ago, I did not realize that I had been so invested in creating birds. A part of this is definitely because in the past my family has had several pet chickens, and I really enjoyed spending time with them.",
+    "note": "Recently, I’ve been more interested in getting good at drawing people. (But until then, look at these birds!)",
+    "image": "art/collection/overprint-difference.webp",
+    "thumbnail": "thumbnails/art.webp",
+    "imageAlt": "A black-and-white difference overprint of layered textbook pages, equations, and diagrams forming a figure.",
+    "imageWidth": 1582,
+    "imageHeight": 2048,
+    "fit": "cover",
+    "position": "50% 50%",
+    "palette": {
+      "accent": "#c20f53",
+      "ink": "#ffffff",
+      "caption": "#c20f53"
+    },
+    "caseStudy": {
+      "layout": "art",
+      "sections": [
+        {
+          "title": "01",
+          "mediaFirst": true,
+          "media": [
+            {
+              "src": "art/collection/stellers-jay.webp",
+              "alt": "A photograph of a square acrylic painting: a blue and black Steller’s jay rendered in dots against a fiery orange and yellow background.",
+              "width": 2048,
+              "height": 1536
+            }
+          ],
+          "paragraphs": [
+            [
+              "This is an acrylic painting of a Steller’s jay. Having been camping in certain parts of California, I’ve been woken up by these guys quite a few times."
+            ],
+            [
+              "Something I find interesting about them, and ",
+              {
+                "text": "all blue birds for that matter",
+                "italic": true
+              },
+              ", is that their feathers contain no blue ",
+              {
+                "text": "pigment",
+                "bold": true
+              },
+              ". Instead of absorbing non-blue colors and reflecting what remains, they manipulate and refract light in a way that produces blue frequencies of light.",
+              {
+                "footnote": 1
+              },
+              " They’re quite eye-catching, and I think that the sharp point they have on the back of their heads is funny."
+            ],
+            [
+              "The technique used here is called ",
+              {
+                "text": "stippling",
+                "href": "http://en.wikipedia.org/wiki/Stippling#Art"
+              },
+              ", and you’d more often see it done with ink in black & white, but I like the effect it produces."
+            ]
+          ]
+        },
+        {
+          "title": "02",
+          "mediaFirst": true,
+          "media": [
+            {
+              "src": "art/collection/broken-line-chicken.webp",
+              "alt": "A framed painting of a chicken made from curved broken strokes of green, brown, cream, and orange over a contrasting red background.",
+              "width": 2048,
+              "height": 1536
+            }
+          ],
+          "paragraphs": [
+            [
+              "This Chicken looks quite like one I’ve had in the past. The breed is something between an “",
+              {
+                "text": "Easter Egger",
+                "href": "https://en.wikipedia.org/wiki/Easter_egger"
+              },
+              "” and an “Americana,” depending on who you ask."
+            ],
+            [
+              "Why does the painting look so …? This is a technique called ",
+              {
+                "text": "broken line painting",
+                "bold": true
+              },
+              ". By first creating an underlayer of a ",
+              {
+                "text": "relatively",
+                "italic": true
+              },
+              " inverse color (in terms of the color wheel), you can really make the colors pop through that almost violent contrast."
+            ],
+            [
+              "This was quite hard to get right and I was worried throughout the process what the end result would be, but it came out better than I expected."
+            ]
+          ]
+        },
+        {
+          "title": "03",
+          "mediaFirst": true,
+          "media": [
+            {
+              "src": "art/collection/ink-chicken.webp",
+              "alt": "An ink drawing of a chicken on white paper with a blue border; dense hatching defines its feathers and the shadow around its feet.",
+              "width": 2048,
+              "height": 1536
+            }
+          ],
+          "paragraphs": [
+            [
+              "Well, here’s another chicken. Same deal as before with the breed. This time, though, it has been depicted in ink using a process called ",
+              {
+                "text": "hatching.",
+                "href": "https://en.wikipedia.org/wiki/Hatching"
+              }
+            ],
+            [
+              "Something you may not think about if you’ve never studied art, is that the goal, even when practicing (maybe ",
+              {
+                "text": "especially",
+                "italic": true
+              },
+              " when practicing), is ",
+              {
+                "text": "not",
+                "bold": true
+              },
+              " usually to depict the subject as “accurately” as possible."
+            ],
+            [
+              "The brain is actually pretty lazy, and our eyes do stuff without us noticing all the time. Look around the legs of the chicken: the shadow has artificially been darkened to make the legs appear lighter relative to the background. With this contrast, you can tell what is happening where it otherwise might have been more ambiguous. The same is done in the other direction with light tones. ",
+              {
+                "footnote": 2
+              }
+            ]
+          ]
+        },
+        {
+          "title": "04",
+          "mediaFirst": true,
+          "media": [
+            {
+              "src": "art/collection/bird-stamp.webp",
+              "alt": "A carved rubber bird stamp on a table above three black bird prints on green, pink, and purple paper.",
+              "width": 2048,
+              "height": 1536
+            }
+          ],
+          "paragraphs": [
+            "This one is pretty self explanatory: it’s a rubber stamp. There’s not really any undos when it comes to making something in this way, but maybe that’s part of the appeal. I thought it was fun to make!"
+          ]
+        },
+        {
+          "title": "05",
+          "mediaFirst": true,
+          "media": [
+            {
+              "src": "art/collection/watercolors.webp",
+              "alt": "A framed collection of four watercolor studies: mountains under a pink sky, a desert, a lighthouse at sunset, and three fish swirling in water.",
+              "width": 2048,
+              "height": 1536
+            }
+          ],
+          "paragraphs": [
+            [
+              "Amazing, here’s something that has ",
+              {
+                "text": "no birds",
+                "bold": true
+              },
+              " at all! This one is watercolor, and a little bit of gouache. My favorite is the one in the bottom left, because I really like the colors. The one on the bottom right took the longest though. ",
+              {
+                "footnote": 3
+              }
+            ]
+          ]
+        }
+      ],
+      "footnotes": [
+        {
+          "number": 1,
+          "paragraphs": [
+            "If you’d like to learn a little more about how this works, including for some other colors, this article I found describes the effect I mentioned:",
+            [
+              {
+                "text": "https://academy.allaboutbirds.org/how-birds-make-colorful-feathers/",
+                "href": "https://academy.allaboutbirds.org/how-birds-make-colorful-feathers/"
+              }
+            ]
+          ]
+        },
+        {
+          "number": 2,
+          "paragraphs": [
+            "“It would be possible to describe everything scientifically, but it would make no sense” - Einstein"
+          ]
+        },
+        {
+          "number": 3,
+          "paragraphs": [
+            "To give credit where credit is due, the reference for the bottom right image is a banner or some kind of cosmetic from Valorant, a game I used to play."
+          ]
+        }
+      ]
+    }
   }
 ]

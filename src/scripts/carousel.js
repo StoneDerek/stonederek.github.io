@@ -102,6 +102,7 @@ export function mountPortfolio() {
   let pendingDrag = null;
   let suppressClickUntil = 0;
   let slideEndsAt = 0;
+  let captionColor = '';
   const captionMotion = mountProjectCaption(caption, root, reducedMotion, { endsAt: () => slideEndsAt });
   let projectOpen = false;
   let articleIndex = -1;
@@ -308,7 +309,15 @@ export function mountPortfolio() {
     }
     updateEnd(frame.endProgress, frame.links);
     updateActive(frame.project);
-    const captionFrame = galleryCaptionFrame(frame, firstProjectPanel);
+    const captionFrame = galleryCaptionFrame(frame, firstProjectPanel,
+      root.classList.contains('is-moving') ? destination : null);
+    const captionPalette = panels[captionFrame.project].palette;
+    const nextCaptionColor = captionPalette.caption || captionPalette.accent;
+    // The title keeps its own project's color even while About is selected.
+    if (captionColor !== nextCaptionColor) {
+      caption.style.setProperty('--caption-color', nextCaptionColor);
+      captionColor = nextCaptionColor;
+    }
     captionMotion.present(captionFrame, {
       title: panels[captionFrame.project].title,
       immediate: initialRender,
@@ -425,6 +434,8 @@ export function mountPortfolio() {
     const start = performance.now();
     slideEndsAt = start + spring.duration;
     root.classList.add('is-moving');
+    // Start the caption now, rather than waiting for the selection midpoint.
+    render(from);
     const frame = now => {
       const state = spring.sample(now - start);
       motionVelocity = state.velocity;
@@ -530,7 +541,9 @@ export function mountPortfolio() {
     const project = panels[index];
     setText('[data-detail-title]', project.title);
     setText('[data-detail-category]', project.category);
-    setText('[data-detail-year]', project.year);
+    setText('[data-detail-year]', project.year || '');
+    root.querySelector('[data-detail-period]').hidden = !project.year;
+    setText('[data-detail-eyebrow]', project.eyebrow || 'Placeholder project');
     setText('[data-detail-description]', project.description);
     setText('[data-detail-note]', project.note);
     setText('[data-detail-number]', `${String(index - firstProjectPanel + 1).padStart(2, '0')} / ${String(panels.length - firstProjectPanel).padStart(2, '0')}`);
@@ -645,7 +658,11 @@ export function mountPortfolio() {
       lastAddress = address;
       if (window.__PORTFOLIO_PREVIEW_ADDRESS__ !== undefined) {
         window.__PORTFOLIO_PREVIEW_ADDRESS__ = address;
-        window.parent.postMessage({ type: 'portfolio-preview-address', address, replace }, '*');
+        if (typeof window.__PORTFOLIO_PREVIEW_SET_ADDRESS__ === 'function') {
+          window.__PORTFOLIO_PREVIEW_SET_ADDRESS__({ address, replace });
+        } else {
+          window.parent.postMessage({ type: 'portfolio-preview-address', address, replace }, '*');
+        }
       } else {
         const state = { ...window.history.state, portfolio: true };
         window.history[replace ? 'replaceState' : 'pushState'](state, '', address);
@@ -955,6 +972,12 @@ export function mountPortfolio() {
   root.dataset.ready = 'true';
   listen(window, 'popstate', followAddress);
   listen(window, 'hashchange', followAddress);
+  listen(window, 'portfolio:preview-navigate', event => {
+    const address = event.detail?.address;
+    if (typeof address !== 'string' || !address.startsWith('/') || address.startsWith('//')) return;
+    window.__PORTFOLIO_PREVIEW_ADDRESS__ = address;
+    followAddress();
+  });
   listen(window, 'message', event => {
     if (event.source !== window.parent || event.data?.type !== 'portfolio-preview-navigate') return;
     window.__PORTFOLIO_PREVIEW_ADDRESS__ = event.data.address;

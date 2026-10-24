@@ -5,6 +5,7 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
   const titleMetrics = caption.querySelector('[data-title-metrics]');
   const button = caption.querySelector('.caption-link');
   const heading = caption.querySelector('h1');
+  const arrow = caption.querySelector('.caption-arrow');
   const titleMeasure = caption.ownerDocument.createElement('canvas').getContext('2d');
   let desired = titleText.textContent;
   let titleFrame = 0;
@@ -14,16 +15,29 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
   let project = -1;
   let interactive = false;
   let pointerHeld = false;
+  let boundaryActive = false;
+  let boundaryTitle = '';
+  let boundarySlots = null;
+  let boundaryProgress = 0;
+  let boundaryTarget = 0;
+  let boundaryTime = 0;
+  const boundaryDuration = 180;
   const glyphWidths = new Map();
 
   function finish() {
     cancelAnimationFrame(titleFrame);
     titleFrame = 0;
     titleSlots = [];
+    boundarySlots = null;
+    if (boundaryActive) {
+      boundaryProgress = boundaryTarget = Number(interactive);
+      desired = boundaryProgress ? boundaryTitle : '';
+    }
     titleText.textContent = desired;
     titleMetrics.textContent = desired;
     captionWord.style.width = '';
     button.style.opacity = desired ? '' : '0';
+    if (arrow) arrow.style.opacity = '';
     if (!desired && !pointerHeld) caption.hidden = true;
     root.classList.remove('is-scrambling');
     syncInteraction();
@@ -31,6 +45,9 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
 
   function set(next, { immediate = false, direction = 1 } = {}) {
     if (destroyed) return;
+    boundaryActive = false;
+    if (arrow) arrow.style.opacity = '';
+    boundarySlots = null;
     const entering = caption.hidden;
     // Hidden captions have no layout width. Reveal before measuring, then build
     // the initial glyph frame synchronously so no completed title flashes.
@@ -147,6 +164,112 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
     frame(start);
   }
 
+  function drawBoundary(next, reveal) {
+    // Floating-point accumulation must not pick different glyphs when the
+    // same moment is reached by playing forward versus rewinding.
+    reveal = Math.round(reveal * 1e6) / 1e6;
+    if (reveal <= 0 || reveal >= 1) {
+      const target = reveal >= 1 ? next : '';
+      desired = target;
+      titleSlots = [];
+      boundarySlots = null;
+      if (titleText.textContent !== target) titleText.textContent = target;
+      titleMetrics.textContent = target;
+      captionWord.style.width = '';
+      button.style.opacity = target ? '' : '0';
+      if (arrow) arrow.style.opacity = '';
+      root.classList.remove('is-scrambling');
+      caption.hidden = !target && !pointerHeld;
+      return;
+    }
+    caption.hidden = false;
+    titleSlots = [];
+    desired = next;
+    if (!boundarySlots || boundaryTitle !== next) {
+      boundaryTitle = next;
+      const font = getComputedStyle(titleText);
+      titleMeasure.font = `${font.fontWeight} ${font.fontSize} ${font.fontFamily}`;
+      const letters = Array.from(next);
+      titleMetrics.textContent = next;
+      const fullWidth = titleMetrics.getBoundingClientRect().width;
+      const widths = letters.map(letter => titleMeasure.measureText(letter).width);
+      const totalWidth = widths.reduce((a, b) => a + b, 0) || 1;
+      const fragment = document.createDocumentFragment();
+      boundarySlots = letters.map((letter, index) => {
+        const slot = document.createElement('span');
+        const glyph = document.createElement('span');
+        slot.className = 'caption-slot'; glyph.className = 'caption-glyph';
+        slot.append(glyph); fragment.append(slot);
+        return { slot, glyph, letter, size: widths[index] * fullWidth / totalWidth,
+          threshold: (letters.length - 1 - index) / Math.max(1, letters.length - 1) * .65,
+          pool: letters.filter((candidate, i) => candidate !== ' ' && widths[i] <= widths[index] + .5) };
+      });
+      titleText.replaceChildren(fragment);
+    }
+    let x = 0;
+    for (let i = 0; i < boundarySlots.length; i++) {
+      const s = boundarySlots[i];
+      const local = Math.max(0, Math.min(1, (reveal - s.threshold) / .35));
+      const blend = local * local * (3 - 2 * local);
+      // Overlapping glyphs grow/shrink continuously, keeping the visible run
+      // centered without the old one-character width jumps. Rewinding the
+      // clock draws exactly the same substitutions and geometry.
+      const size = s.size * blend;
+      const glyph = local <= 0 ? '' : local >= .75 || s.letter === ' ' ? s.letter
+        : s.pool[(i + Math.floor(local * 5)) % s.pool.length] || s.letter;
+      if (s.glyph.textContent !== glyph) s.glyph.textContent = glyph;
+      s.glyph.style.opacity = String(blend);
+      const left = `${x}px`, width = `${size}px`;
+      if (s.slot.style.left !== left) s.slot.style.left = left;
+      if (s.slot.style.width !== width) s.slot.style.width = width;
+      x += size;
+    }
+    const width = `${x}px`;
+    if (captionWord.style.width !== width) captionWord.style.width = width;
+    button.style.opacity = x ? '' : '0';
+    if (arrow) arrow.style.opacity = String(Math.min(1, reveal * 3));
+    root.classList.add('is-scrambling');
+  }
+
+  function advanceBoundary(now) {
+    const step = Math.max(0, now - boundaryTime) / boundaryDuration;
+    boundaryProgress += Math.max(-step, Math.min(step, boundaryTarget - boundaryProgress));
+    if (Math.abs(boundaryTarget - boundaryProgress) < .00001) boundaryProgress = boundaryTarget;
+    boundaryTime = now;
+    drawBoundary(boundaryTitle, boundaryProgress);
+    syncInteraction();
+  }
+
+  function boundaryFrame(now) {
+    titleFrame = 0;
+    advanceBoundary(now);
+    if (Math.abs(boundaryTarget - boundaryProgress) > .00001) titleFrame = requestAnimationFrame(boundaryFrame);
+  }
+
+  function setBoundaryVisible(next, visible, { immediate = false } = {}) {
+    const now = performance.now();
+    if (!boundaryActive) {
+      cancelAnimationFrame(titleFrame);
+      titleFrame = 0;
+      boundaryProgress = caption.hidden || !titleText.textContent ? 0 : 1;
+      boundaryTime = now;
+      boundaryActive = true;
+    } else advanceBoundary(now);
+    boundaryTitle = next;
+    // Only complete entrance/exit destinations are accepted. Drag position
+    // can trigger a selection change, but cannot scrub or stall this clock.
+    boundaryTarget = visible ? 1 : 0;
+    if (immediate || reducedMotion.matches) {
+      boundaryProgress = boundaryTarget = Number(interactive);
+      cancelAnimationFrame(titleFrame);
+      titleFrame = 0;
+    }
+    drawBoundary(next, boundaryProgress);
+    if (Math.abs(boundaryTarget - boundaryProgress) > .00001 && !titleFrame) {
+      titleFrame = requestAnimationFrame(boundaryFrame);
+    }
+  }
+
   function syncInteraction() {
     const accessible = interactive && titleText.textContent.length > 0;
     const inert = !accessible && !pointerHeld;
@@ -164,6 +287,22 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
       if (destroyed) return;
       interactive = state.interactive;
       pointerHeld = holdPointer;
+      if (state.boundaryVisible !== null && state.boundaryVisible !== undefined &&
+        (boundaryActive || !state.boundaryVisible || project < 0)) {
+        setBoundaryVisible(title, state.boundaryVisible, { immediate });
+        button.dataset.project = String(state.project);
+        button.setAttribute('aria-label', `View ${title}`);
+        heading.setAttribute('aria-label', title);
+        project = state.project;
+        syncInteraction();
+        return;
+      }
+      if (boundaryActive) {
+        boundaryActive = false;
+        cancelAnimationFrame(titleFrame);
+        titleFrame = 0;
+        boundarySlots = null;
+      }
       if (state.visible || state.links) {
         if (project !== state.project || desired !== title) {
           const direction = Math.sign(state.project - project) || 1;
@@ -183,11 +322,12 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
       } else if (!titleFrame) finish();
       syncInteraction();
     },
-    pause() { cancelAnimationFrame(titleFrame); titleFrame = 0; },
+    pause() { cancelAnimationFrame(titleFrame); titleFrame = 0; boundaryTime = performance.now(); },
     hide() {
       if (!caption.hidden || titleFrame || titleSlots.length) finish();
       caption.hidden = true;
       project = -1;
+      boundaryActive = false;
     },
     get animating() { return titleFrame !== 0; },
     destroy() { finish(); destroyed = true; }

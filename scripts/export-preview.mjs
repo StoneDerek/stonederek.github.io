@@ -2,12 +2,12 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { Script } from 'node:vm';
 import { build } from 'esbuild';
-import { initializeTheme, themeStorageKey, appearanceEnabled } from '../src/scripts/theme.js';
+import sharp from 'sharp';
 import { previewAddress, previewHash } from '../src/scripts/gallery-location.js';
 
-// Bundle the actual production pages into one offline, navigable review file.
-// One persistent frame uses the same gallery navigation as the production app.
-const routes = { home: 'index.html', about: 'about/index.html', projects: 'projects/index.html', resume: 'resume/index.html' };
+// The unified production document already contains Home, About and all projects.
+// Export it directly so attachment viewers never begin with an empty iframe.
+const routes = { home: 'index.html', resume: 'resume/index.html' };
 const pages = {};
 const assets = {};
 const embedded = new Map();
@@ -29,9 +29,15 @@ async function embedImage(path, publicPath) {
   if (!token) {
     const filename = resolve('public', publicPath);
     if (!filename.startsWith(resolve('public') + '/')) throw new Error(`Preview image is outside public/: ${publicPath}`);
-    const type = mime[publicPath.split('.').pop().toLowerCase()];
+    let type = mime[publicPath.split('.').pop().toLowerCase()];
     if (!type) throw new Error(`Unsupported preview image: ${publicPath}`);
-    const bytes = await readFile(filename);
+    let bytes = await readFile(filename);
+    if (publicPath.startsWith('art/') && type !== 'image/svg+xml') {
+      // Preview copies are smaller; original project photographs stay untouched.
+      bytes = await sharp(bytes).rotate().resize({ width: 1440, height: 1080, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 84, effort: 6 }).toBuffer();
+      type = 'image/webp';
+    }
     token = `__PORTFOLIO_ASSET_${imageTokens.size}__`;
     assets[token] = `data:${type};base64,${bytes.toString('base64')}`;
     imageTokens.set(publicPath, token);
@@ -41,7 +47,7 @@ async function embedImage(path, publicPath) {
 }
 for (const [route, file] of Object.entries(routes)) {
   let html = await readFile(resolve('dist', file), 'utf8');
-  // srcdoc routes use the preview's message bridge instead of network fetching.
+  // The standalone address bridge handles navigation without fetching routes.
   html = html.replace(/<meta\b[^>]*name="astro-view-transitions-enabled"[^>]*>/g, '')
     .replace(/(<meta\b[^>]*name="astro-view-transitions-fallback"[^>]*content=")(?:animate|swap)("[^>]*>)/g, '$1none$2');
   for (const match of html.matchAll(/(?:src|href)="([^"]+\.(?:webp|svg|png|jpg))"/g)) {
@@ -92,78 +98,65 @@ for (const [route, file] of Object.entries(routes)) {
   pages[route] = html;
 }
 
-function initializePreview({ pages, assets, resumePDF }, addressFromHash, hashFromAddress) {
-  const frame = document.querySelector('iframe');
-  const preference = window.matchMedia('(prefers-color-scheme: dark)');
-  let themeChoice = window.__PORTFOLIO_THEME_STATE__?.choice || 'system';
+function initializePreview({ resumePDF, resumeHTML }, addressFromHash, hashFromAddress) {
   let currentAddress = addressFromHash(location.hash);
-  const expanded = route => {
-    let html = pages[route];
-    for (const [token, value] of Object.entries(assets)) html = html.replaceAll(token, () => value);
-    return html;
+  window.__PORTFOLIO_PREVIEW_ADDRESS__ = currentAddress;
+  window.__PORTFOLIO_PREVIEW_SET_ADDRESS__ = ({ address, replace }) => {
+    currentAddress = address;
+    const hash = hashFromAddress(address);
+    if (location.hash === hash) return;
+    try {
+      history[replace ? 'replaceState' : 'pushState'](null, '', hash);
+    } catch { /* Embedded viewers can deny history; browsing still works. */ }
   };
-  const escapeScript = value => JSON.stringify(value).replaceAll('<', '\\u003c');
-  const home = `${location.href.split('#')[0]}#home`.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
-  const pdfAddress = resumePDF ? URL.createObjectURL(new Blob([Uint8Array.from(atob(resumePDF), char => char.charCodeAt(0))], { type: 'application/pdf' })) : null;
-  let resume = expanded('resume').replace(/(<a\b[^>]*\bdata-resume-home\b[^>]*\bhref=")[^"]*(")/, `$1${home}$2`);
-  if (pdfAddress) resume = resume.replace(/(<a\b[^>]*\bdata-resume-pdf\b[^>]*\bhref=")[^"]*(")/, `$1${pdfAddress}$2`);
-  const resumeAddress = pdfAddress || URL.createObjectURL(new Blob([resume], { type: 'text/html' }));
-  const route = new URL(currentAddress, 'https://portfolio.invalid').pathname.split('/')[1] || 'home';
-  let html = expanded(route);
-  const setup = `<script>window.__PORTFOLIO_PREVIEW_ADDRESS__=${escapeScript(currentAddress)};window.__PORTFOLIO_PREVIEW_THEME_CHOICE__=${escapeScript(themeChoice)};window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=${preference.matches};window.addEventListener('message',function(event){if(event.source===window.parent&&event.data?.type==='portfolio-preview-system-theme'){window.__PORTFOLIO_PREVIEW_SYSTEM_DARK__=!!event.data.dark;document.dispatchEvent(new Event('portfolio:preview-system-change'))}});window.__PORTFOLIO_PREVIEW_SET_THEME__=function(state){window.parent.postMessage({type:'portfolio-preview-theme',choice:state.choice,resolved:state.resolved},'*')};<\/script>`;
-  html = html.replace('<head>', `<head><base href="about:srcdoc">${setup}`);
-  html = html.replace(/(<a\b[^>]*\bdata-resume-link\b[^>]*\bhref=")[^"]*("[^>]*>)/g, `$1${resumeAddress}$2`)
-    .replace(/(<a\b[^>]*\bhref=")[^"]*("[^>]*\bdata-resume-link\b)/g, `$1${resumeAddress}$2`);
-  const synchronize = `<script>const title=document.querySelector('title');const sync=function(){window.parent.postMessage({type:'portfolio-preview-title',title:document.title},'*')};if(title)new MutationObserver(sync).observe(title,{childList:true,subtree:true,characterData:true});sync();<\/script>`;
-  html = html.replace('</body>', `${synchronize}</body>`);
-  // Load the app once. Every section, project, and Back/Forward change stays in
-  // this same frame, using the production gallery controller.
-  frame.srcdoc = html;
   const followHistory = () => {
     const address = addressFromHash(location.hash);
     if (address === currentAddress) return;
     currentAddress = address;
-    frame.contentWindow.postMessage({ type: 'portfolio-preview-navigate', address }, '*');
+    window.dispatchEvent(new CustomEvent('portfolio:preview-navigate', { detail: { address } }));
   };
-  frame.addEventListener('load', () => {
-    // An address change before the child mounted may have arrived too early.
-    // Always synchronize the latest address once that single frame is ready.
-    currentAddress = addressFromHash(location.hash);
-    frame.contentWindow.postMessage({ type: 'portfolio-preview-navigate', address: currentAddress }, '*');
-  }, { once: true });
-  window.addEventListener('message', event => {
-    if (event.source !== frame.contentWindow) return;
-    const data = event.data;
-    if (data?.type === 'portfolio-preview-address' && typeof data.address === 'string' && data.address.startsWith('/') && !data.address.startsWith('//')) {
-      currentAddress = data.address;
-      const hash = hashFromAddress(currentAddress);
-      if (location.hash !== hash) history[data.replace ? 'replaceState' : 'pushState'](null, '', hash);
-    }
-    if (data?.type === 'portfolio-preview-title' && typeof data.title === 'string') document.title = data.title + ' - Preview';
-    if (data?.type === 'portfolio-preview-theme' && ['system', 'light', 'dark'].includes(data.choice)) {
-      themeChoice = data.choice;
-      document.documentElement.dataset.theme = data.resolved === 'dark' ? 'dark' : 'light';
-      window.__PORTFOLIO_THEME_STATE__ = { choice: themeChoice, resolved: document.documentElement.dataset.theme };
-    }
-  });
-  preference.addEventListener('change', () => {
-    frame.contentWindow?.postMessage({ type: 'portfolio-preview-system-theme', dark: preference.matches }, '*');
-  });
   window.addEventListener('popstate', followHistory);
   window.addEventListener('hashchange', followHistory);
-  window.addEventListener('pagehide', event => {
-    if (!event.persisted) {
-      URL.revokeObjectURL(resumeAddress);
-      if (pdfAddress) URL.revokeObjectURL(pdfAddress);
-    }
-  });
+
+  const connectResume = () => {
+    let resumeAddress;
+    try {
+      if (resumePDF) {
+        resumeAddress = URL.createObjectURL(new Blob([
+          Uint8Array.from(atob(resumePDF), char => char.charCodeAt(0))
+        ], { type: 'application/pdf' }));
+      } else {
+        const home = `${location.href.split('#')[0]}#home`.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
+        const html = resumeHTML.replace(/(<a\b[^>]*\bdata-resume-home\b[^>]*\bhref=")[^"]*(")/, `$1${home}$2`);
+        resumeAddress = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      }
+    } catch { return; }
+    for (const link of document.querySelectorAll('[data-resume-link]')) link.href = resumeAddress;
+    window.addEventListener('pagehide', event => {
+      if (!event.persisted) URL.revokeObjectURL(resumeAddress);
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', connectResume, { once: true });
+  else connectResume();
 }
-const favicon = assets[await embedImage('/favicon.svg', 'favicon.svg')];
-const payload = JSON.stringify({ pages, assets, resumePDF }).replaceAll('<', '\\u003c');
-const loader = `(${initializePreview.toString()})(JSON.parse(document.getElementById('preview-data').textContent),${previewAddress.toString()},${previewHash.toString()});`;
+
+function expandPage(page) {
+  let html = page;
+  for (const [token, value] of Object.entries(assets)) html = html.replaceAll(token, () => value);
+  return html;
+}
+const settings = JSON.stringify({ resumePDF, resumeHTML: resumePDF ? null : expandPage(pages.resume) }).replaceAll('<', '\\u003c');
+const loader = `(${initializePreview.toString()})(${settings},${previewAddress.toString()},${previewHash.toString()});`;
 new Script(loader, { filename: 'preview-navigation.js' });
-const startup = `(${initializeTheme.toString()})(${JSON.stringify(themeStorageKey)},${appearanceEnabled});`;
-new Script(startup, { filename: 'preview-theme-startup.js' });
-const output = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Derek Stone - Portfolio preview</title><link rel="icon" type="image/svg+xml" href="${favicon}"><style>html,body{margin:0;width:100%;height:100%}html{background:#fff;color-scheme:light}html[data-theme="dark"]{background:#17171b;color-scheme:dark}iframe{display:block;width:100%;height:100%;border:0}noscript{padding:24px;font:16px/1.5 Arial,sans-serif}</style><script>${startup}</script></head><body><iframe title="Derek Stone’s portfolio"></iframe><noscript>Open this preview in a browser with JavaScript enabled to explore Home, About, and Projects.</noscript><script type="application/json" id="preview-data">${payload}</script><script>${loader}</script></body></html>`;
+let output = expandPage(pages.home).replace('<head>', `<head><script>${loader}</script>`);
+output = output.replace(/<title>[^<]*<\/title>/, '<title>Derek Stone - Portfolio preview</title>');
+// Parse the complete output after expanding assets, including inline data.
+for (const match of output.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
+  if (match[1].includes('application/json')) JSON.parse(match[2]);
+  else new Script(match[2], { filename: 'complete-preview.js' });
+}
+if (/<iframe\b/i.test(output) || /__PORTFOLIO_(?:ASSET|RESOURCE)_\d+__/.test(output)) {
+  throw new Error('The standalone preview contains an iframe or an unresolved local asset.');
+}
 await writeFile('portfolio-preview.html', output);
-console.log(`Exported all three portfolio pages (${Math.round(Buffer.byteLength(output) / 1024)} KB).`);
+console.log(`Exported the direct-page portfolio preview (${Math.round(Buffer.byteLength(output) / 1024)} KB).`);

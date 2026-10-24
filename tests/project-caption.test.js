@@ -77,71 +77,117 @@ test('entering Projects reveals the caption before measurement and draws interme
   } finally { s.restore(); }
 });
 
-const view = position => galleryCaptionFrame(galleryFrame(position, 7), 2);
+const view = (position, destination = null) => galleryCaptionFrame(galleryFrame(position, 7), 2, destination);
 
-test('entry adds characters on the scramble clock while gallery position stays fixed', () => {
+test('About entry starts with navigation and resolves in 180ms without waiting for selection', () => {
   const s = scene();
   try {
-    s.motion.present(view(1.499), { title: 'Signal studies' });
+    s.motion.present(view(1), { title: 'Signal studies', immediate: true });
+    s.motion.present(view(1, 2), { title: 'Signal studies' });
     assert.equal(s.caption.hidden, true);
-    s.motion.present(view(1.5001), { title: 'Signal studies' });
-    assert.equal(s.text.textContent, '');
-    assert.equal(s.button.style.opacity, '0');
-    const counts = [0];
-    for (const time of [20, 70, 130, 200, 260, 360]) {
+    const counts = [];
+    for (const time of [16, 30, 60, 90, 120, 180]) {
       s.advance(time);
-      s.motion.present(view(1.5001), { title: 'Signal studies' });
       counts.push(s.text.textContent.length);
     }
-    assert.ok(new Set(counts.filter(count => count > 0 && count < 14)).size >= 4);
-    assert.ok(counts.every((count, i) => i === 0 || count >= counts[i - 1]));
+    assert.ok(counts[0] > 0, 'the first animation frame must show entering characters');
+    assert.ok(new Set(counts).size >= 5);
+    assert.ok(counts.every((count, i) => !i || count >= counts[i - 1]));
     assert.equal(s.text.textContent, 'Signal studies');
+    assert.equal(s.word.style.width, '');
     assert.equal(s.frames.size, 0);
-    assert.equal(s.button.getAttribute('aria-label'), 'View Signal studies');
+    assert.equal(s.caption.inert, true, 'early drawing must not steal About interaction');
+    s.motion.present(view(2), { title: 'Signal studies' });
     assert.equal(s.caption.inert, false);
   } finally { s.restore(); }
 });
 
-test('repeated gallery frames do not restart entry and returning to About animates the characters out', () => {
+test('returning to About rewinds the same glyphs and continuous widths on the same 180ms clock', () => {
   const s = scene();
   try {
-    s.motion.present(view(1.6), { title: 'Signal studies' }); s.advance(70);
-    const glyphs = s.text.textContent, pending = [...s.frames.keys()];
-    for (const position of [1.75, 1.6, 1.9, 2]) s.motion.present(view(position), { title: 'Signal studies' });
-    assert.equal(s.text.textContent, glyphs);
-    assert.deepEqual([...s.frames.keys()], pending);
-    s.advance(360);
-    s.motion.present(view(1.499), { title: 'Signal studies' });
-    assert.equal(s.caption.hidden, false, 'exit must animate instead of immediately hiding the caption');
-    assert.equal(s.text.textContent, 'Signal studies');
-    const counts = [14];
-    for (const time of [420, 500, 600, 720]) {
+    const times = [30, 60, 90, 120, 150, 180];
+    const drawings = new Map();
+    s.motion.present(view(1), { title: 'Signal studies', immediate: true });
+    s.motion.present(view(1, 2), { title: 'Signal studies' });
+    for (const time of times) {
       s.advance(time);
-      s.motion.present(view(1.4), { title: 'Signal studies' });
-      counts.push(s.caption.hidden ? 0 : s.text.textContent.length);
+      drawings.set(time, { text: s.text.textContent, width: parseFloat(s.word.style.width) });
     }
-    assert.ok(counts.some(count => count > 0 && count < 14));
-    assert.ok(counts.every((count, i) => i === 0 || count <= counts[i - 1]));
+    s.motion.present(view(2, 1), { title: 'Signal studies' });
+    for (const time of times.slice(0, -1)) {
+      s.advance(180 + time);
+      const forward = drawings.get(180 - time);
+      assert.equal(s.text.textContent, forward.text);
+      assert.ok(Math.abs(parseFloat(s.word.style.width) - forward.width) < .001);
+    }
+    s.advance(360);
     assert.equal(s.caption.hidden, true);
-    assert.equal(s.frames.size, 0);
+    assert.equal(s.text.textContent, '');
+    assert.equal(s.classes.has('is-scrambling'), false);
   } finally { s.restore(); }
 });
 
-test('reentering during an unfinished exit resumes the drawn glyphs without a stale hide', () => {
+test('an interrupted About transition reverses from its visible glyphs without restarting a full duration', () => {
   const s = scene();
   try {
-    s.motion.present(view(2), { title: 'Signal studies', immediate: true });
-    s.motion.present(view(1.4), { title: 'Signal studies' }); s.advance(180);
-    const glyphs = s.text.textContent, width = parseFloat(s.word.style.width);
-    assert.ok(glyphs.length > 0 && glyphs.length < 14);
-    s.motion.present(view(1.6), { title: 'Signal studies' });
-    assert.equal(s.text.textContent, glyphs);
-    assert.ok(Math.abs(parseFloat(s.word.style.width) - width) < .001);
-    s.advance(540);
-    assert.equal(s.caption.hidden, false);
-    assert.equal(s.text.textContent, 'Signal studies');
+    s.motion.present(view(1), { title: 'Signal studies', immediate: true });
+    s.motion.present(view(1, 2), { title: 'Signal studies' });
+    s.advance(60);
+    const first = { text: s.text.textContent, width: s.word.style.width };
+    s.motion.present(view(1.4, 1), { title: 'Signal studies' });
+    assert.deepEqual({ text: s.text.textContent, width: s.word.style.width }, first);
+    s.advance(90);
+    assert.ok(parseFloat(s.word.style.width) < parseFloat(first.width));
+    s.advance(120);
+    assert.equal(s.caption.hidden, true, 'a one-third entrance needs only one-third of the clock to reverse');
     assert.equal(s.frames.size, 0);
+    s.motion.present(view(1.2, 2), { title: 'Signal studies' });
+    s.advance(300);
+    assert.equal(s.text.textContent, 'Signal studies');
+    assert.equal(s.classes.has('is-scrambling'), false);
   } finally { s.restore(); }
+});
+
+test('holding a drag still after selection lets the full entrance and exit finish in 180ms', () => {
+  const s = scene();
+  try {
+    s.motion.present(view(1), { title: 'Signal studies', immediate: true });
+    s.motion.present(view(1.51), { title: 'Signal studies' });
+    s.advance(90);
+    assert.ok(s.text.textContent.length > 0 && s.text.textContent.length < 14);
+    s.advance(179);
+    assert.equal(s.motion.animating, true);
+    s.advance(180);
+    assert.equal(s.text.textContent, 'Signal studies');
+    assert.equal(s.motion.animating, false);
+    s.motion.present(view(1.49), { title: 'Signal studies' });
+    s.advance(359);
+    assert.equal(s.motion.animating, true);
+    s.advance(360);
+    assert.equal(s.caption.hidden, true);
+    assert.equal(s.motion.animating, false);
+  } finally { s.restore(); }
+});
+
+test('slow, fast and stationary drags draw identical glyphs and widths at equal elapsed times', () => {
+  const paths = [[1.51, 1.51, 1.51, 1.51], [1.51, 1.52, 1.54, 1.56], [1.51, 1.75, 1.9, 2]];
+  let expected;
+  for (const positions of paths) {
+    const s = scene();
+    try {
+      s.motion.present(view(1), { title: 'Signal studies', immediate: true });
+      s.motion.present(view(positions[0]), { title: 'Signal studies' });
+      const drawings = positions.map((position, index) => {
+        s.advance(index * 60);
+        s.motion.present(view(position), { title: 'Signal studies' });
+        return { text: s.text.textContent, width: s.word.style.width };
+      });
+      expected ??= drawings;
+      assert.deepEqual(drawings, expected);
+      assert.equal(s.text.textContent, 'Signal studies');
+      assert.equal(s.frames.size, 0);
+    } finally { s.restore(); }
+  }
 });
 
 test('a caption-held drag survives crossing into Home/About and is hidden after release', () => {
@@ -203,13 +249,13 @@ test('click-driven gallery motion draws multiple partial character counts before
       for (let elapsed = 0; elapsed <= spring.duration; elapsed += 1000 / 60) {
         s.advance(elapsed);
         const position = spring.sample(elapsed).position;
-        s.motion.present(view(position), { title: 'Signal studies' });
+        s.motion.present(view(position, 2), { title: 'Signal studies' });
         counts.add(s.caption.hidden ? 0 : s.text.textContent.length);
       }
       s.advance(spring.duration + 420);
       s.motion.present(view(2), { title: 'Signal studies' });
       assert.ok(counts.has(0));
-      assert.ok([...counts].filter(count => count > 0 && count < 14).length >= 5,
+      assert.ok([...counts].filter(count => count > 0 && count < 14).length >= 3,
         'a click must include several visible partial titles, not only a blank and a completed title');
       assert.equal(s.text.textContent, 'Signal studies');
       assert.equal(s.frames.size, 0);
