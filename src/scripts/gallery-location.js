@@ -34,7 +34,7 @@ export function galleryAddress(index, panels, { base = '/', article = false, anc
   return `${root}projects/${panel === firstProjectPanel ? '' : `#slide=${encodeURIComponent(panels[panel].slug)}`}`;
 }
 
-// The downloaded preview has one frame and the same persistent gallery app.
+// The downloaded preview uses the same persistent gallery app and hash routes.
 export function previewAddress(hash) {
   const [requested, fragment = ''] = hash.replace(/^#/, '').split('?');
   const route = ['home', 'about', 'projects'].includes(requested) ? requested : 'home';

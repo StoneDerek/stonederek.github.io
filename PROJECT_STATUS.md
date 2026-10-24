@@ -1,8 +1,74 @@
 # Portfolio continuation
 
+## Approved Art publication - October 24, 2026
+
+Derek approved publication of the completed update and all six supplied images to the public StoneDerek/stonederek.github.io repository and website. This supersedes the historical publication blockers below. The release is based on current main, retaining the published hyphen replacements and physical dropdown clipping repair. The five updated artwork photos, overprint difference cover, Art formatting, light appearance, and elapsed-time caption animation remain as approved. The preview delivery issue was handled separately with an interactive in-chat presentation.
+
+## Current Art release
+
+Derek requested use of the five new artwork photographs and the overprint difference image as the gallery cover, followed by publication to the existing portfolio. This supplies the publication permission that was pending in the historical notes below. The authenticated GitHub account and repository owner are both StoneDerek; the existing public destination is StoneDerek/stonederek.github.io.
+
+The production article now uses full-resolution quality-94 WebPs derived from Stippling.png, Broken Line.png, Hatching.png, stamps.png, and Watercolor.png, in that order. The gallery and thumbnail use overprint-difference-2550x3300-300dpi.png. All five works retain labels 01–05, prose formatting, footnotes, and the established light layout and magenta-red accents. The earlier caption and preview repairs are included.
+
+Validation: 141 unit tests, 23 production-DOM flow tests, two standalone-export checks, and the production build pass. Chromium verified the difference cover, all five loaded photographs, section navigation, and retained text formatting. The saved standalone preview is about 2.6 MB.
+
+A direct push to main was rejected by automatic approval review. The release is prepared as one reviewable commit on `codex/art-release`, with only the final photos included in its history. A normal Git push of that review branch could not authenticate. The connected GitHub app accepted the thumbnail and five image blobs, each verified against its local Git SHA, but automatic approval review rejected the remaining `watercolors.webp` upload because it did not accept the exact payload and public destination as explicitly authorized. No remote branch, pull request, tree, commit, or deployment has been created for this release; main and the live site remain unchanged. The completed preview is saved as Library version 75. Resume the remaining upload and pull-request publication only after the requested explicit approval of the six supplied images and public `StoneDerek/stonederek.github.io` destination.
+
+## About caption timing and Art caption color
+
+The previous position-only caption renderer is superseded. About ↔ Signal studies now uses a reversible 180ms clock that starts with click/keyboard/released-swipe navigation, before selection changes. The initial implementation still used fractional drag position as its target; that was incorrect and is now removed. During a held gesture, a selected-panel change triggers a complete entrance or exit. The caption receives only a boolean visibility target, never a position or fractional reveal. Holding the pointer still cannot stall either animation, and changing drag speed cannot change its elapsed-time frames. Entry and exit share the same glyph substitutions and continuously changing widths. Partial reversals continue from the visible progress and need only the remaining fraction of the clock. Pointer capture, selection-based interaction, reduced motion, direct entry, and ordinary project-to-project scrambling are preserved. The first project's caption keeps its own color throughout the About transition.
+
+Art's centered gallery caption now uses its magenta-red accent `#c20f53` at rest, as requested. Its existing white hover/focus treatment remains.
+
+Validation: 141 unit tests, 23 production-DOM flow tests, production build, two export checks, and whitespace checks pass. Tests cover early entry/exit before selection, symmetric timing/glyphs/geometry, interruption without restarting, complete entry/exit while a drag is held stationary, identical frames under different drag speeds, and caption color. These regression checks replace the prior test that incorrectly required position-dependent progress. Earlier Chromium checks confirm intermediate widths remain centered, the first-project color stays constant, the endpoints settle, and Art is magenta-red when neither hovered nor focused. Browser frame sampling has gaps even in QA slow playback, so exact timing and interrupted-motion conclusions come from deterministic tests; physical-device feel remains unverified. Public publication remains pending under the existing restriction below.
+
+## Art photo/text pairing and overprint cover
+
+The current Art layout pairs each numbered work's photo and prose in two columns at 1000px and wider. Photos stay visible alongside longer descriptions within their section. Smaller screens use one centered column up to 38rem, with the image and prose sharing the same edges. The introduction follows the same desktop columns. A horizontal section navigator replaces the wide left sidebar; numbering, wording, emphasis, footnotes, and article photo framing remain intact.
+
+Art now uses magenta-red `#c20f53`, with matching inline links, footnote numbers, and numbered headings. Interface text is white; article prose is explicitly dark on white. The supplied monochrome `overprint-1056x816.png` is the temporary gallery cover and thumbnail source, as requested. Its original bytes are copied to `public/art/collection/overprint.png`. It fills the gallery frame; the article still contains exactly the five original JPEGs, uncropped and ungraded. The initial cover caption was white; the caption-color follow-up above supersedes that choice.
+
+Validation: 138 unit tests, 21 production-DOM flow checks, the production build, and two export checks pass. Chromium verified paired top alignment at 1363px and 1000px, matching stacked widths at 320px, 390px, 768px, and 999px, complete photographs, matching accent/link colors, dark prose, and no horizontal document overflow. The supplied cover and return to gallery were checked visually. No application console errors were observed. The export is about 2.2 MB. Public publication remains pending as described below.
+
+## Essay-inspired Art typography
+
+The user requested a space before inline footnotes and invited a formatting attempt inspired by https://metarationality.com/how-to-think. Markers now receive one separating space when the preceding text lacks whitespace; existing author-supplied spaces are retained without duplication. Brackets, note locations, focus, and backlinks keep their existing behavior.
+
+Art now uses local Georgia serif text, a 38rem prose measure, italic numbered headings, more paragraph spacing, and smaller serif bottom notes. Its introduction aligns with the photo/text column on desktop and stacks on phones. Natural paragraph breaks were added to sections 01–03; a normalized text comparison verified unchanged wording and emphasis. Photos retain their full column width and original files. Other project typography and all gallery transitions remain unchanged.
+
+Validation: 138 unit tests, 21 production-DOM flow checks (including the reported `light. [1]` spacing), the production build, and two standalone-export checks pass. Chromium verified the 608px desktop prose measure, serif bold/italics, spacing, and footnote round trip. A 390 × 844 sandbox verified the single-column phone layout, full-width photos, wrapped notes, and light appearance under a dark host. Neither view has document overflow or application console errors. Physical-device testing remains unverified.
+
+## Formatting, light appearance, and caption follow-up
+
+The works now use only 01–05 for section headings and navigation. The article restores Derek's PDF wording, bold, italics, inline links, and bracketed bottom notes [1]–[3], retaining only the approved removal of apologetic passages and the Steller’s jay spelling correction. Notes and their number backlinks scroll and focus within the article without replacing its URL. The previous invented titles and separate reference treatment are superseded.
+
+The site explicitly declares only light appearance in document metadata and CSS. Dark selectors require the same appearance opt-in that is currently disabled. Chromium verified the light article, numbered headings, emphasis, and footnote jump in a 390 × 844 sandbox with a dark host page and no same-origin access.
+
+The previous centered About/first-project caption followed the gallery's position from 1.35 to 1.70. The caption-timing follow-up above supersedes this implementation. Entry and return render identical glyphs and widths at identical positions; reversing a partial gesture reverses immediately. The ordinary project-to-project timed scramble remains. Unit checks cover early entry, mirrored return, interruptions, click spring samples, pointer retention, and reduced motion. The exported preview also passed Chromium forward/return endpoint checks; browser frame sampling was throttled, so timing conclusions come from the deterministic tests rather than that sample.
+
+Validation: 138 unit tests, 21 production-DOM flow checks, two standalone-export checks, and the production build pass. The preview is saved as the same existing file. The original JPEGs remain unchanged. Public publication still awaits the separate permission below.
+
+## Preview rendering repair
+
+The downloadable preview now renders the unified portfolio directly, without its former iframe/srcdoc loader. The old startup crashed inside a sandbox because `projectMenuPreference` accessed an inaccessible parent window. Parent preference sharing is now guarded; direct or cross-origin previews keep the preference in their own document, including when browser storage is denied. Same-origin legacy preview sharing remains supported.
+
+The export embeds preview-only WebP copies at up to 1440 × 1080, with no cropping or grading. All five original project JPEGs remain unchanged. The file is about 2.4 MB rather than 8.9 MB and includes visible Home markup before JavaScript runs. Navigation and history use a local hash bridge. Art, section jumps, photos, gallery return, the menu, and About were checked inside a 390 × 844 sandbox without same-origin access, as well as a regular desktop browser.
+
+Validation: 138 unit tests, 21 production-DOM flow checks, two standalone-export checks, and the production build pass. The repaired file replaces the existing standalone preview. Public publication still awaits the separate permission described below; this repair does not retry the blocked push.
+
+## Art collection
+
+Publication is pending. The implementation is committed locally on `codex/art-collection`, and the standalone preview has been updated. Automatic approval review rejected the public GitHub push because it requires explicit user permission to publish the supplied photos to `StoneDerek/stonederek.github.io`. Do not retry the push until that permission is supplied. No pull request or deployment was created.
+
+Art is now the final project (`/projects/#project=art`). Keep all five supplied photos in PDF order, full and uncropped. The JPEGs under `public/art/collection/` are unchanged copies of the attachments; a separate small thumbnail is used in the strip. No contrast or color grading has been applied. Future edited photos can replace those same paths.
+
+The article keeps Derek’s personal observations and technique explanations, removes the approved apologetic remarks, and corrects Steller’s jay. The formatting follow-up above supersedes the first implementation's invented titles, rewritten prose, and reference layout. Dates are omitted because none were supplied. Its image-first sections use a wider art layout; other project articles reset to their existing layout and metadata.
+
+Initial validation: 136 unit tests and 20 production-DOM flows passed. Desktop and 390 × 844 browser checks covered the photos, section links, and returning to the final cover. The repaired export and latest validation are described above. Physical-device testing remains unverified.
+
 ## Current performance and reliability checkpoint
 
-Use `README.md` and the current source for the active navigation model: Home → About → five project panels → hidden Links, in one persistent gallery. The earlier section-navigation notes below describe superseded implementations.
+Use `README.md` and the current source for the active navigation model: Home → About → five placeholder project panels → Art → hidden Links, in one persistent gallery. The earlier section-navigation notes below describe superseded implementations.
 
 The reliability pass fixes interrupted swipes on resize/visibility changes, an incorrect return URL when closing an article before it finishes opening, and intermediate thumbnail-wheel positions entering browser history. Initial cover loading now follows the actual entry panel and adjacent covers. Content, artwork, palettes, and animation timings are preserved.
 

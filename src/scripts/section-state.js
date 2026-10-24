@@ -6,13 +6,18 @@ export function galleryFrame(value, projectCount) {
     endProgress: Math.max(0, position - last), links: position >= last + .5 };
 }
 
-// Selection triggers a caption request; the caption owns its animation clock.
-export function galleryCaptionFrame(frame, firstProject) {
+// Navigation/selection triggers a complete entrance or exit. Never pass slide
+// progress to the caption: after the trigger, elapsed time owns every glyph.
+export function galleryCaptionFrame(frame, firstProject, destination = null) {
+  const boundaryVisible = frame.project <= firstProject && !frame.links
+    ? (destination === null ? frame.project : Math.round(destination)) >= firstProject
+    : null;
   return {
     project: Math.max(firstProject, frame.project),
-    visible: !frame.links && frame.project >= firstProject,
+    visible: !frame.links && (frame.project >= firstProject || boundaryVisible === true),
     interactive: !frame.links && frame.project >= firstProject,
-    links: frame.links
+    links: frame.links,
+    boundaryVisible
   };
 }
 
