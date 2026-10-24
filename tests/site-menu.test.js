@@ -24,7 +24,11 @@ function scene({ reduced = false, unsupported = null } = {}) {
     open: false, dataset: {}, style: { height: '', setProperty(name, value) { this[name] = value; } },
     querySelector: selector => selector === 'summary' ? toggle : body,
     addEventListener: (name, callback) => events.set(name, callback),
-    getBoundingClientRect() { return { height: parseFloat(this.style.height) || (this.open ? 800 : 64) }; }
+    getBoundingClientRect() {
+      return { height: activeHeight
+        ? activeHeight.drawnHeight ?? parseFloat(activeHeight.frames[0].height)
+        : parseFloat(this.style.height) || (this.open ? 800 : 64) };
+    }
   };
   for (const [name, node] of [['details', details], ['body', body]]) {
     if (name === unsupported) continue;
@@ -41,10 +45,7 @@ function scene({ reduced = false, unsupported = null } = {}) {
   }
   Object.assign(globalThis, {
     document: { activeElement: null }, getComputedStyle: node => ({
-      opacity: node.opacity, transform: node.transform,
-      clipPath: node === details && activeHeight
-        ? activeHeight.drawnHeight === null ? activeHeight.frames[0].clipPath
-          : `inset(0px 0px ${800 - activeHeight.drawnHeight}px 0px round 8px)` : 'none'
+      opacity: node.opacity, transform: node.transform
     })
   });
   const preference = { matches: reduced };
@@ -70,11 +71,10 @@ test('the complete menu body is hidden after closing and all animation fills are
     s.navigation.set(true);
     assert.equal(s.body.hidden, false);
     assert.equal(s.body.inert, false);
-    assert.deepEqual(s.animations[0].frames.map(frame => frame.clipPath), [
-      'inset(0px 0px 736px 0px round 8px)', 'inset(0px 0px 0px 0px round 8px)'
+    assert.deepEqual(s.animations[0].frames.map(frame => frame.height), [
+      '64px', '800px'
     ]);
-    assert.equal(s.details.style.height, '', 'animation must not resize the full menu every frame');
-    assert.equal(s.details.getBoundingClientRect().height, 800);
+    assert.equal(s.details.getBoundingClientRect().height, 64, 'the shell physically clips the fixed-size body');
     assert.equal(s.details.dataset.animating, '');
     s.animations[0].finish();
     assert.equal(s.details.style.height, '');
@@ -118,12 +118,12 @@ test('rapid reversals retain the drawn frame and stale completions cannot hide t
     s.body.transform = 'matrix(1, 0, 0, 1, 0, -2)';
     s.navigation.set(false);
     const staleClose = s.animations[2].onfinish;
-    assert.equal(s.animations[2].frames[0].clipPath, 'inset(0px 0px 524px 0px round 8px)');
+    assert.equal(s.animations[2].frames[0].height, '276px');
     assert.equal(s.animations[3].frames[0].opacity, '.6');
     assert.equal(s.animations[3].frames[0].transform, s.body.transform);
     s.animations[2].drawnHeight = 100;
     s.navigation.set(true);
-    assert.equal(s.animations[4].frames[0].clipPath, 'inset(0px 0px 700px 0px round 8px)');
+    assert.equal(s.animations[4].frames[0].height, '100px');
     staleOpen();
     staleClose();
     assert.equal(s.details.open, true);

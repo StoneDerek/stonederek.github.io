@@ -1,5 +1,6 @@
-// Lay out the open menu once, then reveal its clip instead of reflowing the
-// full-screen reading area on every animation frame.
+// Keep the reading area absolutely positioned at its full size. Animate the
+// shell's physical height so overflow clips every divider, including when a
+// native details element discards its animated compositing layers on close.
 export function mountSiteMenu(details, reducedMotion, { onChange = () => {}, signal } = {}) {
   const toggle = details.querySelector('summary');
   const body = details.querySelector('.menu-body');
@@ -20,11 +21,7 @@ export function mountSiteMenu(details, reducedMotion, { onChange = () => {}, sig
   };
   function set(open, { immediate = false, focus = false } = {}) {
     const current = ++generation;
-    const boxHeight = details.getBoundingClientRect().height;
-    const clip = animation && getComputedStyle(details).clipPath;
-    const inset = clip && /^inset\(([^)]+)\)/.exec(clip)?.[1].split(' round ')[0].trim().split(/\s+/);
-    const clippedBottom = inset ? parseFloat(inset[inset.length > 2 ? 2 : 0]) || 0 : 0;
-    const fromHeight = boxHeight - clippedBottom;
+    const fromHeight = details.getBoundingClientRect().height;
     const wasClosed = !details.open;
     const style = details.open && !body.hidden ? getComputedStyle(body) : null;
     const fromOpacity = style?.opacity || '0';
@@ -41,7 +38,6 @@ export function mountSiteMenu(details, reducedMotion, { onChange = () => {}, sig
       details.open = open;
       cancel();
       details.style.height = '';
-      details.style.clipPath = '';
       body.style.opacity = '';
       body.style.transform = '';
       sync();
@@ -59,8 +55,7 @@ export function mountSiteMenu(details, reducedMotion, { onChange = () => {}, sig
       finish(); return;
     }
     details.dataset.animating = '';
-    const reveal = height => `inset(0px 0px ${Math.max(0, fullHeight - height)}px 0px round 8px)`;
-    animation = details.animate([{ clipPath: reveal(fromHeight) }, { clipPath: reveal(toHeight) }], {
+    animation = details.animate([{ height: `${fromHeight}px` }, { height: `${toHeight}px` }], {
       duration: open ? 340 : 240, easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'both'
     });
     contentAnimation = body.animate([
