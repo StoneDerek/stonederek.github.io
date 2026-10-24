@@ -20,9 +20,7 @@ button { font: inherit; cursor: pointer; border: 0; }
 .site-menu { transition: background-color 320ms ease; }
 .site-header[data-palette-motion], .site-header[data-palette-motion] .site-menu { transition: none; }
 .site-menu:not([open]) > .menu-body { display: none; }
-.menu-body { display: flex; flex-direction: column; height: calc(var(--menu-height) - var(--menu-summary-height, 64px)); overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; touch-action: pan-y pinch-zoom; }
-.site-menu[data-animating] { will-change: clip-path; }
-.site-menu[data-animating] > .menu-body { will-change: opacity, transform; }
+.menu-body { position: absolute; inset: var(--menu-summary-height, 64px) 0 auto; display: flex; flex-direction: column; height: calc(var(--menu-height) - var(--menu-summary-height, 64px)); overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; touch-action: pan-y pinch-zoom; }
 .site-menu > summary { position: relative; display: flex; flex-direction: column; justify-content: center; flex: 0 0 auto; min-height: 64px; padding: 11px 14px; list-style: none; cursor: pointer; font: inherit; }
 .site-menu summary::-webkit-details-marker { display: none; }
 .menu-name { font: inherit; font-weight: 700; }
