@@ -139,7 +139,7 @@ function initializePreview({ pages, assets, resumePDF }, addressFromHash, hashFr
       const hash = hashFromAddress(currentAddress);
       if (location.hash !== hash) history[data.replace ? 'replaceState' : 'pushState'](null, '', hash);
     }
-    if (data?.type === 'portfolio-preview-title' && typeof data.title === 'string') document.title = data.title + ' — Preview';
+    if (data?.type === 'portfolio-preview-title' && typeof data.title === 'string') document.title = data.title + ' - Preview';
     if (data?.type === 'portfolio-preview-theme' && ['system', 'light', 'dark'].includes(data.choice)) {
       themeChoice = data.choice;
       document.documentElement.dataset.theme = data.resolved === 'dark' ? 'dark' : 'light';
@@ -164,6 +164,6 @@ const loader = `(${initializePreview.toString()})(JSON.parse(document.getElement
 new Script(loader, { filename: 'preview-navigation.js' });
 const startup = `(${initializeTheme.toString()})(${JSON.stringify(themeStorageKey)},${appearanceEnabled});`;
 new Script(startup, { filename: 'preview-theme-startup.js' });
-const output = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Derek Stone — Portfolio preview</title><link rel="icon" type="image/svg+xml" href="${favicon}"><style>html,body{margin:0;width:100%;height:100%}html{background:#fff;color-scheme:light}html[data-theme="dark"]{background:#17171b;color-scheme:dark}iframe{display:block;width:100%;height:100%;border:0}noscript{padding:24px;font:16px/1.5 Arial,sans-serif}</style><script>${startup}</script></head><body><iframe title="Derek Stone’s portfolio"></iframe><noscript>Open this preview in a browser with JavaScript enabled to explore Home, About, and Projects.</noscript><script type="application/json" id="preview-data">${payload}</script><script>${loader}</script></body></html>`;
+const output = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Derek Stone - Portfolio preview</title><link rel="icon" type="image/svg+xml" href="${favicon}"><style>html,body{margin:0;width:100%;height:100%}html{background:#fff;color-scheme:light}html[data-theme="dark"]{background:#17171b;color-scheme:dark}iframe{display:block;width:100%;height:100%;border:0}noscript{padding:24px;font:16px/1.5 Arial,sans-serif}</style><script>${startup}</script></head><body><iframe title="Derek Stone’s portfolio"></iframe><noscript>Open this preview in a browser with JavaScript enabled to explore Home, About, and Projects.</noscript><script type="application/json" id="preview-data">${payload}</script><script>${loader}</script></body></html>`;
 await writeFile('portfolio-preview.html', output);
 console.log(`Exported all three portfolio pages (${Math.round(Buffer.byteLength(output) / 1024)} KB).`);

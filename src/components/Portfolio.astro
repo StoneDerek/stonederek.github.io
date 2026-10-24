@@ -19,7 +19,7 @@ const first = projects[0];
 const linksLogo = ['      _', '     | |', '   __| |___', '  / _` / __|', ' | (_| \\__ \\_', '  \\__,_|___(_)'].join('\n');
 const serialized = JSON.stringify(panels).replace(/</g, '\\u003c');
 ---
-<Layout title={`${site.name} — ${section === 'home' ? 'Portfolio' : section === 'about' ? 'About' : 'Projects'}`} description={section === 'projects' ? `Projects, experiments, and work in progress by ${site.name}.` : section === 'about' ? `About ${site.name}.` : site.description}>
+<Layout title={`${site.name} - ${section === 'home' ? 'Portfolio' : section === 'about' ? 'About' : 'Projects'}`} description={section === 'projects' ? `Projects, experiments, and work in progress by ${site.name}.` : section === 'about' ? `About ${site.name}.` : site.description}>
   <main id="portfolio" class="portfolio" data-base={base} data-panel-kind={panels[selected].kind} data-initial-panel={selected} style={`--accent:${palette.accent};--ink:${palette.ink};--caption-color:${palette.caption || palette.accent}`}>
     <a class="skip-link" href={section === 'home' ? '#home-title' : section === 'about' ? '#about-title' : '#project-caption'}>Skip to content</a>
 
@@ -77,7 +77,7 @@ const serialized = JSON.stringify(panels).replace(/</g, '\\u003c');
               </details>
               <nav class="gallery-end-links" aria-label="Professional links">
                 <a href={site.linkedin} data-end-link target="_blank" rel="noopener noreferrer">LinkedIn</a>
-                <a href={resumeURL(base)} data-end-link data-resume-link target="_blank" rel="noopener" aria-label="Resume PDF (opens in a new tab)" title="Resume PDF — opens in a new tab">Resume</a>
+                <a href={resumeURL(base)} data-end-link data-resume-link target="_blank" rel="noopener" aria-label="Resume PDF (opens in a new tab)" title="Resume PDF - opens in a new tab">Resume</a>
                 <a href={`mailto:${site.email}`} data-end-link>Email</a>
               </nav>
             </footer>

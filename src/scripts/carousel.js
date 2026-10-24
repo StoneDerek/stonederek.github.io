@@ -651,7 +651,7 @@ export function mountPortfolio() {
         window.history[replace ? 'replaceState' : 'pushState'](state, '', address);
       }
     }
-    document.title = `${siteHeader.dataset.owner} — ${article ? panels[index].title : sectionForPanel(index) === 'home' ? 'Portfolio' : sectionForPanel(index) === 'about' ? 'About' : 'Projects'}`;
+    document.title = `${siteHeader.dataset.owner} - ${article ? panels[index].title : sectionForPanel(index) === 'home' ? 'Portfolio' : sectionForPanel(index) === 'about' ? 'About' : 'Projects'}`;
   }
 
   function navigatePanel(index, { skipHistory = false, immediate = false, focusThumbnail = false, focusContent = false } = {}) {
@@ -704,7 +704,7 @@ export function mountPortfolio() {
     Promise.resolve(pending).then(() => {
       if (lastAddress !== key) return;
       if (route.anchor) scrollAnchor(route.anchor);
-      document.title = `${siteHeader.dataset.owner} — ${route.article === null ? route.panel === 0 ? 'Portfolio' : route.panel === 1 ? 'About' : 'Projects' : panels[route.article].title}`;
+      document.title = `${siteHeader.dataset.owner} - ${route.article === null ? route.panel === 0 ? 'Portfolio' : route.panel === 1 ? 'About' : 'Projects' : panels[route.article].title}`;
     });
   }
 
