@@ -111,6 +111,9 @@ test('all direct panel and article URLs mount one persistent portfolio with matc
       assert.equal(s.find('[data-project-view]').hidden, article === null, address);
       assert.equal(s.document.querySelectorAll('#portfolio').length, 1);
       assert.equal(s.document.querySelector('link[rel="icon"]').getAttribute('href'), '/favicon.svg', address);
+      assert.equal(s.find('.menu-name').textContent, 'Derek Stone', address);
+      assert.equal(s.find('[data-menu-context]').textContent, panel === 0 ? 'Home' : panel === 1 ? 'About' : article === null ? 'Projects:' : 'Project:', address);
+      assert.equal(s.find('[data-menu-title]').textContent, panel < 2 ? '' : panel === projects.length + 2 ? 'Links' : projects[panel - 2].title, address);
       if (article !== null) assert.equal(Number(s.article), article, address);
     } finally { await s.close(); }
   }
@@ -128,6 +131,11 @@ test('the static favicon stays untouched across gallery, article and Links navig
     s.click('[data-menu-project="2"]'); await s.flush();
     s.click('.back-button'); await s.flush();
     s.key('End'); s.key('Home');
+    assert.equal(s.find('[data-menu-context]').textContent, 'Home');
+    assert.equal(s.find('[data-menu-title]').textContent, '');
+    s.click('[data-menu-about]');
+    assert.equal(s.find('[data-menu-context]').textContent, 'About');
+    assert.equal(s.find('[data-menu-title]').textContent, '');
     mutations.push(...observer.takeRecords());
     assert.equal(s.document.querySelector('link[rel="icon"]'), icon);
     assert.equal(icon.getAttribute('href'), '/favicon.svg');
@@ -556,6 +564,15 @@ test('all compiled pages have valid local assets, links and accessibility refere
     } });
     try {
       window.document.write(await readFile(new URL(`../dist/${entry}index.html`, import.meta.url), 'utf8'));
+      if (entry !== 'resume/') {
+        assert.equal(window.document.querySelector('.menu-name').textContent, 'Derek Stone');
+        assert.equal(window.document.querySelector('#home-title').textContent, 'Hi, I’m Derek.');
+        assert.equal(window.document.querySelector('.introduction-lead'), null);
+        if (entry !== 'projects/') {
+          assert.equal(window.document.querySelector('[data-menu-context]').textContent, entry === 'about/' ? 'About' : 'Home');
+          assert.equal(window.document.querySelector('[data-menu-title]').textContent, '');
+        }
+      }
       const ids = [...window.document.querySelectorAll('[id]')].map(node => node.id);
       assert.equal(new Set(ids).size, ids.length, `Duplicate IDs in ${entry || 'Home'}`);
       for (const node of window.document.querySelectorAll('[aria-controls], [aria-labelledby], [aria-describedby]')) {

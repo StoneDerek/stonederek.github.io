@@ -9,14 +9,15 @@ const url = (path = '') => `${base}${path}`;
 const gallery = page === 'projects';
 const published = publicationDate();
 const cat = ['  ╱|、', '(˚ˎ 。7', ' |、˜〵', 'じしˍ,)ノ'].join('\n');
-const location = gallery ? projects[0].title : page === 'about' ? site.name : 'Introduction';
+const context = gallery ? 'Projects:' : page === 'about' ? 'About' : 'Home';
+const location = gallery ? projects[0].title : '';
 ---
 <header class="site-header" data-owner={site.name} data-page={page}>
   <details class="site-menu" data-menu>
-    <summary aria-label={`Open navigation. ${page === 'home' ? 'Home' : gallery ? 'Projects' : 'About'}: ${location}`} aria-controls="project-navigation">
+    <summary aria-label={`Open navigation. ${context}${location ? ` ${location}` : ''}`} aria-controls="project-navigation">
       <span class="menu-name">{site.header}</span>
       <span class="menu-status-row"><span class="menu-status"><span class="menu-location"><span class="menu-context">
-        <span class="menu-context-row" data-menu-context>{page === 'home' ? 'Home:' : gallery ? 'Projects:' : 'About:'}</span>
+        <span class="menu-context-row" data-menu-context>{context}</span>
       </span><span class="menu-title-window"><span data-menu-title>{location}</span></span></span><span class="menu-open-label" aria-hidden="true">Menu</span></span><svg class="menu-icon" viewBox="0 0 16 16" aria-hidden="true"><path class="menu-bars" d="M3 4h10M3 8h10M3 12h10" /><path class="menu-cross" d="m4 4 8 8m0-8-8 8" /></svg></span>
     </summary>
     <div class="menu-body">
