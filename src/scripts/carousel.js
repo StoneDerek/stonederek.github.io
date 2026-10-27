@@ -153,8 +153,9 @@ export function mountPortfolio() {
   function updateMenuName() {
     const location = menuContext === 'home' ? 'Home'
       : menuContext === 'about' ? 'About'
+      : menuContext === 'links' ? 'Links'
       : menuContext === 'project' ? `Project: ${panels[Math.max(firstProjectPanel, articleIndex)].title}`
-      : `Projects: ${endOpen ? 'Links' : panels[Math.max(0, active)].title}`;
+      : `Projects: ${panels[Math.max(0, active)].title}`;
     menuToggle.setAttribute('aria-label', `${menuNavigation.expanded ? 'Close' : 'Open'} navigation. ${location}`);
     const section = menuContext === 'project' || menuContext === 'gallery' ? 'projects' : menuContext;
     for (const [route, link] of [['home', homeMenuButton], ['about', aboutMenuButton], ['projects', menu.querySelector('[data-menu-gallery]')]]) {
@@ -167,13 +168,14 @@ export function mountPortfolio() {
 
   function setMenuContext(next, { immediate = false, direction } = {}) {
     const section = sectionForPanel(active);
-    const context = typeof next === 'boolean' ? next ? 'project' : section === 'projects' ? 'gallery' : section : next;
+    const requested = typeof next === 'boolean' ? next ? 'project' : section === 'projects' ? 'gallery' : section : next;
+    const context = requested === 'gallery' && endOpen ? 'links' : requested;
     if (menuContext === context && !immediate) return;
-    const order = ['home', 'about', 'gallery', 'project'];
+    const order = ['home', 'about', 'gallery', 'links', 'project'];
     direction ??= Math.sign(order.indexOf(context) - order.indexOf(menuContext)) || 1;
     menuContext = context;
     updateMenuName();
-    contextMotion.set({ home: 'Home', about: 'About', gallery: 'Projects:', project: 'Project:' }[context], { immediate, direction });
+    contextMotion.set({ home: 'Home', about: 'About', gallery: 'Projects:', links: 'Links', project: 'Project:' }[context], { immediate, direction });
   }
 
   function setMenuTitle(title, options) {
@@ -208,7 +210,7 @@ export function mountPortfolio() {
       if (!links && Number(button.dataset.menuProject) === index) button.setAttribute('aria-current', 'true');
       else button.removeAttribute('aria-current');
     });
-    setMenuTitle(links ? 'Links' : project.kind === 'project' ? project.title : '', { immediate, direction });
+    setMenuTitle(!links && project.kind === 'project' ? project.title : '', { immediate, direction });
   }
 
   function updateEnd(progress, links) {
@@ -233,6 +235,7 @@ export function mountPortfolio() {
     endOpen = links;
     root.dataset.atGalleryEnd = String(links);
     skipLink.href = links ? '#gallery-end' : '#project-caption';
+    if (active >= 0 && !hasDialog()) setMenuContext(false, { direction: links ? 1 : -1 });
     updateGalleryIdentity({ direction: projectOpen || projectRequests.busy ? -1 : links ? 1 : -1 });
   }
 
@@ -668,7 +671,7 @@ export function mountPortfolio() {
         window.history[replace ? 'replaceState' : 'pushState'](state, '', address);
       }
     }
-    document.title = `${siteHeader.dataset.owner} - ${article ? panels[index].title : sectionForPanel(index) === 'home' ? 'Portfolio' : sectionForPanel(index) === 'about' ? 'About' : 'Projects'}`;
+    document.title = `${siteHeader.dataset.owner} - ${article ? panels[index].title : index === end ? 'Links' : sectionForPanel(index) === 'home' ? 'Portfolio' : sectionForPanel(index) === 'about' ? 'About' : 'Projects'}`;
   }
 
   function navigatePanel(index, { skipHistory = false, immediate = false, focusThumbnail = false, focusContent = false } = {}) {
@@ -721,7 +724,7 @@ export function mountPortfolio() {
     Promise.resolve(pending).then(() => {
       if (lastAddress !== key) return;
       if (route.anchor) scrollAnchor(route.anchor);
-      document.title = `${siteHeader.dataset.owner} - ${route.article === null ? route.panel === 0 ? 'Portfolio' : route.panel === 1 ? 'About' : 'Projects' : panels[route.article].title}`;
+      document.title = `${siteHeader.dataset.owner} - ${route.article === null ? route.panel === end ? 'Links' : route.panel === 0 ? 'Portfolio' : route.panel === 1 ? 'About' : 'Projects' : panels[route.article].title}`;
     });
   }
 
