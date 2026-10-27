@@ -151,8 +151,8 @@ export function mountPortfolio() {
   });
 
   function updateMenuName() {
-    const location = menuContext === 'home' ? 'Home: Introduction'
-      : menuContext === 'about' ? `About: ${siteHeader.dataset.owner}`
+    const location = menuContext === 'home' ? 'Home'
+      : menuContext === 'about' ? 'About'
       : menuContext === 'project' ? `Project: ${panels[Math.max(firstProjectPanel, articleIndex)].title}`
       : `Projects: ${endOpen ? 'Links' : panels[Math.max(0, active)].title}`;
     menuToggle.setAttribute('aria-label', `${menuNavigation.expanded ? 'Close' : 'Open'} navigation. ${location}`);
@@ -173,7 +173,7 @@ export function mountPortfolio() {
     direction ??= Math.sign(order.indexOf(context) - order.indexOf(menuContext)) || 1;
     menuContext = context;
     updateMenuName();
-    contextMotion.set({ home: 'Home:', about: 'About:', gallery: 'Projects:', project: 'Project:' }[context], { immediate, direction });
+    contextMotion.set({ home: 'Home', about: 'About', gallery: 'Projects:', project: 'Project:' }[context], { immediate, direction });
   }
 
   function setMenuTitle(title, options) {
@@ -208,7 +208,7 @@ export function mountPortfolio() {
       if (!links && Number(button.dataset.menuProject) === index) button.setAttribute('aria-current', 'true');
       else button.removeAttribute('aria-current');
     });
-    setMenuTitle(links ? 'Links' : project.kind === 'home' ? 'Introduction' : project.kind === 'about' ? siteHeader.dataset.owner : project.title, { immediate, direction });
+    setMenuTitle(links ? 'Links' : project.kind === 'project' ? project.title : '', { immediate, direction });
   }
 
   function updateEnd(progress, links) {
