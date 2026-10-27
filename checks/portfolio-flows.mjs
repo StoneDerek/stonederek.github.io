@@ -566,7 +566,10 @@ test('all compiled pages have valid local assets, links and accessibility refere
       window.document.write(await readFile(new URL(`../dist/${entry}index.html`, import.meta.url), 'utf8'));
       if (entry !== 'resume/') {
         assert.equal(window.document.querySelector('.menu-name').textContent, 'stonederek.github.io');
-        assert.equal(window.document.querySelector('#home-title').textContent, 'Derek Stone.');
+        const title = window.document.querySelector('#home-title');
+        assert.equal(title.textContent, 'Derek Stone');
+        assert.equal(title.nextElementSibling.className, 'introduction-divider');
+        assert.equal(title.nextElementSibling.getAttribute('aria-hidden'), 'true');
         assert.equal(window.document.querySelector('.introduction-lead').textContent, 'Hi, I’m Derek.');
         if (entry !== 'projects/') {
           assert.equal(window.document.querySelector('[data-menu-context]').textContent, entry === 'about/' ? 'About' : 'Home');
