@@ -572,7 +572,7 @@ test('all compiled pages have valid local assets, links and accessibility refere
         const path = url.pathname.endsWith('/') ? `${url.pathname}index.html` : url.pathname;
         await access(new URL(`../dist${path}`, import.meta.url));
       }
-      const covers = [...window.document.querySelectorAll('[data-slide] img')];
+      const covers = [...window.document.querySelectorAll('[data-slide][data-panel-kind="project"] img')];
       assert.equal(covers.filter(image => image.loading === 'eager').length, entry === '' ? 0 : entry === 'about/' ? 1 : entry === 'projects/' ? 2 : 0);
     } finally { await window.happyDOM.close(); }
   }

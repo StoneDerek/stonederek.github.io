@@ -38,7 +38,7 @@ const serialized = JSON.stringify(panels).replace(/</g, '\\u003c');
             ) : (
               <div class:list={['profile-scroll', 'profile-shell', `${panel.kind}-shell`]} data-profile-scroll tabindex="-1">
                 <div class:list={['profile-main', `${panel.kind}-main`]}>
-                  {panel.kind === 'home' ? <HomeContent /> : <AboutContent />}
+                  {panel.kind === 'home' ? <HomeContent active={index === selected} /> : <AboutContent />}
                 </div>
                 <ProfileFooter page={panel.kind} />
               </div>

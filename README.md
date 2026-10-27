@@ -39,7 +39,7 @@ The hidden Links panel retains the local ASCII mirror puzzle, trophy, profession
 
 ## Content and appearance
 
-Home prose now lives in `src/components/HomeContent.astro`; About stays in `src/components/AboutContent.astro`. Home and About retain their placeholder copy. The first five projects remain fictional placeholders; Art contains Derek’s own work and edited copy from his supplied draft. Signal studies still demonstrates the six-section case-study layout, facts, and local supporting illustration.
+Home prose lives in `src/components/HomeContent.astro`; it contains Derek’s supplied introduction, preserving the italic research areas, bold interests, and Rose-Hulman link. The climbing photograph at `public/art/home/climbing.webp` retains the supplied 1536 × 2048 framing. It sits beside the introduction on desktop and below it on phones, loads eagerly on Home, and stays lazy on direct About or project entry. About stays in `src/components/AboutContent.astro` and retains its placeholder copy. The first five projects remain fictional placeholders; Art contains Derek’s own work and edited copy from his supplied draft. Signal studies still demonstrates the six-section case-study layout, facts, and local supporting illustration.
 
 Home uses its light-purple palette; About uses light blue; project covers keep their own palettes. The anchored header blends colors over 320ms. Its section label and title move together: forward navigation moves up, backward navigation moves down, and interrupted requests resume from their drawn positions.
 
