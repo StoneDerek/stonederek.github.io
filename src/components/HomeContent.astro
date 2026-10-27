@@ -2,20 +2,23 @@
 import ThemeControl from './ThemeControl.astro';
 import { appearanceEnabled } from '../scripts/theme.js';
 const base = import.meta.env.BASE_URL;
+const { active = false } = Astro.props;
 ---
       <section class="home-introduction" aria-labelledby="home-title">
         <div class="introduction-copy">
-          <p class="profile-eyebrow">Lorem ipsum / Dolor sit amet</p>
           <h1 id="home-title">Derek<br /> Stone<span class="name-period">.</span></h1>
-          <p class="introduction-lead">Lorem ipsum dolor sit amet.</p>
+          <p class="introduction-lead">Hi, I’m Derek.</p>
           {appearanceEnabled && <ThemeControl />}
-        </div>
-        <div class="introduction-content">
+          <div class="introduction-content">
           <div class="introduction-prose">
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
-            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Cras mattis consectetur purus sit amet fermentum.</p>
+            <p>I’m an Electrical Engineering student at <a href="https://www.rose-hulman.edu/" target="_blank" rel="noopener noreferrer">Rose-Hulman Institute of Technology</a>. I have experience in <em>simulation</em> and <em>ML research</em>. I’m looking to get more hands-on experience and exposure to cutting-edge technologies. I’m particularly interested in <strong>semiconductors</strong>, <strong>photonics</strong>, and <strong>hardware design</strong>.</p>
+            <p>I love to work on challenging and unique problems, especially when they give me the chance to learn something new. Thank you for taking the time to visit my website, and I hope you’ll enjoy seeing some of the things I’ve done.</p>
           </div>
           <div class="profile-actions"><a class="profile-button" href={`${base}projects/`} data-site-route="projects">Explore projects</a><a class="profile-text-link" href={`${base}about/`} data-site-route="about">More about me</a></div>
+          </div>
         </div>
+        <figure class="introduction-photo">
+          <img src={`${base}art/home/climbing.webp`} alt="A climber reaching between holds on an indoor climbing wall." width="1536" height="2048" loading={active ? 'eager' : 'lazy'} fetchpriority={active ? 'high' : 'auto'} decoding="async" draggable="false" />
+        </figure>
       </section>
 
