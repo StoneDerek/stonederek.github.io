@@ -111,7 +111,7 @@ test('all direct panel and article URLs mount one persistent portfolio with matc
       assert.equal(s.find('[data-project-view]').hidden, article === null, address);
       assert.equal(s.document.querySelectorAll('#portfolio').length, 1);
       assert.equal(s.document.querySelector('link[rel="icon"]').getAttribute('href'), '/favicon.svg', address);
-      assert.equal(s.find('.menu-name').textContent, 'Derek Stone', address);
+      assert.equal(s.find('.menu-name').textContent, 'stonederek.github.io', address);
       assert.equal(s.find('[data-menu-context]').textContent, panel === 0 ? 'Home' : panel === 1 ? 'About' : article === null ? 'Projects:' : 'Project:', address);
       assert.equal(s.find('[data-menu-title]').textContent, panel < 2 ? '' : panel === projects.length + 2 ? 'Links' : projects[panel - 2].title, address);
       if (article !== null) assert.equal(Number(s.article), article, address);
@@ -565,9 +565,9 @@ test('all compiled pages have valid local assets, links and accessibility refere
     try {
       window.document.write(await readFile(new URL(`../dist/${entry}index.html`, import.meta.url), 'utf8'));
       if (entry !== 'resume/') {
-        assert.equal(window.document.querySelector('.menu-name').textContent, 'Derek Stone');
-        assert.equal(window.document.querySelector('#home-title').textContent, 'Hi, I’m Derek.');
-        assert.equal(window.document.querySelector('.introduction-lead'), null);
+        assert.equal(window.document.querySelector('.menu-name').textContent, 'stonederek.github.io');
+        assert.equal(window.document.querySelector('#home-title').textContent, 'Derek Stone.');
+        assert.equal(window.document.querySelector('.introduction-lead').textContent, 'Hi, I’m Derek.');
         if (entry !== 'projects/') {
           assert.equal(window.document.querySelector('[data-menu-context]').textContent, entry === 'about/' ? 'About' : 'Home');
           assert.equal(window.document.querySelector('[data-menu-title]').textContent, '');
