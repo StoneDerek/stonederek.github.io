@@ -112,8 +112,12 @@ test('all direct panel and article URLs mount one persistent portfolio with matc
       assert.equal(s.document.querySelectorAll('#portfolio').length, 1);
       assert.equal(s.document.querySelector('link[rel="icon"]').getAttribute('href'), '/favicon.svg', address);
       assert.equal(s.find('.menu-name').textContent, 'stonederek.github.io', address);
-      assert.equal(s.find('[data-menu-context]').textContent, panel === 0 ? 'Home' : panel === 1 ? 'About' : article === null ? 'Projects:' : 'Project:', address);
-      assert.equal(s.find('[data-menu-title]').textContent, panel < 2 ? '' : panel === projects.length + 2 ? 'Links' : projects[panel - 2].title, address);
+      assert.equal(s.find('[data-menu-context]').textContent, panel === 0 ? 'Home' : panel === 1 ? 'About' : panel === projects.length + 2 ? 'Links' : article === null ? 'Projects:' : 'Project:', address);
+      assert.equal(s.find('[data-menu-title]').textContent, panel < 2 || panel === projects.length + 2 ? '' : projects[panel - 2].title, address);
+      if (panel === projects.length + 2) {
+        assert.equal(s.find('[data-menu] > summary').getAttribute('aria-label'), 'Open navigation. Links');
+        assert.equal(s.document.title, 'Derek Stone - Links');
+      }
       if (article !== null) assert.equal(Number(s.article), article, address);
     } finally { await s.close(); }
   }
@@ -201,7 +205,11 @@ test('thumbnails, mobile controls and keyboard traverse all panels without remou
     s.click('[data-step="1"]'); assert.equal(s.panel, 1);
     s.click('[data-step="-1"]'); assert.equal(s.panel, 0);
     s.key('End'); assert.equal(s.panel, s.panels.length);
+    assert.equal(s.find('[data-menu-context]').textContent, 'Links');
+    assert.equal(s.find('[data-menu-title]').textContent, '');
     s.click('[data-end-return]'); assert.equal(s.panel, s.panels.length - 1);
+    assert.equal(s.find('[data-menu-context]').textContent, 'Projects:');
+    assert.equal(s.find('[data-menu-title]').textContent, s.panels.at(-1).title);
   } finally { await s.close(); }
 });
 
@@ -428,12 +436,23 @@ test('rapid article and section requests honor the latest destination', async ()
 test('Back and Forward restore articles and sections without creating history entries', async () => {
   const s = await scene();
   try {
+    s.key('End');
     s.click('[data-menu-about]');
     s.click('[data-menu-project="3"]'); await s.flush();
     const entries = s.window.history.length;
     s.window.history.back();
     await new Promise(resolve => setTimeout(resolve, 0)); await s.flush();
     assert.equal(s.panel, 1); assert.equal(s.find('[data-project-view]').hidden, true);
+    s.window.history.back();
+    await new Promise(resolve => setTimeout(resolve, 0)); await s.flush();
+    assert.equal(s.panel, s.panels.length);
+    assert.equal(s.find('[data-menu-context]').textContent, 'Links');
+    assert.equal(s.find('[data-menu-title]').textContent, '');
+    assert.equal(s.find('[data-menu] > summary').getAttribute('aria-label'), 'Open navigation. Links');
+    assert.equal(s.document.title, 'Derek Stone - Links');
+    s.window.history.forward();
+    await new Promise(resolve => setTimeout(resolve, 0)); await s.flush();
+    assert.equal(s.panel, 1);
     s.window.history.forward();
     await new Promise(resolve => setTimeout(resolve, 0)); await s.flush();
     assert.equal(s.article, '3'); assert.equal(s.panel, 3);
