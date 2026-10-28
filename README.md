@@ -4,7 +4,7 @@ A single full-screen horizontal gallery: Home → About → projects → Links. 
 
 ## Navigation model
 
-Home and About are real gallery panels, followed by five existing placeholder projects and the Art collection as the final project. All share one track, thumbnail strip, header, gesture controller, and persistent app instance. Home and About have labeled thumbnails and native vertical reading areas; project covers keep their artwork, title scramble, and article controls. Links remains a hidden end panel without its own thumbnail or dropdown entry.
+Home and About are real gallery panels, followed by three project previews, two remaining placeholder projects, and the Art collection as the final project. All share one track, thumbnail strip, header, gesture controller, and persistent app instance. Home and About have labeled thumbnails and native vertical reading areas; project covers keep their artwork, title scramble, and article controls. Links remains a hidden end panel without its own thumbnail or dropdown entry.
 
 The separate white navigation row, About return button, page-to-gallery handoff, Astro document router, and outgoing section snapshots are removed. Selecting Home or About slides to that panel. The dropdown can open a project article over the currently drawn panel; only after the article covers it does the gallery select the article's return slide. Closing reveals that project. Selecting Home or About from an article closes onto the requested content panel.
 
@@ -39,7 +39,7 @@ The hidden Links panel retains the local ASCII mirror puzzle, trophy, profession
 
 ## Content and appearance
 
-Home prose lives in `src/components/HomeContent.astro`; it contains Derek’s supplied introduction, preserving the italic research areas, bold interests, and Rose-Hulman link. The climbing photograph at `public/art/home/climbing.webp` retains the supplied 1536 × 2048 framing. It sits beside the introduction on desktop and below it on phones, loads eagerly on Home, and stays lazy on direct About or project entry. About stays in `src/components/AboutContent.astro` and retains its placeholder copy. The first five projects remain fictional placeholders; Art contains Derek’s own work and edited copy from his supplied draft. Signal studies still demonstrates the six-section case-study layout, facts, and local supporting illustration.
+Home prose lives in `src/components/HomeContent.astro`; it contains Derek’s supplied introduction, preserving the italic research areas, bold interests, and Rose-Hulman link. The climbing photograph at `public/art/home/climbing.webp` retains the supplied 1536 × 2048 framing. It sits beside the introduction on desktop and below it on phones, loads eagerly on Home, and stays lazy on direct About or project entry. About stays in `src/components/AboutContent.astro` and retains its placeholder copy. The first three projects preview acoustic drone detection with CNN spectrogram analysis, an academic-advising RAG chatbot, and 2D lightning simulation with a probabilistic potential model. Their generated covers are illustrative concepts; their copy describes project directions without claiming measured results. The drone project uses the six-section case-study layout. Two fictional placeholders remain, and Art contains Derek’s own work and edited copy from his supplied draft.
 
 Direct Home entry reveals the introduction over 800ms and the photograph over 900ms with a 140ms stagger. The photograph waits for decoding and layer preparation, then slides 16px while fading in. Rendering hints are released when it finishes. Returning Home through the gallery does not replay the entrance; reduced motion, hiding the page, and leaving the document finish it immediately. The navigation stays outside this animation.
 
@@ -54,7 +54,8 @@ Edit `src/data/projects.json`. Each item contains:
 | Field | Purpose |
 | --- | --- |
 | `slug` | Stable project ID for direct URLs; use lowercase letters, numbers, and hyphens |
-| `title`, `category`, `year`, `caption` | Project metadata and gallery announcement text |
+| `title`, `category`, `year`, `caption` | Full project metadata and gallery announcement text |
+| `galleryTitle`, `galleryMethod` | Optional subject and method lines for the centered cover caption; the full `title` remains in accessible labels, navigation, and articles |
 | `description`, `note` | Text shown when clicking the centered project title |
 | `image`, `thumbnail` | Image paths relative to `public/` |
 | `imageAlt` | A useful description for screen readers |
@@ -67,7 +68,7 @@ Edit `src/data/projects.json`. Each item contains:
 | `palette.ink` | Text color on accent controls and in the white project view |
 | `palette.caption` | Optional override for the centered title color on lighter images |
 
-Use landscape images around 1920 × 1200 and smaller thumbnail copies around 320 × 200. Put them in `public/art/` and `public/thumbnails/`, then change the paths in the JSON. Use strong contrast between accent and ink, and check the caption against the image. There is no automatic palette extraction or slideshow timer.
+Use landscape images around 1920 × 1200 and smaller thumbnail copies around 320 × 200. Put them in `public/art/` and `public/thumbnails/`, then change the paths in the JSON. Use strong contrast between accent and ink, and check the caption against the image. The three project previews use the same accent for their centered caption, navigation, and thumbnail frame. Their subject and method appear on two lines, preserving the existing timed subject scramble. Image prompts are recorded in `design/project-cover-prompts.md`. There is no automatic palette extraction or slideshow timer.
 
 Article images can use paths relative to `public/` or absolute URLs. Omit `articleMedia` for a text-only article. Supplying image width and height reserves its layout space before it loads. Section images load lazily as the reader approaches them. The offline exporter embeds local article and section images, including images that only appear in project data; remote images still require a connection.
 

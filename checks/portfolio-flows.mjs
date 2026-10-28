@@ -118,6 +118,12 @@ test('all direct panel and article URLs mount one persistent portfolio with matc
       assert.equal(s.find('.menu-name').textContent, 'stonederek.github.io', address);
       assert.equal(s.find('[data-menu-context]').textContent, panel === 0 ? 'Home' : panel === 1 ? 'About' : panel === projects.length + 2 ? 'Links' : article === null ? 'Projects:' : 'Project:', address);
       assert.equal(s.find('[data-menu-title]').textContent, panel < 2 || panel === projects.length + 2 ? '' : projects[panel - 2].title, address);
+      if (panel >= 2 && panel < projects.length + 2 && article === null) {
+        const project = projects[panel - 2];
+        assert.equal(s.find('[data-title]').textContent, project.galleryTitle || project.title, address);
+        assert.equal(s.find('[data-title-method]').textContent, project.galleryMethod || '', address);
+        assert.equal(s.find('.caption-link').getAttribute('aria-label'), `View ${project.title}`, address);
+      }
       if (panel === projects.length + 2) {
         assert.equal(s.find('[data-menu] > summary').getAttribute('aria-label'), 'Open navigation. Links');
         assert.equal(s.document.title, 'Derek Stone - Links');
@@ -288,10 +294,10 @@ test('About caption starts with navigation, keeps the project color, and exits o
     await s.tick(32);
     assert.equal(s.panel, 1, 'the slide has not crossed the selection midpoint yet');
     const title = s.find('[data-title]');
-    assert.ok(title.textContent.length > 0 && title.textContent.length < s.panels[2].title.length);
+    assert.ok(title.textContent.length > 0 && title.textContent.length < s.panels[2].galleryTitle.length);
     assert.equal(s.find('.project-caption').style.getPropertyValue('--caption-color'), s.panels[2].palette.accent);
     await s.tick(160);
-    assert.equal(title.textContent, s.panels[2].title);
+    assert.equal(title.textContent, s.panels[2].galleryTitle);
     await s.tick(400);
     s.click('[data-thumbnail="1"]');
     await s.tick(32);
@@ -325,7 +331,7 @@ test('a held About drag cannot stall the caption entrance or exit', async () => 
     await s.tick(192);
     assert.equal(s.root.classList.contains('is-dragging'), true);
     assert.ok(Math.abs(position() - heldPosition) < .000001, 'card lift must not be mistaken for slide progress');
-    assert.equal(s.find('[data-title]').textContent, s.panels[2].title,
+    assert.equal(s.find('[data-title]').textContent, s.panels[2].galleryTitle,
       'the full title must finish while the pointer and slide remain stationary');
     s.pointer('pointermove', 140, '[data-stage]');
     await s.tick(16);
@@ -649,7 +655,7 @@ test('replacing Art clears its layout, photos and label, and restores dated proj
     assert.equal(host.dataset.layout, '');
     assert.equal(s.find('[data-detail-period]').hidden, false);
     assert.equal(s.find('[data-detail-year]').textContent, '2026');
-    assert.equal(s.find('[data-detail-eyebrow]').textContent, 'Placeholder project');
+    assert.equal(s.find('[data-detail-eyebrow]').textContent, 'Project preview');
     assert.equal(host.querySelectorAll('img[src*="/collection/"]').length, 0);
     assert.equal(host.querySelectorAll('.case-study-media-first, .case-study-references, .project-footnotes').length, 0);
     s.click('[data-menu-project="3"]'); await s.flush();
