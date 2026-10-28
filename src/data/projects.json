@@ -6,14 +6,14 @@
     "year": "2026",
     "caption": "Recognizing drones from their acoustic signatures.",
     "description": "An exploration of detecting drones from sound by converting recordings into spectrograms and using a convolutional neural network to recognize acoustic patterns.",
-    "note": "Project details, training data, and measured performance will be added as the work develops. The cover is an illustrative concept image.",
+    "note": "Project details, training data, and measured performance will be added as the work develops. The cover is a computed spectrogram of synthetic harmonic audio, not a drone recording or model result.",
     "image": "art/acoustic-drone-detection.webp",
     "thumbnail": "thumbnails/acoustic-drone-detection.webp",
-    "imageAlt": "Concept image of a quadcopter above a dark mountain valley, with spectral light patterns suggesting its acoustic signature.",
-    "position": "69% 50%",
+    "imageAlt": "A computed time-frequency spectrogram of synthetic harmonic audio, with fine burgundy harmonic bands on a dark background.",
+    "position": "50% 50%",
     "palette": {
-      "accent": "#c9ff55",
-      "ink": "#162307"
+      "accent": "#1aff78",
+      "ink": "#18221b"
     },
     "caseStudy": {
       "facts": [
@@ -55,10 +55,10 @@
           "media": [
             {
               "src": "art/acoustic-drone-detection.webp",
-              "alt": "Concept image of a quadcopter above a dark mountain valley, with spectral light patterns suggesting its acoustic signature.",
-              "caption": "Concept cover; the spectral light patterns are illustrative, not recorded data.",
-              "width": 1586,
-              "height": 992
+              "alt": "A computed time-frequency spectrogram of synthetic harmonic audio, with fine burgundy harmonic bands on a dark background.",
+              "caption": "An STFT of synthetic harmonic audio. This illustrates the representation; it is not a drone recording or a classification result.",
+              "width": 1920,
+              "height": 1200
             }
           ]
         },
@@ -85,8 +85,8 @@
     "galleryTitle": "Acoustic Drone Detection",
     "galleryMethod": "with CNN Spectrogram Analysis",
     "eyebrow": "Project preview",
-    "imageWidth": 1586,
-    "imageHeight": 992
+    "imageWidth": 1920,
+    "imageHeight": 1200
   },
   {
     "slug": "soft-machines",
@@ -95,20 +95,20 @@
     "year": "2026",
     "caption": "Academic questions, grounded in source documents.",
     "description": "A retrieval-augmented chatbot for academic-advising questions, using relevant catalog, curriculum, and policy documents to ground its responses.",
-    "note": "The intended focus is clear answers with traceable sources. Supported documents, implementation details, and evaluation will be added as the project develops. The cover is a concept image.",
+    "note": "The intended focus is clear answers with traceable sources. Supported documents, implementation details, and evaluation will be added as the project develops. The cover diagrams the planned document-to-answer workflow.",
     "image": "art/academic-advising-rag.webp",
     "thumbnail": "thumbnails/academic-advising-rag.webp",
-    "imageAlt": "Concept image of academic books, course documents, and a laptop showing abstract conversation and source-document cards on a warm ivory desk.",
+    "imageAlt": "A blue-gray schematic connecting course catalogs, degree requirements, and academic policies to retrieved passages and an answer with citations.",
     "position": "50% 50%",
     "palette": {
-      "accent": "#59238b",
+      "accent": "#b52810",
       "ink": "#ffffff"
     },
     "galleryTitle": "Academic Advising",
     "galleryMethod": "RAG Chatbot",
     "eyebrow": "Project preview",
-    "imageWidth": 1584,
-    "imageHeight": 993
+    "imageWidth": 1920,
+    "imageHeight": 1200
   },
   {
     "slug": "afterimage",
@@ -117,20 +117,20 @@
     "year": "2026",
     "caption": "Exploring how local probabilities grow branching discharges.",
     "description": "A two-dimensional lightning simulation that explores branching discharge paths through a probabilistic potential model.",
-    "note": "The project will document the potential model, growth rules, and the patterns they produce. The cover is an illustrative concept image rather than a simulation result.",
+    "note": "The project will document the potential model, growth rules, and the patterns they produce. The cover is a separate illustrative lattice-growth calculation, not output from the project implementation.",
     "image": "art/lightning-potential-model.webp",
     "thumbnail": "thumbnails/lightning-potential-model.webp",
-    "imageAlt": "Concept visualization of a planar branching electrical discharge, with fine blue-white filaments against a deep indigo field.",
-    "position": "47% 50%",
+    "imageAlt": "An illustrative potential-weighted lattice-growth calculation: muted olive branching paths between fixed electrodes on a dark field.",
+    "position": "50% 50%",
     "palette": {
-      "accent": "#ffce55",
-      "ink": "#352209"
+      "accent": "#efc4ff",
+      "ink": "#211629"
     },
     "galleryTitle": "2D Lightning Simulation",
     "galleryMethod": "with a Probabilistic Potential Model",
     "eyebrow": "Project preview",
-    "imageWidth": 1586,
-    "imageHeight": 992
+    "imageWidth": 1920,
+    "imageHeight": 1200
   },
   {
     "slug": "field-notes",
