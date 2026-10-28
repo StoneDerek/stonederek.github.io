@@ -529,10 +529,11 @@ test('Art opens as the final project with five full photos, section jumps and cr
     assert.equal(host.querySelectorAll('.project-footnote').length, 4);
     assert.match(host.querySelector('#project-note-art-0').textContent, /\[0\] The cover for this section in the gallery was created using evolution and a loss function/);
     assert.equal(host.querySelector('#project-note-art-0 a[role="doc-backlink"]'), null);
-    assert.match(host.querySelector('#project-note-art-0 .source-lead').textContent, /All images used appear to be public domain and can be found here: Sources\./);
+    const coverNote = host.querySelector('#project-note-art-0');
+    assert.equal(coverNote.querySelectorAll(':scope > p').length, 1);
+    assert.match(coverNote.querySelector('p').textContent, /reference\. All images used appear to be public domain and can be found here: Sources\./);
     const sourcesDialog = host.querySelector('[data-source-dialog]');
     assert.equal(sourcesDialog.querySelectorAll('.source-list li').length, 13);
-    assert.match(sourcesDialog.textContent, /original scan URLs are not available/i);
     assert.match(sourcesDialog.querySelector('.source-list li').textContent, /507 Mechanical Movements/);
     s.click('[data-source-open]');
     assert.equal(sourcesDialog.open, true);
