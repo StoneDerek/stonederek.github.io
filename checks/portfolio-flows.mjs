@@ -547,6 +547,10 @@ test('Art opens as the final project with five full photos, section jumps and cr
     assert.match(host.querySelector('#project-note-art-3').textContent, /Valorant/);
     assert.match(host.querySelector('#project-note-art-2').textContent, /Einstein/);
     const source = host.querySelector('#project-note-art-1 a[href^=\"https:\"]');
+    const birdNote = host.querySelector('#project-note-art-1');
+    assert.equal(birdNote.querySelectorAll(':scope > p').length, 1);
+    assert.equal(source.parentElement, birdNote.querySelector('p'));
+    assert.match(source.parentElement.textContent, /mentioned: https:\/\/academy\.allaboutbirds\.org/);
     assert.equal(source.href, 'https://academy.allaboutbirds.org/how-birds-make-colorful-feathers/');
     assert.equal(source.rel, 'noopener noreferrer');
     s.click('[aria-label=\"Footnote 2\"]');
