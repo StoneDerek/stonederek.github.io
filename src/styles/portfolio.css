@@ -5,6 +5,8 @@
   :root[data-appearance-enabled]:not([data-theme]) { color-scheme: dark; --canvas: #17171b; --page-text: #eeebf3; --muted: #b7b1c4; --rule: #39353f; --nav-surface: #222127; --nav-links-selection: #37333f; --article-ink: #eeebf3; --default-accent: #302b3d; --default-ink: #f1eafa; --default-accent-hover: #423b56; --default-accent-mark: #bca9f0; --about-accent: #253747; --about-ink: #eaf4ff; --about-hover: #30495f; --about-mark: #91caff; }
 }
 [hidden] { display: none !important; }
+html[data-portfolio-entry-pending] #portfolio { visibility: hidden; }
+html[data-portfolio-entry-pending] #portfolio, html[data-portfolio-entry-pending] #portfolio * { transition: none !important; }
 html { background: var(--canvas); }
 body { margin: 0; background: var(--canvas); font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
 button, a, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
