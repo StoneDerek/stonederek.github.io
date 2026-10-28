@@ -6,6 +6,7 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
   const button = caption.querySelector('.caption-link');
   const heading = caption.querySelector('h1');
   const arrow = caption.querySelector('.caption-arrow');
+  const methodText = caption.querySelector('[data-title-method]');
   const titleMeasure = caption.ownerDocument.createElement('canvas').getContext('2d');
   let desired = titleText.textContent;
   let titleFrame = 0;
@@ -38,6 +39,7 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
     captionWord.style.width = '';
     button.style.opacity = desired ? '' : '0';
     if (arrow) arrow.style.opacity = '';
+    if (methodText) methodText.style.opacity = boundaryActive ? String(boundaryProgress) : '';
     if (!desired && !pointerHeld) caption.hidden = true;
     root.classList.remove('is-scrambling');
     syncInteraction();
@@ -47,6 +49,7 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
     if (destroyed) return;
     boundaryActive = false;
     if (arrow) arrow.style.opacity = '';
+    if (methodText) methodText.style.opacity = '';
     boundarySlots = null;
     const entering = caption.hidden;
     // Hidden captions have no layout width. Reveal before measuring, then build
@@ -168,6 +171,7 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
     // Floating-point accumulation must not pick different glyphs when the
     // same moment is reached by playing forward versus rewinding.
     reveal = Math.round(reveal * 1e6) / 1e6;
+    if (methodText) methodText.style.opacity = String(reveal);
     if (reveal <= 0 || reveal >= 1) {
       const target = reveal >= 1 ? next : '';
       desired = target;
@@ -283,13 +287,17 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
   return {
     set,
     finish,
-    present(state, { title, immediate = false, holdPointer = false } = {}) {
+    present(state, { title, displayTitle = title, method = '', immediate = false, holdPointer = false } = {}) {
       if (destroyed) return;
+      if (methodText) {
+        if (methodText.textContent !== method) methodText.textContent = method;
+        if (methodText.hidden !== !method) methodText.hidden = !method;
+      }
       interactive = state.interactive;
       pointerHeld = holdPointer;
       if (state.boundaryVisible !== null && state.boundaryVisible !== undefined &&
         (boundaryActive || !state.boundaryVisible || project < 0)) {
-        setBoundaryVisible(title, state.boundaryVisible, { immediate });
+        setBoundaryVisible(displayTitle, state.boundaryVisible, { immediate });
         button.dataset.project = String(state.project);
         button.setAttribute('aria-label', `View ${title}`);
         heading.setAttribute('aria-label', title);
@@ -302,11 +310,12 @@ export function mountProjectCaption(caption, root, reducedMotion, { endsAt = () 
         cancelAnimationFrame(titleFrame);
         titleFrame = 0;
         boundarySlots = null;
+        if (methodText) methodText.style.opacity = '';
       }
       if (state.visible || state.links) {
-        if (project !== state.project || desired !== title) {
+        if (project !== state.project || desired !== displayTitle) {
           const direction = Math.sign(state.project - project) || 1;
-          set(title, { immediate: immediate || state.links, direction });
+          set(displayTitle, { immediate: immediate || state.links, direction });
           button.dataset.project = String(state.project);
           button.setAttribute('aria-label', `View ${title}`);
           heading.setAttribute('aria-label', title);

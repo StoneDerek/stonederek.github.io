@@ -87,7 +87,7 @@ const serialized = JSON.stringify(panels).replace(/</g, '\\u003c');
         </div>
         <div id="project-caption" class="project-caption" tabindex="-1" hidden={selected < firstProjectPanel}>
           <div>
-          <h1 aria-label={first.title}><button type="button" class="caption-link" data-action="project" data-project={firstProjectPanel} aria-controls="project-article" aria-label={`View ${first.title}`}><span class="caption-word"><span class="caption-metrics" data-title-metrics aria-hidden="true">{first.title}</span><span class="caption-letters" data-title aria-hidden="true">{first.title}</span></span><svg class="caption-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></button></h1>
+          <h1 aria-label={first.title}><button type="button" class="caption-link" data-action="project" data-project={firstProjectPanel} aria-controls="project-article" aria-label={`View ${first.title}`}><span class="caption-copy" aria-hidden="true"><span class="caption-heading"><span class="caption-word"><span class="caption-metrics" data-title-metrics>{first.galleryTitle || first.title}</span><span class="caption-letters" data-title>{first.galleryTitle || first.title}</span></span><svg class="caption-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" /></svg></span><span class="caption-method" data-title-method hidden={!first.galleryMethod}>{first.galleryMethod}</span></span></button></h1>
           </div>
         </div>
       </div>

@@ -323,6 +323,8 @@ export function mountPortfolio() {
     }
     captionMotion.present(captionFrame, {
       title: panels[captionFrame.project].title,
+      displayTitle: panels[captionFrame.project].galleryTitle,
+      method: panels[captionFrame.project].galleryMethod,
       immediate: initialRender,
       holdPointer: drag?.capture === captionButton || Boolean(drag?.nativeTouch && captionButton.contains(drag.target))
     });
