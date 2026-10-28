@@ -304,7 +304,7 @@ test('About caption starts with navigation, keeps the project color, and exits o
     await s.tick(400);
     assert.equal(s.frames, 0);
     s.click('[data-thumbnail="7"]'); await s.tick();
-    assert.equal(s.find('.project-caption').style.getPropertyValue('--caption-color'), s.panels[7].palette.accent);
+    assert.equal(s.find('.project-caption').style.getPropertyValue('--caption-color'), s.panels[7].palette.caption || s.panels[7].palette.accent);
   } finally { await s.close(); }
 });
 
