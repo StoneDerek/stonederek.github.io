@@ -183,13 +183,15 @@ export function mountProjectCaseStudy(host, { base = '/', reducedMotion } = {}) 
           }
           if (note.sourceLead && note.sources?.length) {
             const dialogId = `project-sources-${slug}-${note.number}`;
-            const lead = element('p', 'source-lead', note.sourceLead);
+            const lead = entry.lastElementChild || element('p');
+            if (!lead.parentElement) entry.append(lead);
+            if (lead.textContent && !/\s$/.test(lead.textContent)) lead.append(' ');
             const open = element('button', 'source-open', 'Sources');
             open.type = 'button';
             open.dataset.sourceOpen = '';
             open.setAttribute('aria-haspopup', 'dialog');
             open.setAttribute('aria-controls', dialogId);
-            lead.append(open, '.');
+            lead.append(note.sourceLead, open, '.');
             const dialog = element('dialog', 'art-source-dialog');
             dialog.id = dialogId;
             dialog.dataset.sourceDialog = '';
@@ -203,7 +205,6 @@ export function mountProjectCaseStudy(host, { base = '/', reducedMotion } = {}) 
             close.setAttribute('autofocus', '');
             header.append(title, close);
             const body = element('div', 'source-dialog-body');
-            body.append(element('p', 'source-dialog-intro', 'The original scan URLs are not available. These are the books identified in the saved arrangement.'));
             const list = element('ol', 'source-list');
             for (const source of note.sources) {
               const item = element('li');
@@ -212,7 +213,7 @@ export function mountProjectCaseStudy(host, { base = '/', reducedMotion } = {}) 
             }
             body.append(list);
             dialog.append(header, body);
-            entry.append(lead, dialog);
+            entry.append(dialog);
           }
           notes.append(entry);
         }

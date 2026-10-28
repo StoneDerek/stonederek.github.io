@@ -252,7 +252,6 @@ dialog.art-source-dialog[open] { display: flex; flex-direction: column; }
 .source-dialog-header h2 { margin: 0; color: var(--accent); font-size: 24px; font-weight: 400; }
 .source-dialog-close { min-height: 44px; padding: 8px 12px; border-radius: 5px; background: var(--accent); color: var(--ink); font: inherit; }
 .source-dialog-body { padding: 22px 24px 26px; overflow-y: auto; overscroll-behavior: contain; }
-.project-footnote .source-dialog-intro { margin: 0 0 18px; }
 .source-list { margin: 0; padding-left: 1.4em; }
 .source-list li { margin-top: 12px; line-height: 1.5; }
 @media (min-width: 1000px) {
