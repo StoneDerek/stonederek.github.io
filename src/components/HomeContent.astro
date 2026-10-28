@@ -1,10 +1,11 @@
 ---
 import ThemeControl from './ThemeControl.astro';
 import { appearanceEnabled } from '../scripts/theme.js';
+import { prepareHomeEntrance } from '../scripts/home-entry.js';
 const base = import.meta.env.BASE_URL;
 const { active = false } = Astro.props;
 ---
-      <section class="home-introduction" aria-labelledby="home-title">
+      <section class:list={['home-introduction', { 'has-entry-motion': active }]} data-home-entry={active ? '' : undefined} aria-labelledby="home-title">
         <div class="introduction-copy">
           <h1 id="home-title">Derek Stone</h1>
           <span class="introduction-divider" aria-hidden="true"></span>
@@ -22,4 +23,5 @@ const { active = false } = Astro.props;
           <img src={`${base}art/home/climbing.webp`} alt="A climber reaching between holds on an indoor climbing wall." width="1536" height="2048" loading={active ? 'eager' : 'lazy'} fetchpriority={active ? 'high' : 'auto'} decoding="async" draggable="false" />
         </figure>
       </section>
+      {active && <script is:inline set:html={`(${prepareHomeEntrance.toString()})(document.currentScript.previousElementSibling);`} />}
 
