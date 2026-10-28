@@ -209,6 +209,8 @@ dialog::backdrop { background: #050b1bc9; }
 .case-study-media figcaption { color: var(--muted); }
 .case-study-media-first { margin: 0 0 28px; }
 .case-study-section a, .project-footnotes a { color: #1154cc; text-decoration: underline; text-underline-offset: 2px; }
+/* Move a prose link as one unit when it fits; contain longer links on narrow screens. */
+.introduction-prose a, .about-story p a, .case-study-section a, .project-footnotes a { display: inline-block; max-width: 100%; overflow-wrap: anywhere; vertical-align: baseline; }
 .project-noteref { white-space: nowrap; }
 .project-noteref a { scroll-margin-top: calc(144px + env(safe-area-inset-top)); }
 .project-footnotes { margin-top: 64px; border-top: 1px solid var(--rule); padding-top: 36px; }
