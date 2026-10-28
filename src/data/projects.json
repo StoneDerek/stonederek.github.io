@@ -164,17 +164,17 @@
     "caption": "Acrylic, ink, printmaking, and watercolor. Mostly birds.",
     "description": "Until I compiled this collection of some of my more polished pieces some time ago, I did not realize that I had been so invested in creating birds. A part of this is definitely because in the past my family has had several pet chickens, and I really enjoyed spending time with them.",
     "note": "Recently, I’ve been more interested in getting good at drawing people. (But until then, look at these birds!)",
-    "image": "art/collection/overprint-difference.webp",
+    "image": "art/collection/overprint-cover.webp",
     "thumbnail": "thumbnails/art.webp",
-    "imageAlt": "A black-and-white difference overprint of layered textbook pages, equations, and diagrams forming a figure.",
+    "imageAlt": "A black-and-white overprint of layered textbook pages, illustrations, equations, and diagrams.",
     "imageWidth": 1582,
     "imageHeight": 2048,
     "fit": "cover",
     "position": "50% 50%",
     "palette": {
-      "accent": "#c20f53",
+      "accent": "#c90062",
       "ink": "#ffffff",
-      "caption": "#c20f53"
+      "caption": "#c90062"
     },
     "caseStudy": {
       "layout": "art",
@@ -341,6 +341,13 @@
         }
       ],
       "footnotes": [
+        {
+          "number": 0,
+          "backlink": false,
+          "paragraphs": [
+            "The cover for this section in the gallery was created using evolution and a loss function to fit pdf pages to a specified reference."
+          ]
+        },
         {
           "number": 1,
           "paragraphs": [

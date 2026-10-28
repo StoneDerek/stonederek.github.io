@@ -522,11 +522,13 @@ test('Art opens as the final project with five full photos, section jumps and cr
     }
     const cover = s.find('[data-slide="' + index + '"] img');
     assert.equal(cover.style.objectFit, 'cover');
-    assert.equal(cover.getAttribute('src'), '/art/collection/overprint-difference.webp');
+    assert.equal(cover.getAttribute('src'), '/art/collection/overprint-cover.webp');
     assert.equal(cover.width, 1582); assert.equal(cover.height, 2048);
     assert.deepEqual([...host.querySelectorAll('.case-study-section strong')].map(x => x.textContent), ['pigment', 'broken line painting', 'not', 'no birds']);
     assert.deepEqual([...host.querySelectorAll('.case-study-section em')].map(x => x.textContent), ['all blue birds for that matter', 'relatively', 'especially']);
-    assert.equal(host.querySelectorAll('.project-footnote').length, 3);
+    assert.equal(host.querySelectorAll('.project-footnote').length, 4);
+    assert.match(host.querySelector('#project-note-art-0').textContent, /\[0\] The cover for this section in the gallery was created using evolution and a loss function/);
+    assert.equal(host.querySelector('#project-note-art-0 a[role="doc-backlink"]'), null);
     assert.equal(host.querySelectorAll('[role=\"doc-noteref\"]').length, 3);
     for (const marker of host.querySelectorAll('.project-noteref')) {
       assert.match(marker.parentElement.textContent, /\S \[\d+\]/, 'footnotes need one separating space');
