@@ -156,11 +156,13 @@ export function mountProjectCaseStudy(host, { base = '/', reducedMotion } = {}) 
           for (const [index, paragraph] of (note.paragraphs || []).entries()) {
             const text = element('p');
             if (index === 0) {
-              const back = element('a', '', String(note.number));
-              back.href = `#project-ref-${slug}-${note.number}`;
-              back.dataset.articleJump = `project-ref-${slug}-${note.number}`;
-              back.setAttribute('role', 'doc-backlink');
-              back.setAttribute('aria-label', `Back to reference ${note.number}`);
+              const back = element(note.backlink === false ? 'span' : 'a', 'footnote-number', String(note.number));
+              if (note.backlink !== false) {
+                back.href = `#project-ref-${slug}-${note.number}`;
+                back.dataset.articleJump = `project-ref-${slug}-${note.number}`;
+                back.setAttribute('role', 'doc-backlink');
+                back.setAttribute('aria-label', `Back to reference ${note.number}`);
+              }
               text.append('[', back, '] ');
             }
             appendInline(text, paragraph);
