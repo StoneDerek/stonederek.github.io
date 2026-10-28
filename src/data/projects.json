@@ -346,6 +346,22 @@
           "backlink": false,
           "paragraphs": [
             "The cover for this section in the gallery was created using evolution and a loss function to fit pdf pages to a specified reference."
+          ],
+          "sourceLead": "All images used appear to be public domain and can be found here: ",
+          "sources": [
+            { "author": "Henry T. Brown", "title": "507 Mechanical Movements", "year": "1908" },
+            { "author": "Edmund Beckett, with Pliny E. Chase", "title": "Astronomy without Mathematics", "year": "1869" },
+            { "author": "Alfred Barnard Basset", "title": "A Treatise on Physical Optics", "year": "1892" },
+            { "author": "William Steadman Aldis", "title": "Elementary Treatise on Geometrical Optics", "year": "1896" },
+            { "author": "Dionysius Lardner", "title": "Hand-book of Natural Philosophy: Optics", "year": "1856" },
+            { "author": "John Henderson", "title": "Practical Electricity and Magnetism", "year": "1898" },
+            { "author": "Charles Henry Sampson", "title": "Mechanical Drawing and Practical Drafting", "year": "1915" },
+            { "author": "William Brooke O’Shaughnessy", "title": "A Manual of Chemistry", "year": "1842" },
+            { "author": "William Darlington", "title": "Agricultural Botany", "year": "1847" },
+            { "author": "Heber W. Youngken", "title": "Pharmaceutical Botany, with Glossary of Botanical Terms", "year": "1921" },
+            { "author": "Calvin Cutter", "title": "A Treatise on Anatomy, Physiology, and Hygiene", "year": "1849" },
+            { "author": "Fawcett Allen and David Arthur Jones", "title": "An Atlas of Commercial Geography", "year": "1913" },
+            { "author": "O. W. Walker", "title": "Atlas of Massachusetts", "year": "1891" }
           ]
         },
         {
