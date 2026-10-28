@@ -2,11 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, access } from 'node:fs/promises';
 import { Window } from 'happy-dom';
+import { Script } from 'node:vm';
 import { mountPortfolio } from '../src/scripts/carousel.js';
 
 // Exercise production markup and the real controller. This is DOM simulation:
 // geometry, time and canvas text metrics are supplied, not browser rendering.
-async function scene(address = '/', { reduced = true, width = 390 } = {}) {
+async function scene(address = '/', { reduced = true, width = 390, tiles = false, onMount } = {}) {
   const route = address.split('#')[0];
   const entry = route.includes('/projects') ? 'projects/' : route.includes('/about') ? 'about/' : '';
   const html = await readFile(new URL(`../dist/${entry}index.html`, import.meta.url), 'utf8');
@@ -17,6 +18,9 @@ async function scene(address = '/', { reduced = true, width = 390 } = {}) {
   window.ontouchstart = null;
   document.write(html);
   const root = document.querySelector('#portfolio');
+  const startup = document.querySelector('script[data-portfolio-entry]');
+  new Script(startup.textContent).runInNewContext({ window, document, URL });
+  const startupPending = document.documentElement.hasAttribute('data-portfolio-entry-pending');
   const frames = new Map();
   let clock = 0, nextFrame = 0;
   const preferences = new Map();
@@ -52,7 +56,7 @@ async function scene(address = '/', { reduced = true, width = 390 } = {}) {
   } });
   const globals = {
     window, document, Element: window.Element, AbortController: window.AbortController,
-    getComputedStyle: style, CSS: { supports: () => false }, performance: { now: () => clock },
+    getComputedStyle: style, CSS: { supports: () => tiles }, performance: { now: () => clock },
     requestAnimationFrame: callback => { frames.set(++nextFrame, callback); return nextFrame; },
     cancelAnimationFrame: id => frames.delete(id)
   };
@@ -88,7 +92,7 @@ async function scene(address = '/', { reduced = true, width = 390 } = {}) {
       else delete globalThis[name];
     }
   };
-  try { cleanup = mountPortfolio(); await cleanup.entryDone; await flush(); }
+  try { cleanup = mountPortfolio(); onMount?.({ root, document, startupPending }); await cleanup.entryDone; await flush(); }
   catch (error) { await close(); throw error; }
   return { window, document, root, find, click, key, pointer, tick, flush, close,
     get frames() { return frames.size; },
@@ -120,6 +124,70 @@ test('all direct panel and article URLs mount one persistent portfolio with matc
       }
       if (article !== null) assert.equal(Number(s.article), article, address);
     } finally { await s.close(); }
+  }
+});
+
+test('direct article entry resolves synchronously without a gallery flash or reveal animation', async () => {
+  const projects = JSON.parse(await readFile(new URL('../src/data/projects.json', import.meta.url), 'utf8'));
+  for (const project of projects) {
+    const s = await scene(`/projects/#project=${project.slug}`, {
+      reduced: false, tiles: true,
+      onMount: ({ root, document, startupPending }) => {
+        assert.equal(startupPending, true, 'the head script conceals the default gallery before the controller starts');
+        assert.equal(document.documentElement.hasAttribute('data-portfolio-entry-pending'), false);
+        assert.equal(root.dataset.ready, 'true');
+        assert.equal(root.querySelector('[data-detail-title]').textContent, project.title);
+        assert.equal(root.querySelector('[data-menu-title]').textContent, project.title);
+        assert.equal(root.querySelector('[data-menu-context]').textContent, 'Project:');
+        assert.equal(root.querySelector('[data-project-view]').hidden, false);
+        assert.equal(root.querySelector('[data-project-view]').inert, false);
+        assert.equal(root.classList.contains('is-project-opening'), false);
+        assert.equal(root.querySelectorAll('.project-tile-layer').length, 0);
+      }
+    });
+    try {
+      assert.equal(s.article, String(s.panels.findIndex(panel => panel.slug === project.slug)));
+    } finally { await s.close(); }
+  }
+});
+
+test('opening an article from the gallery still animates and returns to its own cover', async () => {
+  const s = await scene('/projects/', { reduced: false, tiles: true });
+  try {
+    const index = s.panels.findIndex(panel => panel.slug === 'art');
+    s.click(`[data-menu-project="${index}"]`);
+    assert.equal(s.root.classList.contains('is-project-opening'), true);
+    assert.equal(s.root.querySelectorAll('.project-tile-layer').length, 1);
+    await s.tick();
+    assert.equal(s.article, String(index));
+    assert.equal(s.find('[data-detail-title]').textContent, 'Art');
+    s.click('.back-button');
+    await s.tick();
+    assert.equal(s.panel, index);
+    assert.equal(s.address, '/projects/#slide=art');
+  } finally { await s.close(); }
+});
+
+test('the early entry guard works before body parsing and releases the fallback on load', async () => {
+  const html = await readFile(new URL('../dist/projects/index.html', import.meta.url), 'utf8');
+  assert.ok(html.indexOf('data-portfolio-entry') < html.indexOf('<body'));
+  const script = html.match(/<script\b[^>]*data-portfolio-entry[^>]*>([\s\S]*?)<\/script>/)[1];
+  for (const [address, preview, pending] of [
+    ['https://stonederek.github.io/projects/#project=art', undefined, true],
+    ['https://stonederek.github.io/portfolio/projects/index.html#slide=art', undefined, true],
+    ['https://stonederek.github.io/projects/', undefined, false],
+    ['https://stonederek.github.io/about/#interests', undefined, false],
+    ['file:///portfolio-preview.html#projects?project=art', '/projects/#project=art', true]
+  ]) {
+    const window = new Window({ url: address, settings: { disableJavaScriptEvaluation: true } });
+    try {
+      window.__PORTFOLIO_PREVIEW_ADDRESS__ = preview;
+      new Script(script).runInNewContext({ window, document: window.document, URL });
+      assert.equal(window.document.querySelector('#portfolio'), null);
+      assert.equal(window.document.documentElement.hasAttribute('data-portfolio-entry-pending'), pending, address);
+      window.dispatchEvent(new window.Event('load'));
+      assert.equal(window.document.documentElement.hasAttribute('data-portfolio-entry-pending'), false);
+    } finally { await window.happyDOM.close(); }
   }
 });
 

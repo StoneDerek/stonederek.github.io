@@ -590,10 +590,12 @@ export function mountPortfolio() {
     setMenuContext(opening, { immediate: sectionEntry });
     document.body.classList.add('dialog-open');
     try {
-      await settleTiles(root, projectPage, {
-        opening, replacing, origin: projectOrigin, scrollTop: opening ? 0 : scrollTop,
-        signal: projectAbort.signal, reducedMotion: reducedMotion.matches
-      });
+      if (!sectionEntry) {
+        await settleTiles(root, projectPage, {
+          opening, replacing, origin: projectOrigin, scrollTop: opening ? 0 : scrollTop,
+          signal: projectAbort.signal, reducedMotion: reducedMotion.matches
+        });
+      }
     } finally {
       projectOpen = opening;
       projectView.hidden = !opening;
@@ -974,6 +976,12 @@ export function mountPortfolio() {
   writeAddress(initial.panel, { article: initial.article !== null, anchor: initial.anchor, replace: true });
   if (initial.anchor) scrollAnchor(initial.anchor, { focus: false });
   root.dataset.ready = 'true';
+  if (document.documentElement.hasAttribute('data-portfolio-entry-pending')) {
+    // Resolve the final palette while startup transitions are suppressed.
+    getComputedStyle(menu).backgroundColor;
+    getComputedStyle(siteHeader).color;
+    document.documentElement.removeAttribute('data-portfolio-entry-pending');
+  }
   listen(window, 'popstate', followAddress);
   listen(window, 'hashchange', followAddress);
   listen(window, 'portfolio:preview-navigate', event => {
