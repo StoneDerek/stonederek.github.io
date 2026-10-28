@@ -345,6 +345,28 @@ dialog.art-source-dialog[open] { display: flex; flex-direction: column; }
 .introduction-copy { min-width: 0; }
 .introduction-photo { min-width: 0; margin: 0; }
 .introduction-photo img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; border-radius: 6px; }
+/* This marker is rendered only for direct Home entry. Gallery navigation
+   keeps these elements mounted, so returning Home does not replay it. */
+@media (prefers-reduced-motion: no-preference) {
+  .home-introduction.has-entry-motion > .introduction-copy { animation: home-arrival 800ms cubic-bezier(.25, .1, .25, 1) backwards; }
+  .home-introduction.has-entry-motion > .introduction-photo {
+    animation: home-photo-rise 900ms 140ms cubic-bezier(.22, .61, .36, 1) backwards, home-photo-fade 900ms 140ms cubic-bezier(.25, .1, .25, 1) backwards;
+    will-change: transform, opacity;
+  }
+  .home-introduction.has-entry-motion > .introduction-photo[data-entry-pending] { animation-play-state: paused; }
+}
+@keyframes home-arrival {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes home-photo-rise {
+  from { transform: translate3d(0, 16px, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+@keyframes home-photo-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 /* Let the name use a little of the column gap without moving the photo. */
 .introduction-copy h1 { width: max-content; max-width: calc(100% + 36px); margin: 0 0 26px; font-size: clamp(46px, calc(8.4vw - 9px), 90px); font-weight: 500; line-height: 1.05; letter-spacing: -.055em; }
 .introduction-divider { display: block; width: 100%; height: 1px; margin-bottom: 28px; background: var(--rule); }
