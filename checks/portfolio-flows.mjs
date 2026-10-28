@@ -529,6 +529,15 @@ test('Art opens as the final project with five full photos, section jumps and cr
     assert.equal(host.querySelectorAll('.project-footnote').length, 4);
     assert.match(host.querySelector('#project-note-art-0').textContent, /\[0\] The cover for this section in the gallery was created using evolution and a loss function/);
     assert.equal(host.querySelector('#project-note-art-0 a[role="doc-backlink"]'), null);
+    assert.match(host.querySelector('#project-note-art-0 .source-lead').textContent, /All images used appear to be public domain and can be found here: Sources\./);
+    const sourcesDialog = host.querySelector('[data-source-dialog]');
+    assert.equal(sourcesDialog.querySelectorAll('.source-list li').length, 13);
+    assert.match(sourcesDialog.textContent, /original scan URLs are not available/i);
+    assert.match(sourcesDialog.querySelector('.source-list li').textContent, /507 Mechanical Movements/);
+    s.click('[data-source-open]');
+    assert.equal(sourcesDialog.open, true);
+    s.click('[data-source-close]');
+    assert.equal(sourcesDialog.open, false);
     assert.equal(host.querySelectorAll('[role=\"doc-noteref\"]').length, 3);
     for (const marker of host.querySelectorAll('.project-noteref')) {
       assert.match(marker.parentElement.textContent, /\S \[\d+\]/, 'footnotes need one separating space');
@@ -547,7 +556,9 @@ test('Art opens as the final project with five full photos, section jumps and cr
     const jumps = [...host.querySelectorAll('[data-case-study-jump]')];
     s.click(`[data-case-study-jump="${jumps[4].dataset.caseStudyJump}"]`);
     assert.equal(s.document.activeElement.id, jumps[4].dataset.caseStudyJump);
+    s.click('[data-source-open]');
     s.click('.back-button'); await s.flush();
+    assert.equal(sourcesDialog.open, false, 'the sources dialog closes when leaving the article');
     assert.equal(s.panel, index);
     assert.equal(s.address, '/projects/#slide=art');
     s.key('End');

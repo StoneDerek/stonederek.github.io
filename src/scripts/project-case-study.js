@@ -37,7 +37,19 @@ export function mountProjectCaseStudy(host, { base = '/', reducedMotion } = {}) 
     return node;
   };
   const controller = new AbortController();
+  const closeSources = () => host.querySelectorAll('dialog[data-source-dialog][open]').forEach(dialog => dialog.close());
   host.addEventListener('click', event => {
+    const opener = event.target.closest('[data-source-open]');
+    if (opener && host.contains(opener)) {
+      const dialog = doc.getElementById(opener.getAttribute('aria-controls'));
+      if (dialog && !dialog.open) dialog.showModal();
+      return;
+    }
+    const closer = event.target.closest('[data-source-close]');
+    if (closer && host.contains(closer)) {
+      closer.closest('dialog')?.close();
+      return;
+    }
     const button = event.target.closest('[data-case-study-jump], [data-article-jump]');
     if (!button || !host.contains(button)) return;
     const heading = host.querySelector(`#${button.dataset.caseStudyJump || button.dataset.articleJump}`);
@@ -48,6 +60,7 @@ export function mountProjectCaseStudy(host, { base = '/', reducedMotion } = {}) 
   }, { signal: controller.signal });
 
   function render(project) {
+    closeSources();
     const { facts = [], sections = [], footnotes = [] } = project.caseStudy || {};
     const slug = project.slug.replace(/[^\w-]/g, '-');
     const appendInline = (parent, content) => {
@@ -168,6 +181,39 @@ export function mountProjectCaseStudy(host, { base = '/', reducedMotion } = {}) 
             appendInline(text, paragraph);
             entry.append(text);
           }
+          if (note.sourceLead && note.sources?.length) {
+            const dialogId = `project-sources-${slug}-${note.number}`;
+            const lead = element('p', 'source-lead', note.sourceLead);
+            const open = element('button', 'source-open', 'Sources');
+            open.type = 'button';
+            open.dataset.sourceOpen = '';
+            open.setAttribute('aria-haspopup', 'dialog');
+            open.setAttribute('aria-controls', dialogId);
+            lead.append(open, '.');
+            const dialog = element('dialog', 'art-source-dialog');
+            dialog.id = dialogId;
+            dialog.dataset.sourceDialog = '';
+            dialog.setAttribute('aria-labelledby', `${dialogId}-title`);
+            const header = element('div', 'source-dialog-header');
+            const title = element('h2', '', 'Cover sources');
+            title.id = `${dialogId}-title`;
+            const close = element('button', 'source-dialog-close', 'Close');
+            close.type = 'button';
+            close.dataset.sourceClose = '';
+            close.setAttribute('autofocus', '');
+            header.append(title, close);
+            const body = element('div', 'source-dialog-body');
+            body.append(element('p', 'source-dialog-intro', 'The original scan URLs are not available. These are the books identified in the saved arrangement.'));
+            const list = element('ol', 'source-list');
+            for (const source of note.sources) {
+              const item = element('li');
+              item.append(`${source.author}, `, element('cite', '', source.title), ` (${source.year}).`);
+              list.append(item);
+            }
+            body.append(list);
+            dialog.append(header, body);
+            entry.append(lead, dialog);
+          }
           notes.append(entry);
         }
         body.append(notes);
@@ -179,5 +225,5 @@ export function mountProjectCaseStudy(host, { base = '/', reducedMotion } = {}) 
     host.replaceChildren(content);
     host.hidden = !host.childElementCount;
   }
-  return { render, destroy() { controller.abort(); } };
+  return { render, closeSources, destroy() { closeSources(); controller.abort(); } };
 }

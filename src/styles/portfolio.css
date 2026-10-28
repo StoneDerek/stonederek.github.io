@@ -243,6 +243,18 @@ dialog::backdrop { background: #050b1bc9; }
 .project-case-study[data-layout="art"] .project-footnote p { font-size: 16px; line-height: 1.65; }
 .project-case-study[data-layout="art"] :is(.case-study-section, .project-footnotes) a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: .14em; }
 .project-case-study[data-layout="art"] .footnote-number { color: var(--accent); }
+.source-open { padding: 0; background: transparent; color: var(--accent); font: inherit; text-decoration: underline; text-underline-offset: .14em; }
+.source-open:focus-visible, .source-dialog-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+dialog.art-source-dialog { width: min(640px, calc(100% - 32px)); max-width: none; max-height: min(80svh, 720px); border: 1px solid var(--rule); border-radius: 8px; background: var(--canvas); color: var(--page-text); box-shadow: 0 16px 60px rgb(0 0 0 / .22); font-family: var(--art-reading-font); overflow: hidden; }
+dialog.art-source-dialog[open] { display: flex; flex-direction: column; }
+.art-source-dialog::backdrop { background: rgb(5 11 27 / .55); }
+.source-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; border-bottom: 1px solid var(--rule); }
+.source-dialog-header h2 { margin: 0; color: var(--accent); font-size: 24px; font-weight: 400; }
+.source-dialog-close { min-height: 44px; padding: 8px 12px; border-radius: 5px; background: var(--accent); color: var(--ink); font: inherit; }
+.source-dialog-body { padding: 22px 24px 26px; overflow-y: auto; overscroll-behavior: contain; }
+.project-footnote .source-dialog-intro { margin: 0 0 18px; }
+.source-list { margin: 0; padding-left: 1.4em; }
+.source-list li { margin-top: 12px; line-height: 1.5; }
 @media (min-width: 1000px) {
   .project-case-study[data-layout="art"] .case-study-section { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); column-gap: clamp(32px, 4vw, 64px); align-items: start; }
   .project-case-study[data-layout="art"] .case-study-section h2 { grid-column: 1 / -1; }

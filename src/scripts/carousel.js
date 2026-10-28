@@ -572,6 +572,7 @@ export function mountPortfolio() {
 
   async function transitionProject(opening, { replacing = false, sectionEntry = false } = {}) {
     if (disposed) return;
+    caseStudy.closeSources();
     const scrollTop = projectView.scrollTop;
     const originalVisibility = projectPage.style.visibility;
     projectPage.style.visibility = 'hidden';
