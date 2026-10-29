@@ -10,11 +10,12 @@ const gallery = page === 'projects';
 const published = publicationDate();
 const cat = ['  ╱|、', '(˚ˎ 。7', ' |、˜〵', 'じしˍ,)ノ'].join('\n');
 const context = gallery ? 'Projects:' : page === 'about' ? 'About' : 'Home';
-const location = gallery ? projects[0].title : '';
+const location = gallery ? projects[0].galleryTitle || projects[0].title : '';
+const fullLocation = gallery ? projects[0].title : '';
 ---
 <header class="site-header" data-owner={site.name} data-page={page}>
   <details class="site-menu" data-menu>
-    <summary aria-label={`Open navigation. ${context}${location ? ` ${location}` : ''}`} aria-controls="project-navigation">
+    <summary aria-label={`Open navigation. ${context}${fullLocation ? ` ${fullLocation}` : ''}`} aria-controls="project-navigation">
       <span class="menu-name">{site.header}</span>
       <span class="menu-status-row"><span class="menu-status"><span class="menu-location"><span class="menu-context">
         <span class="menu-context-row" data-menu-context>{context}</span>

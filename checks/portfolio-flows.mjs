@@ -120,7 +120,7 @@ test('all direct panel and article URLs mount one persistent portfolio with matc
       assert.equal(s.document.querySelector('link[rel="icon"]').getAttribute('href'), '/favicon.svg', address);
       assert.equal(s.find('.menu-name').textContent, 'stonederek.github.io', address);
       assert.equal(s.find('[data-menu-context]').textContent, panel === 0 ? 'Home' : panel === 1 ? 'About' : panel === projects.length + 2 ? 'Links' : article === null ? 'Projects:' : 'Project:', address);
-      assert.equal(s.find('[data-menu-title]').textContent, panel < 2 || panel === projects.length + 2 ? '' : projects[panel - 2].title, address);
+      assert.equal(s.find('[data-menu-title]').textContent, panel < 2 || panel === projects.length + 2 ? '' : projects[panel - 2].galleryTitle || projects[panel - 2].title, address);
       if (panel >= 2 && panel < projects.length + 2 && article === null) {
         const project = projects[panel - 2];
         assert.equal(s.find('[data-title]').textContent, project.galleryTitle || project.title, address);
@@ -136,6 +136,25 @@ test('all direct panel and article URLs mount one persistent portfolio with matc
   }
 });
 
+test('old project links open the same project and replace their placeholder URL without adding history', async () => {
+  for (const [old, current, panel] of [
+    ['signal-studies', 'acoustic-drone-detection', 2],
+    ['soft-machines', 'academic-advising', 3],
+    ['afterimage', '2d-lightning-simulation', 4]
+  ]) {
+    for (const article of [false, true]) {
+      const s = await scene(`/projects/#${article ? 'project' : 'slide'}=${old}`);
+      try {
+        assert.equal(s.panel, panel);
+        assert.equal(s.article, article ? String(panel) : undefined);
+        assert.equal(s.address, !article && panel === 2 ? '/projects/' : `/projects/#${article ? 'project' : 'slide'}=${current}`);
+        assert.equal(s.window.history.length, 1);
+        assert.equal(s.find('[data-menu-title]').textContent, s.panels[panel].galleryTitle);
+      } finally { await s.close(); }
+    }
+  }
+});
+
 test('direct article entry resolves synchronously without a gallery flash or reveal animation', async () => {
   const projects = JSON.parse(await readFile(new URL('../src/data/projects.json', import.meta.url), 'utf8'));
   for (const project of projects) {
@@ -146,7 +165,7 @@ test('direct article entry resolves synchronously without a gallery flash or rev
         assert.equal(document.documentElement.hasAttribute('data-portfolio-entry-pending'), false);
         assert.equal(root.dataset.ready, 'true');
         assert.equal(root.querySelector('[data-detail-title]').textContent, project.title);
-        assert.equal(root.querySelector('[data-menu-title]').textContent, project.title);
+        assert.equal(root.querySelector('[data-menu-title]').textContent, project.galleryTitle || project.title);
         assert.equal(root.querySelector('[data-menu-context]').textContent, 'Project:');
         assert.equal(root.querySelector('[data-project-view]').hidden, false);
         assert.equal(root.querySelector('[data-project-view]').inert, false);

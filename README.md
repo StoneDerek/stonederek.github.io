@@ -54,8 +54,9 @@ Edit `src/data/projects.json`. Each item contains:
 | Field | Purpose |
 | --- | --- |
 | `slug` | Stable project ID for direct URLs; use lowercase letters, numbers, and hyphens |
+| `legacySlugs` | Optional previous slugs that still open this project; newly generated URLs use `slug` |
 | `title`, `category`, `year`, `caption` | Full project metadata and gallery announcement text |
-| `galleryTitle`, `galleryMethod` | Optional subject and method lines for the centered cover caption; the full `title` remains in accessible labels, navigation, and articles |
+| `galleryTitle`, `galleryMethod` | Optional subject and method lines for the centered cover caption; `galleryTitle` also supplies the compact header label. The full `title` remains in accessible labels, the expanded project list, and articles |
 | `description`, `note` | Text shown when clicking the centered project title |
 | `image`, `thumbnail` | Image paths relative to `public/` |
 | `imageAlt` | A useful description for screen readers |

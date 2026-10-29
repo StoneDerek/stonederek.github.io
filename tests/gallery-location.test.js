@@ -57,6 +57,20 @@ test('legacy index URLs and unknown project fragments safely resolve', () => {
   assert.equal(resolveGalleryLocation('/projects/#gallery', panels).panel, 2);
 });
 
+test('previous project names open the corresponding current cover and article', () => {
+  for (const [old, current] of [
+    ['signal-studies', 'acoustic-drone-detection'],
+    ['soft-machines', 'academic-advising'],
+    ['afterimage', '2d-lightning-simulation']
+  ]) {
+    const panel = panels.findIndex(project => project.slug === current);
+    assert.ok(panel >= firstProjectPanel);
+    assert.deepEqual(resolveGalleryLocation(`/projects/#slide=${old}`, panels), { panel, article: null, anchor: '' });
+    assert.deepEqual(resolveGalleryLocation(`/projects/#project=${old}`, panels), { panel, article: panel, anchor: '' });
+    assert.equal(galleryAddress(panel, panels, { article: true }), `/projects/#project=${current}`);
+  }
+});
+
 test('gallery bounds clamp to Home and Links, not a nonexistent project', () => {
   assert.equal(galleryAddress(-20, panels), '/');
   assert.equal(galleryAddress(999, panels), '/projects/#links');
