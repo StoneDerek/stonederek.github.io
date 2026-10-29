@@ -60,7 +60,8 @@ test('legacy index URLs and unknown project fragments safely resolve', () => {
 test('previous project names open the corresponding current cover and article', () => {
   for (const [old, current] of [
     ['signal-studies', 'acoustic-drone-detection'],
-    ['soft-machines', 'academic-advising'],
+    ['academic-advising', 'rag-chatbot'],
+    ['soft-machines', 'rag-chatbot'],
     ['afterimage', '2d-lightning-simulation']
   ]) {
     const panel = panels.findIndex(project => project.slug === current);
