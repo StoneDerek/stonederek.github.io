@@ -312,8 +312,8 @@ test('About caption starts with navigation, keeps the project color, and exits o
     assert.equal(title.textContent, '');
     await s.tick(400);
     assert.equal(s.frames, 0);
-    s.click('[data-thumbnail="7"]'); await s.tick();
-    assert.equal(s.find('.project-caption').style.getPropertyValue('--caption-color'), s.panels[7].palette.caption || s.panels[7].palette.accent);
+    s.click(`[data-thumbnail="${s.panels.length - 1}"]`); await s.tick();
+    assert.equal(s.find('.project-caption').style.getPropertyValue('--caption-color'), s.panels.at(-1).palette.caption || s.panels.at(-1).palette.accent);
   } finally { await s.close(); }
 });
 
@@ -662,7 +662,7 @@ test('Art keeps the header accent on its title across gallery and article naviga
     s.click('.back-button'); await s.flush();
     assertAccent();
     s.click('[data-menu-project="2"]'); await s.flush();
-    s.click('[data-menu-project="7"]'); await s.flush();
+    s.click(`[data-menu-project="${s.panels.length - 1}"]`); await s.flush();
     s.click('.back-button'); await s.flush();
     assertAccent();
   } finally { await s.close(); }
@@ -684,7 +684,7 @@ test('enlarging a photo preserves the article, scroll position, focus and addres
     assert.equal(s.document.activeElement, s.find('[data-image-close]'));
     s.key('ArrowRight', '[data-image-close]');
     assert.equal(s.address, '/projects/#project=art');
-    assert.equal(s.article, '7');
+    assert.equal(s.article, String(s.panels.findIndex(panel => panel.slug === 'art')));
     s.click('[data-image-close]');
     assert.equal(dialog.open, false);
     assert.equal(article.style.overflow, '');
@@ -980,7 +980,8 @@ test('image warming reaches the next cover before entry without promoting all di
     s.click('[data-menu-about]');
     assert.equal(s.find('[data-slide="2"] img').loading, 'eager');
     assert.equal(s.find('[data-slide="5"] img').loading, 'lazy');
-    s.click('[data-thumbnail="5"]');
-    for (const index of [4, 5, 6]) assert.equal(s.find(`[data-slide="${index}"] img`).loading, 'eager');
+    const target = s.panels.length - 2;
+    s.click(`[data-thumbnail="${target}"]`);
+    for (const index of [target - 1, target, target + 1]) assert.equal(s.find(`[data-slide="${index}"] img`).loading, 'eager');
   } finally { await s.close(); }
 });

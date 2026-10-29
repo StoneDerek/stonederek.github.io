@@ -133,40 +133,6 @@
     "imageHeight": 1200
   },
   {
-    "slug": "field-notes",
-    "title": "Field notes",
-    "category": "Research",
-    "year": "2026",
-    "caption": "Small observations. Slightly bigger questions.",
-    "description": "A collection of things noticed on the way to doing something else. These invented notes will eventually make room for a real question and a more useful answer.",
-    "note": "Drop in diagrams, observations, and the reasoning behind your decisions. The concentric shapes are only abstract artwork, not research data.",
-    "image": "art/field-notes.webp",
-    "thumbnail": "thumbnails/field-notes.webp",
-    "imageAlt": "Layered lime green contours forming a rippled basin on a dark forest green field.",
-    "position": "62% 50%",
-    "palette": {
-      "accent": "#d6ee99",
-      "ink": "#1b3317"
-    }
-  },
-  {
-    "slug": "night-shift",
-    "title": "Night shift",
-    "category": "Build",
-    "year": "2026",
-    "caption": "One more iteration before calling it a night.",
-    "description": "The fictional build that finally worked just after everyone stopped watching. A small reminder that the best part of a project is often buried in the process.",
-    "note": "Replace this with a build log, measurements, and what changed between versions. These glowing lines are a texture, not a circuit diagram.",
-    "image": "art/night-shift.webp",
-    "thumbnail": "thumbnails/night-shift.webp",
-    "imageAlt": "An electric blue gridded surface with a glowing amber line and a bright point of light.",
-    "position": "62% 50%",
-    "palette": {
-      "accent": "#ffc46b",
-      "ink": "#352110"
-    }
-  },
-  {
     "slug": "art",
     "title": "Art",
     "category": "Personal collection",
