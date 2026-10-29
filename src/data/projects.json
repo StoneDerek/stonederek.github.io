@@ -90,9 +90,9 @@
     "imageHeight": 1200
   },
   {
-    "slug": "academic-advising",
-    "legacySlugs": ["soft-machines"],
-    "title": "Academic Advising RAG Chatbot",
+    "slug": "rag-chatbot",
+    "legacySlugs": ["academic-advising", "soft-machines"],
+    "title": "RAG Chatbot for Academic Advising",
     "category": "Retrieval-augmented generation",
     "year": "2026",
     "caption": "Academic questions, grounded in source documents.",
@@ -106,8 +106,8 @@
       "accent": "#b52810",
       "ink": "#ffffff"
     },
-    "galleryTitle": "Academic Advising",
-    "galleryMethod": "RAG Chatbot",
+    "galleryTitle": "RAG Chatbot",
+    "galleryMethod": "for Academic Advising",
     "eyebrow": "Project preview",
     "imageWidth": 1920,
     "imageHeight": 1200

@@ -136,10 +136,11 @@ test('all direct panel and article URLs mount one persistent portfolio with matc
   }
 });
 
-test('old project links open the same project and replace their placeholder URL without adding history', async () => {
+test('old project links open the same project and replace their previous URL without adding history', async () => {
   for (const [old, current, panel] of [
     ['signal-studies', 'acoustic-drone-detection', 2],
-    ['soft-machines', 'academic-advising', 3],
+    ['academic-advising', 'rag-chatbot', 3],
+    ['soft-machines', 'rag-chatbot', 3],
     ['afterimage', '2d-lightning-simulation', 4]
   ]) {
     for (const article of [false, true]) {
