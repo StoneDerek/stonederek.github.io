@@ -130,14 +130,15 @@ dialog.victory-dialog { width: min(320px, calc(100vw - 48px)); max-height: calc(
 .gallery-end-return:hover .control-arrow { transform: translateX(-2px); }
 .gallery-end-return:focus-visible { outline: 1px dashed currentColor; outline-offset: -5px; }
 .portfolio :is(.project-caption, .filmstrip, .mobile-controls) { opacity: max(0, calc(1 - var(--end-progress, 0) * 2)); }
-.project-caption { position: absolute; z-index: 1; top: 50%; left: 50%; transform: translate(-50%, -50%); width: max-content; max-width: calc(100% - 40px); text-align: center; }
+/* Center the heading row; an optional subtitle extends below that anchor. */
+.project-caption { --caption-line-height: 1.25em; --caption-padding-block: 12px; position: absolute; z-index: 1; top: 50%; left: 50%; transform: translate(-50%, calc(var(--caption-line-height) / -2 - var(--caption-padding-block))); width: max-content; max-width: calc(100% - 40px); font-size: clamp(18px, 1.75vw, 24px); text-align: center; }
 .project-caption[inert] { pointer-events: none; }
 h1 { margin: 0; font-size: 14px; line-height: 1.25; font-weight: 600; }
-.project-caption h1 { font-size: clamp(18px, 1.75vw, 24px); }
-.caption-link { position: relative; display: flex; align-items: center; justify-content: center; min-height: 44px; max-width: 100%; margin-inline: auto; padding: 12px 16px; border-radius: 5px; background: transparent; color: var(--caption-color); font-size: inherit; font-weight: inherit; line-height: inherit; text-shadow: 0 1px 16px rgb(0 0 0 / .25); user-select: none; -webkit-user-select: none; transition: color 180ms ease; }
+.project-caption h1 { font-size: inherit; }
+.caption-link { position: relative; display: flex; align-items: center; justify-content: center; min-height: 44px; max-width: 100%; margin-inline: auto; padding: var(--caption-padding-block) 16px; border-radius: 5px; background: transparent; color: var(--caption-color); font-size: inherit; font-weight: inherit; line-height: inherit; text-shadow: 0 1px 16px rgb(0 0 0 / .25); user-select: none; -webkit-user-select: none; transition: color 180ms ease; }
 .caption-link::before { content: ''; position: absolute; z-index: -1; inset: 0; border-radius: inherit; background: var(--accent); opacity: 0; transition: opacity 180ms ease; }
 .caption-copy { display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: 100%; }
-.caption-heading { display: flex; align-items: center; justify-content: center; gap: 7px; }
+.caption-heading { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: var(--caption-line-height); }
 .caption-method { max-width: 100%; font-size: clamp(12px, 1vw, 14px); line-height: 1.4; font-weight: 500; text-wrap: balance; }
 .caption-arrow { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; transition: transform 180ms ease; }
 .caption-word { position: relative; display: inline-block; white-space: pre; text-align: center; }
