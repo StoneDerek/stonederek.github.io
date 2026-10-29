@@ -16,7 +16,24 @@ export function renderProjectMedia(host, items = [], { base = '/', eager = true 
     image.loading = eager && !figures.childElementCount ? 'eager' : 'lazy';
     if (item.width > 0) image.width = item.width;
     if (item.height > 0) image.height = item.height;
-    figure.append(image);
+    const open = doc.createElement('button');
+    open.type = 'button';
+    open.className = 'project-image-open';
+    open.dataset.imageOpen = '';
+    open.setAttribute('aria-label', `Enlarge image${item.alt ? `: ${item.alt}` : ''}`);
+    open.setAttribute('aria-haspopup', 'dialog');
+    open.setAttribute('aria-controls', 'project-image-viewer');
+    open.append(image);
+    const icon = doc.createElement('span');
+    icon.className = 'image-enlarge-mark';
+    icon.setAttribute('aria-hidden', 'true');
+    // Four corners distinguish image enlargement from an external link.
+    const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    const path = doc.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M8 3H3v5m13-5h5v5M3 16v5h5m8 0h5v-5');
+    svg.append(path); icon.append(svg); open.append(icon);
+    figure.append(open);
     if (item.caption) {
       const caption = doc.createElement('figcaption');
       caption.textContent = item.caption;

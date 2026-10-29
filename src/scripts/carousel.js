@@ -13,6 +13,7 @@ import { linksPalette } from '../data/section-palettes.js';
 import { sectionTiming } from '../data/section-motion.js';
 import { readHeaderPalette, blendHeaderPalette, stopHeaderPalette } from './header-palette.js';
 import { mountProjectCaseStudy, renderProjectMedia } from './project-case-study.js';
+import { mountProjectImageViewer } from './project-image-viewer.js';
 import { mountSwipeInput } from './swipe-input.js';
 
 export function mountPortfolio() {
@@ -57,6 +58,7 @@ export function mountPortfolio() {
   const contextLabel = menu.querySelector('[data-menu-context]');
   const menuTitle = menu.querySelector('[data-menu-title]');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const imageViewer = mountProjectImageViewer(root, projectView, { reducedMotion });
   const contextMotion = mountMenuLabel(contextLabel, reducedMotion);
   const menuTitleMotion = mountMenuLabel(menuTitle, reducedMotion);
   const projectNavigation = mountProjectMenu(projectsMenu, reducedMotion, { signal: controller.signal, persist: true });
@@ -543,6 +545,7 @@ export function mountPortfolio() {
   });
 
   function fillProject(index) {
+    imageViewer.close({ restoreFocus: false, immediate: true });
     const project = panels[index];
     setText('[data-detail-title]', project.title);
     setText('[data-detail-category]', project.category);
@@ -574,6 +577,7 @@ export function mountPortfolio() {
 
   async function transitionProject(opening, { replacing = false, sectionEntry = false } = {}) {
     if (disposed) return;
+    imageViewer.close({ restoreFocus: false, immediate: true });
     caseStudy.closeSources();
     const scrollTop = projectView.scrollTop;
     const originalVisibility = projectPage.style.visibility;
@@ -1001,6 +1005,7 @@ export function mountPortfolio() {
     disposed = true;
     stopHeaderPalette(siteHeader);
     laser.destroy();
+    imageViewer.destroy();
     caseStudy.destroy();
     credits.open = false;
     controller.abort();

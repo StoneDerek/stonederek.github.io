@@ -15,6 +15,8 @@ async function scene(address = '/', { reduced = true, width = 390, tiles = false
     disableJavaScriptEvaluation: true, disableJavaScriptFileLoading: true, disableCSSFileLoading: true
   } });
   const { document } = window;
+  window.innerWidth = width;
+  window.innerHeight = 844;
   window.ontouchstart = null;
   document.write(html);
   const root = document.querySelector('#portfolio');
@@ -42,8 +44,9 @@ async function scene(address = '/', { reduced = true, width = 390, tiles = false
   window.HTMLElement.prototype.releasePointerCapture = function() { captures.delete(this); };
   window.HTMLElement.prototype.getAnimations = () => [];
   window.HTMLElement.prototype.getBoundingClientRect = function() {
-    const w = this.matches('.thumbnail') ? 88 : this.matches('.caption-word, [data-title-metrics]') ? this.textContent.length * 8 : width;
-    return { x: 0, y: 0, left: 0, right: w, top: 0, bottom: 64, width: w, height: 64 };
+    const w = this.matches('[data-image-canvas]') ? parseFloat(this.style.width) || width : this.matches('.thumbnail') ? 88 : this.matches('.caption-word, [data-title-metrics]') ? this.textContent.length * 8 : width;
+    const h = this.matches('[data-image-canvas]') ? parseFloat(this.style.height) || 64 : this.matches('.image-viewer-toolbar') ? 44 : 64;
+    return { x: 0, y: 0, left: 0, right: w, top: 0, bottom: h, width: w, height: h };
   };
   for (const node of [document.documentElement, root, ...root.querySelectorAll('[data-stage], .thumbnail-rail, [data-project-view]')]) {
     Object.defineProperties(node, { clientWidth: { value: width, configurable: true }, clientHeight: { value: 844, configurable: true } });
@@ -644,6 +647,267 @@ test('Art opens as the final project with five full photos, section jumps and cr
     assert.equal(s.panel, s.panels.length);
     s.click('[data-end-return]');
     assert.equal(s.panel, index);
+  } finally { await s.close(); }
+});
+
+test('Art keeps the header accent on its title across gallery and article navigation', async () => {
+  const s = await scene('/projects/#slide=art');
+  try {
+    const assertAccent = () => {
+      assert.equal(s.root.style.getPropertyValue('--accent'), '#c90062');
+      assert.equal(s.find('.project-caption').style.getPropertyValue('--caption-color'), '#c90062');
+    };
+    assertAccent();
+    s.click('.caption-link'); await s.flush();
+    s.click('.back-button'); await s.flush();
+    assertAccent();
+    s.click('[data-menu-project="2"]'); await s.flush();
+    s.click('[data-menu-project="7"]'); await s.flush();
+    s.click('.back-button'); await s.flush();
+    assertAccent();
+  } finally { await s.close(); }
+});
+
+test('enlarging a photo preserves the article, scroll position, focus and address', async () => {
+  const s = await scene('/projects/#project=art');
+  try {
+    const article = s.find('[data-project-view]');
+    const button = s.find('.case-study-section [data-image-open]');
+    const dialog = s.find('[data-image-viewer]');
+    article.scrollTop = 740;
+    button.focus();
+    s.click('.case-study-section [data-image-open]');
+    assert.equal(dialog.open, true);
+    assert.equal(article.style.overflow, 'hidden');
+    assert.equal(s.find('[data-image-full]').src, button.querySelector('img').src);
+    assert.equal(s.find('[data-image-full]').alt, button.querySelector('img').alt);
+    assert.equal(s.document.activeElement, s.find('[data-image-close]'));
+    s.key('ArrowRight', '[data-image-close]');
+    assert.equal(s.address, '/projects/#project=art');
+    assert.equal(s.article, '7');
+    s.click('[data-image-close]');
+    assert.equal(dialog.open, false);
+    assert.equal(article.style.overflow, '');
+    assert.equal(article.scrollTop, 740);
+    assert.equal(s.document.activeElement, button);
+    assert.equal(s.find('[data-image-full]').hasAttribute('src'), false);
+    s.click('.case-study-section [data-image-open]');
+    s.key('Escape', '[data-image-close]');
+    dialog.dispatchEvent(new s.window.Event('cancel', { cancelable: true }));
+    assert.equal(dialog.open, false);
+    assert.equal(article.hidden, false, 'Escape closes only the image, leaving the article open');
+    assert.equal(s.address, '/projects/#project=art');
+    s.click('.case-study-section [data-image-open]');
+    s.click('[data-image-canvas]');
+    assert.equal(dialog.open, false, 'blank space around the photo dismisses it');
+  } finally { await s.close(); }
+});
+
+test('gradual zoom reaches decoded source resolution, pans without resetting and retains detail on resize', async () => {
+  const s = await scene('/projects/#project=art');
+  try {
+    s.click('.case-study-section [data-image-open]');
+    const full = s.find('[data-image-full]');
+    const canvas = s.find('[data-image-canvas]');
+    const dialog = s.find('[data-image-viewer]');
+    Object.defineProperties(full, { naturalWidth: { value: 1440 }, naturalHeight: { value: 1080 } });
+    full.dispatchEvent(new s.window.Event('load'));
+    const drawn = () => {
+      const match = full.style.transform.match(/translate3d\(([-+e.\d]+)px, ([-+e.\d]+)px, 0\) scale\(([-+e.\d]+)\)/);
+      assert.ok(match, 'the photo has an explicit fitted size and viewing transform');
+      return match.slice(1).map(Number);
+    };
+    const fitted = s.find('[data-image-scale]').textContent;
+    const area = [canvas.style.width, canvas.style.height];
+    s.click('[data-image-zoom]');
+    assert.equal(canvas.hasAttribute('data-zoomed'), true);
+    assert.ok(parseInt(s.find('[data-image-scale]').textContent) > parseInt(fitted));
+    assert.ok(parseInt(s.find('[data-image-scale]').textContent) < 100, 'the first step is gradual');
+    s.find('[data-image-zoom]').focus();
+    for (let i = 0; i < 5; i++) s.click('[data-image-zoom]');
+    assert.equal(s.find('[data-image-scale]').textContent, '100%');
+    assert.equal(s.find('[data-image-zoom]').getAttribute('aria-disabled'), 'true');
+    assert.equal(s.document.activeElement, s.find('[data-image-zoom]'), 'reaching a zoom limit preserves keyboard focus');
+    assert.equal(parseFloat(full.style.width) * drawn()[2], 1440, 'stop at the decoded width, even if metadata is larger');
+    assert.equal(parseFloat(full.style.height) * drawn()[2], 1080);
+    assert.deepEqual([canvas.style.width, canvas.style.height], area, 'zoom cannot resize the surrounding viewer');
+    const [left, top] = drawn();
+    const pointer = (type, x, y) => canvas.dispatchEvent(new s.window.PointerEvent(type, {
+      bubbles: true, cancelable: true, pointerId: 11, pointerType: 'mouse', button: 0, clientX: x, clientY: y
+    }));
+    pointer('pointerdown', 200, 200);
+    pointer('pointermove', 150, 180);
+    pointer('pointerup', 150, 180);
+    assert.equal(drawn()[0], left - 50);
+    assert.equal(drawn()[1], top - 20);
+    assert.equal(canvas.hasPointerCapture(11), false);
+    s.click('[data-image-canvas]');
+    assert.equal(dialog.open, true, 'a click emitted by finishing a drag must not dismiss the viewer');
+    assert.equal(canvas.hasAttribute('data-zoomed'), true);
+    s.click('[data-image-full]');
+    assert.equal(canvas.hasAttribute('data-zoomed'), true, 'an ordinary click never throws away the inspected detail');
+    assert.equal(dialog.open, true);
+    s.click('[data-image-fit]');
+    assert.equal(canvas.hasAttribute('data-zoomed'), false);
+    assert.equal(s.find('[data-image-scale]').textContent, fitted);
+    s.click('[data-image-zoom]');
+    const beforeArrow = drawn()[0];
+    const arrow = new s.window.KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'ArrowRight' });
+    canvas.dispatchEvent(arrow);
+    assert.equal(arrow.defaultPrevented, true);
+    assert.equal(drawn()[0], beforeArrow - 48, 'keyboard arrows pan the enlarged photo');
+    assert.equal(s.address, '/projects/#project=art');
+    canvas.focus();
+    const inspectedScale = s.find('[data-image-scale]').textContent;
+    s.window.innerWidth = 320;
+    s.window.dispatchEvent(new s.window.Event('resize'));
+    assert.equal(canvas.hasAttribute('data-zoomed'), true);
+    assert.equal(s.find('[data-image-scale]').textContent, inspectedScale);
+    assert.equal(canvas.style.width, '320px');
+    assert.equal(s.document.activeElement, canvas);
+    s.key('0', '[data-image-canvas]');
+    assert.equal(canvas.hasAttribute('data-zoomed'), false);
+    assert.equal(s.find('[data-image-zoom-out]').getAttribute('aria-disabled'), 'true');
+  } finally { await s.close(); }
+});
+
+test('wheel zoom stays under the cursor and touch pinch, pan and double tap stay inside the viewer', async () => {
+  const s = await scene('/projects/#project=art');
+  try {
+    s.click('.case-study-section [data-image-open]');
+    const full = s.find('[data-image-full]'), canvas = s.find('[data-image-canvas]');
+    const dialog = s.find('[data-image-viewer]');
+    const transform = () => {
+      const match = full.style.transform.match(/translate3d\(([-+e.\d]+)px, ([-+e.\d]+)px, 0\) scale\(([-+e.\d]+)\)/);
+      assert.ok(match, `Invalid image transform: ${full.style.transform}`);
+      return match.slice(1).map(Number);
+    };
+    const point = { x: 130, y: parseFloat(canvas.style.height) / 2 }, before = transform();
+    const wheel = new s.window.WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -120, clientX: point.x, clientY: point.y });
+    // happy-dom's WheelEvent omits its inherited mouse coordinates.
+    Object.defineProperties(wheel, { clientX: { value: point.x }, clientY: { value: point.y } });
+    canvas.dispatchEvent(wheel);
+    const after = transform();
+    assert.equal(wheel.defaultPrevented, true);
+    for (let axis = 0; axis < 2; axis++) {
+      const coordinate = axis ? point.y : point.x;
+      assert.ok(Math.abs((coordinate - before[axis]) / before[2] - (coordinate - after[axis]) / after[2]) < .00001);
+    }
+    const touch = (type, id, x, y) => canvas.dispatchEvent(new s.window.PointerEvent(type, {
+      bubbles: true, cancelable: true, pointerId: id, pointerType: 'touch', button: 0, clientX: x, clientY: y
+    }));
+    const level = parseInt(s.find('[data-image-scale]').textContent);
+    touch('pointerdown', 21, 100, 350);
+    touch('pointerdown', 22, 200, 450);
+    touch('pointermove', 21, 60, 310);
+    touch('pointermove', 22, 240, 490);
+    assert.ok(parseInt(s.find('[data-image-scale]').textContent) > level);
+    touch('pointerup', 22, 240, 490);
+    touch('pointermove', 21, 50, 300);
+    touch('pointerup', 21, 50, 300);
+    s.click('[data-image-canvas]');
+    assert.equal(dialog.open, true, 'the compatibility click after a pinch must not dismiss it');
+    assert.equal(canvas.hasPointerCapture(21), false);
+    assert.equal(canvas.hasPointerCapture(22), false);
+    assert.equal(canvas.hasAttribute('data-panning'), false);
+    s.click('[data-image-fit]');
+    for (let i = 0; i < 2; i++) {
+      touch('pointerdown', 23, 150, 400);
+      touch('pointerup', 23, 150, 400);
+      s.click('[data-image-full]');
+      await s.tick(80);
+    }
+    assert.equal(canvas.hasAttribute('data-zoomed'), true, 'double tap deliberately enlarges the touched area');
+    touch('pointerdown', 24, 150, 400);
+    touch('pointercancel', 24, 150, 400);
+    assert.equal(canvas.hasPointerCapture(24), false);
+    s.click('[data-image-close]');
+    assert.equal(dialog.open, false);
+    assert.equal(full.style.transform, '');
+    assert.equal(s.address, '/projects/#project=art');
+  } finally { await s.close(); }
+});
+
+test('zoom transitions can be interrupted by input, closing and reduced motion', async () => {
+  const s = await scene('/projects/#project=art', { reduced: false });
+  try {
+    s.click('.case-study-section [data-image-open]');
+    const full = s.find('[data-image-full]');
+    const initial = full.style.transform;
+    s.click('[data-image-zoom]');
+    assert.equal(full.style.transform, initial, 'a discrete zoom starts from the drawn position');
+    await s.tick(64);
+    const intermediate = full.style.transform;
+    assert.notEqual(intermediate, initial);
+    const preference = s.window.matchMedia('(prefers-reduced-motion: reduce)');
+    preference.matches = true;
+    const change = new s.window.Event('change'); change.matches = true;
+    preference.dispatchEvent(change);
+    assert.notEqual(full.style.transform, intermediate, 'reduced motion settles the requested zoom immediately');
+    const settled = full.style.transform;
+    await s.tick(200);
+    assert.equal(full.style.transform, settled, 'no cancelled zoom frame can overwrite the settled image');
+    s.click('[data-image-close]');
+    await s.tick(200);
+    assert.equal(full.style.transform, '');
+    assert.equal(s.find('[data-image-viewer]').open, false);
+  } finally { await s.close(); }
+});
+
+test('viewer motion can be interrupted and reduced motion finishes dismissal immediately', async () => {
+  const s = await scene('/projects/#project=art', { reduced: false });
+  try {
+    const dialog = s.find('[data-image-viewer]');
+    const effects = [];
+    dialog.animate = (frames, options) => {
+      let resolve, reject;
+      const effect = { frames, options, cancelled: false,
+        finished: new Promise((yes, no) => { resolve = yes; reject = no; }),
+        finish() { resolve(); }, cancel() { this.cancelled = true; reject(new Error('cancelled')); }
+      };
+      effects.push(effect); return effect;
+    };
+    s.click('.case-study-section [data-image-open]');
+    assert.equal(effects[0].options.duration, 180);
+    s.click('[data-image-zoom]');
+    assert.equal(effects[0].cancelled, true, 'an early zoom uses the settled image geometry');
+    s.click('[data-image-close]');
+    assert.equal(effects[0].cancelled, true);
+    assert.equal(effects[1].options.duration, 120);
+    assert.equal(dialog.open, true, 'retain modal focus until the closing frame completes');
+    const preference = s.window.matchMedia('(prefers-reduced-motion: reduce)');
+    preference.matches = true;
+    const change = new s.window.Event('change'); change.matches = true;
+    preference.dispatchEvent(change);
+    assert.equal(dialog.open, false);
+    assert.equal(effects[1].cancelled, true);
+    effects[1].finish(); await s.flush();
+    assert.equal(s.find('[data-project-view]').hidden, false);
+    s.click('.case-study-section [data-image-open]');
+    assert.equal(effects.length, 2, 'reduced motion suppresses the opening transition too');
+    s.click('[data-image-close]');
+    assert.equal(dialog.open, false);
+  } finally { await s.close(); }
+});
+
+test('the image viewer survives rapid reopen and closes cleanly before article replacement', async () => {
+  const s = await scene('/projects/#project=art');
+  try {
+    const dialog = s.find('[data-image-viewer]');
+    const article = s.find('[data-project-view]');
+    s.click('.case-study-section [data-image-open]');
+    s.click('[data-image-close]');
+    s.click('.case-study-section:nth-child(2) [data-image-open]');
+    dialog.dispatchEvent(new s.window.Event('close'));
+    assert.equal(dialog.open, true);
+    assert.match(s.find('[data-image-full]').src, /broken-line-chicken/);
+    assert.equal(article.style.overflow, 'hidden');
+    s.click('[data-menu-project="2"]'); await s.flush();
+    assert.equal(dialog.open, false);
+    assert.equal(article.style.overflow, '');
+    assert.equal(article.scrollTop, 0);
+    assert.equal(s.find('[data-image-full]').hasAttribute('src'), false);
+    assert.equal(s.find('[data-detail-title]').textContent, s.panels[2].title);
   } finally { await s.close(); }
 });
 
