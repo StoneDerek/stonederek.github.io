@@ -130,6 +130,24 @@ const serialized = JSON.stringify(panels).replace(/</g, '\\u003c');
 
 
 
+    <dialog id="project-image-viewer" class="project-image-viewer" data-image-viewer aria-label="Enlarged project image">
+      <div class="image-viewer-toolbar">
+        <span class="image-viewer-label" data-image-label>Image</span>
+        <div class="image-viewer-zoom-controls" role="group" aria-label="Image zoom">
+          <button type="button" class="image-viewer-zoom" data-image-zoom-out aria-label="Zoom out" title="Zoom out (−)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg></button>
+          <span class="image-viewer-scale" data-image-scale aria-label="Zoom level">100%</span>
+          <button type="button" class="image-viewer-zoom" data-image-zoom aria-label="Zoom in" title="Zoom in (+)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14" /></svg></button>
+          <button type="button" class="image-viewer-zoom image-viewer-fit" data-image-fit aria-label="Fit image to viewer" title="Fit image (0)">Fit</button>
+        </div>
+        <button type="button" class="image-viewer-close" data-image-close aria-label="Close enlarged image" title="Close enlarged image" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+      </div>
+      <figure class="image-viewer-figure">
+        <div class="image-viewer-canvas" data-image-canvas tabindex="0" role="group" aria-label="Image inspection. Use plus and minus to zoom, arrow keys to pan, and zero to fit."><img data-image-full alt="" decoding="async" draggable="false" /></div>
+        <figcaption data-image-caption hidden></figcaption>
+      </figure>
+    </dialog>
+
+
     <script type="application/json" id="portfolio-data" set:html={serialized}></script>
     <noscript><div class="noscript-message">Enable JavaScript to browse all panels and project articles.</div></noscript>
   </main>
