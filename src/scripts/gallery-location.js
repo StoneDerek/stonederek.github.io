@@ -14,7 +14,8 @@ export function resolveGalleryLocation(address, panels) {
     return { panel: section === 'home' ? 0 : 1, article: null, anchor };
   }
   const query = new URLSearchParams(url.hash.slice(1));
-  const project = slug => panels.findIndex(panel => panel.kind === 'project' && panel.slug === slug);
+  const project = slug => panels.findIndex(panel => panel.kind === 'project' &&
+    (panel.slug === slug || panel.legacySlugs?.includes(slug)));
   const article = project(query.get('project'));
   if (article >= firstProjectPanel) return { panel: article, article, anchor: '' };
   if (query.has('links')) return { panel: panels.length, article: null, anchor: '' };

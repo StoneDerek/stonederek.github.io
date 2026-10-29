@@ -212,7 +212,7 @@ export function mountPortfolio() {
       if (!links && Number(button.dataset.menuProject) === index) button.setAttribute('aria-current', 'true');
       else button.removeAttribute('aria-current');
     });
-    setMenuTitle(!links && project.kind === 'project' ? project.title : '', { immediate, direction });
+    setMenuTitle(!links && project.kind === 'project' ? project.galleryTitle || project.title : '', { immediate, direction });
   }
 
   function updateEnd(progress, links) {

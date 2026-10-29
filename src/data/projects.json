@@ -1,6 +1,7 @@
 [
   {
-    "slug": "signal-studies",
+    "slug": "acoustic-drone-detection",
+    "legacySlugs": ["signal-studies"],
     "title": "Acoustic Drone Detection with CNN Spectrogram Analysis",
     "category": "Machine learning",
     "year": "2026",
@@ -89,7 +90,8 @@
     "imageHeight": 1200
   },
   {
-    "slug": "soft-machines",
+    "slug": "academic-advising",
+    "legacySlugs": ["soft-machines"],
     "title": "Academic Advising RAG Chatbot",
     "category": "Retrieval-augmented generation",
     "year": "2026",
@@ -111,7 +113,8 @@
     "imageHeight": 1200
   },
   {
-    "slug": "afterimage",
+    "slug": "2d-lightning-simulation",
+    "legacySlugs": ["afterimage"],
     "title": "2D Lightning Simulation with a Probabilistic Potential Model",
     "category": "Computational modeling",
     "year": "2026",
