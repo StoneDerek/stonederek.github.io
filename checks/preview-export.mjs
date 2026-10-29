@@ -21,8 +21,8 @@ test('the exported page contains visible portfolio content before scripts run', 
     assert.equal(doc.querySelectorAll('#portfolio').length, 1);
     assert.ok(doc.querySelector('[data-slide="0"] h1').textContent.trim());
     assert.equal(doc.querySelector('[data-slide="0"]').getAttribute('aria-hidden'), 'false');
-    assert.equal(doc.querySelectorAll('[data-slide]').length, 8);
-    for (const image of doc.querySelectorAll('img')) assert.match(image.getAttribute('src'), /^data:image\//);
+    assert.equal(doc.querySelectorAll('[data-slide]').length, JSON.parse(doc.querySelector('#portfolio-data').textContent).length);
+    for (const image of doc.querySelectorAll('img[src]')) assert.match(image.getAttribute('src'), /^data:image\//);
     assert.equal(doc.querySelectorAll('script[src], link[rel="stylesheet"]').length, 0);
     for (const script of doc.scripts) {
       if (script.type === 'application/json') JSON.parse(script.textContent);

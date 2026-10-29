@@ -503,7 +503,12 @@ body:has(#portfolio) { overflow: hidden; }
 .profile-panel .profile-main { padding-top: 150px; }
 .profile-panel :is(h1, h2, section) { scroll-margin-top: 150px; }
 .profile-panel .profile-footer { padding-bottom: 30px; }
-.thumbnail-section { display: grid; place-items: center; background-color: var(--thumbnail-accent); color: var(--thumbnail-ink); font-size: 12px; line-height: 1.2; font-weight: 600; }
+.thumbnail-section { display: grid; place-items: center; background-color: transparent; color: var(--muted); font-size: 12px; line-height: 1.2; font-weight: 500; opacity: 1; transform: none; }
+.thumbnail-section span { padding-block: 8px; }
+.thumbnail-section.is-active span { color: var(--page-text); }
+.thumbnail-section:hover span { color: var(--page-text); }
+.thumbnail-section:focus-visible span { outline: 1px dashed currentColor; outline-offset: 4px; }
+.thumbnail-section:focus-visible::after { display: none; }
 .portfolio:is(.is-moving, .is-dragging, .is-lifting) .profile-scroll,
 .profile-panel[aria-hidden="true"] .profile-scroll { scrollbar-color: transparent transparent; }
 .portfolio:is(.is-moving, .is-dragging, .is-lifting) .profile-scroll::-webkit-scrollbar-thumb,
