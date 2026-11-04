@@ -47,5 +47,6 @@ export function prepareHomeEntrance(introduction) {
   motion?.addEventListener?.('change', () => { if (motion.matches) finish(); });
   page.addEventListener('visibilitychange', () => { if (page.hidden) finish(); });
   view.addEventListener('pagehide', finish);
+  view.addEventListener('portfolio:preview-unmount', finish, { once: true });
   replay();
 }

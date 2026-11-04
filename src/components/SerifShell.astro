@@ -1,0 +1,42 @@
+---
+import site from '../data/site.json';
+import Layout from '../layouts/Layout.astro';
+import SerifNavigation from './SerifNavigation.astro';
+import '../styles/serif.css';
+
+const { page = 'home', contentId = `${page}-content` } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const labels = { home: 'Portfolio', work: 'Work', about: 'About', resume: 'Resume' };
+const title = `${site.name} - ${labels[page] || 'Portfolio'}`;
+const description = page === 'work' ? `Projects, experiments, and work in progress by ${site.name}.` : page === 'about' ? `About ${site.name}.` : page === 'resume' ? `The latest resume for ${site.name}.` : site.description;
+---
+<Layout title={title} description={description}>
+<div
+  id={page === 'work' ? 'work-portfolio' : undefined}
+  class="serif-site"
+  data-page={page}
+  data-work-root={page === 'work' ? '' : undefined}
+  data-base={base}
+  data-owner={page === 'work' ? site.name : undefined}
+>
+  <a class="serif-skip-link" href={`#${contentId}`}>Skip to content</a>
+  <header class="serif-masthead">
+    <a class="serif-identity" href={base} aria-label={`${site.name} home`}>{site.name}</a>
+    <details class="serif-mobile-menu" data-serif-menu>
+      <summary>Menu</summary>
+      <SerifNavigation page={page} mode="mobile" />
+    </details>
+  </header>
+  <SerifNavigation page={page} />
+  <main id={contentId} class="serif-main" tabindex="-1">
+    <slot />
+  </main>
+  <footer class="serif-footer">
+    <a class="serif-email" href={`mailto:${site.email}`}>{site.email}</a>
+    <div class="serif-footer-links">
+      <a href={`${base}resume/`}>Resume</a>
+      <a href={site.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn (opens in a new tab)">LinkedIn</a>
+    </div>
+  </footer>
+</div>
+</Layout>

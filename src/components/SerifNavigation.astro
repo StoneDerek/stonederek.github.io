@@ -1,0 +1,31 @@
+---
+import site from '../data/site.json';
+
+const { page = 'home', mode = 'desktop' } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const links = [
+  { label: 'Home', page: 'home', href: base },
+  { label: 'Work', page: 'work', href: `${base}projects/` },
+  { label: 'About', page: 'about', href: `${base}about/` },
+  { label: 'Art', page: 'art', href: `${base}art/` },
+  { label: 'Resume', page: 'resume', href: `${base}resume/`, professional: true },
+  { label: 'LinkedIn', href: site.linkedin, external: true },
+];
+---
+<nav class:list={['serif-navigation', `serif-navigation-${mode}`]} aria-label="Main navigation">
+  <ul class="serif-nav-list">
+    {links.map(link => (
+      <li class:list={{ 'serif-professional-start': link.professional }}>
+        <a
+          class="serif-nav-link"
+          href={link.href}
+          aria-current={link.page === page ? 'page' : undefined}
+          data-work-index={link.page === 'work' ? '' : undefined}
+          target={link.external ? '_blank' : undefined}
+          rel={link.external ? 'noopener noreferrer' : undefined}
+          aria-label={link.external ? `${link.label} (opens in a new tab)` : undefined}
+        >{link.label}</a>
+      </li>
+    ))}
+  </ul>
+</nav>

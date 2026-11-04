@@ -11,19 +11,20 @@ import { galleryPanels, firstProjectPanel } from '../data/gallery-panels.js';
 import { resumeURL } from '../data/resume.js';
 const base = import.meta.env.BASE_URL;
 const url = (path) => `${base}${path}`;
-const { section = 'home' } = Astro.props;
+const { section = 'home', initialSlug = '' } = Astro.props;
 const panels = galleryPanels(projects);
-const selected = section === 'home' ? 0 : section === 'about' ? 1 : firstProjectPanel;
+const requestedPanel = panels.findIndex(panel => panel.slug === initialSlug);
+const selected = requestedPanel >= firstProjectPanel ? requestedPanel : section === 'home' ? 0 : section === 'about' ? 1 : firstProjectPanel;
 const palette = panels[selected].palette;
-const first = projects[0];
+const first = projects.find(project => project.slug === initialSlug) || projects[0];
 const linksLogo = ['      _', '     | |', '   __| |___', '  / _` / __|', ' | (_| \\__ \\_', '  \\__,_|___(_)'].join('\n');
 const serialized = JSON.stringify(panels).replace(/</g, '\\u003c');
 ---
-<Layout title={`${site.name} - ${section === 'home' ? 'Portfolio' : section === 'about' ? 'About' : 'Projects'}`} description={section === 'projects' ? `Projects, experiments, and work in progress by ${site.name}.` : section === 'about' ? `About ${site.name}.` : site.description}>
+<Layout title={`${site.name} - ${initialSlug === 'art' ? 'Art' : section === 'home' ? 'Portfolio' : section === 'about' ? 'About' : 'Projects'}`} description={initialSlug === 'art' ? `Art and a personal collection by ${site.name}.` : section === 'projects' ? `Projects, experiments, and work in progress by ${site.name}.` : section === 'about' ? `About ${site.name}.` : site.description}>
   <main id="portfolio" class="portfolio" data-base={base} data-panel-kind={panels[selected].kind} data-initial-panel={selected} style={`--accent:${palette.accent};--ink:${palette.ink};--caption-color:${palette.caption || palette.accent}`}>
     <a class="skip-link" href={section === 'home' ? '#home-title' : section === 'about' ? '#about-title' : '#project-caption'}>Skip to content</a>
 
-    <SiteHeader page={section} unified />
+    <SiteHeader page={section} unified initialProject={first} />
 
 
     <section class="carousel" aria-roledescription="carousel" aria-label="Home, About, and selected projects" tabindex="0">

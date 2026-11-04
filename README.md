@@ -1,29 +1,31 @@
 # Derek Stone portfolio
 
-A single full-screen horizontal gallery: Home → About → projects → Links. Built with Astro, CSS, and small browser scripts; published as a static GitHub Pages site.
+An Astro portfolio with a shared serif layout, native Home and About pages, and a two-column Work grid. The three engineering projects keep their current images, descriptions, case studies, and direct-link aliases. Art retains the existing gallery and image inspection experience while its dedicated presentation is developed separately.
 
 ## Navigation model
 
-Home and About are real gallery panels, followed by three project previews and the Art collection as the final project. All share one track, thumbnail strip, header, gesture controller, and persistent app instance. Home and About have labeled thumbnails and native vertical reading areas; project covers keep their artwork, title scramble, and article controls. Links remains a hidden end panel without its own thumbnail or dropdown entry.
-
-The separate white navigation row, About return button, page-to-gallery handoff, Astro document router, and outgoing section snapshots are removed. Selecting Home or About slides to that panel. The dropdown can open a project article over the currently drawn panel; only after the article covers it does the gallery select the article's return slide. Closing reveals that project. Selecting Home or About from an article closes onto the requested content panel.
-
 | Address | Destination |
 | --- | --- |
-| `/` | Home panel |
-| `/about/` | About panel |
-| `/about/#interests` | About, scrolled to a section |
-| `/projects/` | First project cover |
-| `/projects/#slide=<slug>` | A project cover |
-| `/projects/#project=<slug>` | A project article |
-| `/projects/#links` | Hidden Links panel |
-| `/resume/` | Permanent résumé route |
+| `/` | Home introduction and supplied climbing photograph |
+| `/projects/` | Three-project Work grid |
+| `/projects/#project=<slug>` | Rich project article in the serif layout |
+| `/projects/#slide=<slug>` | Compatible entry to the corresponding project article |
+| `/about/` | Existing About content in the shared layout |
+| `/about/#interests` | Native About section anchor |
+| `/art/` | Existing gallery, initially selecting Art |
+| `/art/#links` | Existing mirror puzzle and credits |
+| `/projects/#links` | Compatible entry to the mirror puzzle |
+| `/resume/` | Permanent resume page and current PDF link |
 
-All three main entry routes render the same `src/components/Portfolio.astro` component. Direct entry still works without a prior visit to Home. After startup, internal navigation uses the existing app and the History API instead of fetching or swapping documents. Back/Forward restores the appropriate panel or article; About anchors retain normal URLs. Ordinary menu anchors also retain useful real destinations for opening links in another tab.
+Work shows Acoustic Drone Detection, RAG Chatbot, and 2D Lightning Simulation in that order. Titles and method lines remain separate; Art and removed fictional placeholders are not Work cards. Existing project slugs and their legacy aliases resolve to the same article content.
 
-`src/data/gallery-panels.js` prepends Home and About to project data. `src/scripts/gallery-location.js` owns route parsing and formatting, including the standalone preview's address format. Invalid project slugs fall back to the project gallery. Home and About never become project articles.
+Opening an article records the Work scroll position and triggering card. Closing or using browser Back restores that grid entry, including keyboard focus. A directly opened article closes to Work without sending the reader to a previous external page. Back and Forward restore reading positions. Image zoom, case-study sections, and footnotes reuse the existing renderers.
 
-## Reading and controls
+`SerifShell.astro` provides document metadata, masthead, navigation, main content, and footer. Desktop navigation occupies its own right column; smaller widths use a native menu, and the project grid becomes one column below 760px. `WorkContent.astro` supplies the grid, article hooks, image viewer, and project data. `work-page.js` owns article/history state, while `work-location.js` resolves current and legacy addresses. Home and About reuse their supplied content and Home entrance hooks.
+
+The following gallery controls describe the preserved Art implementation. Native page navigation and the Work grid are checked separately.
+
+## Legacy Art gallery reading and controls
 
 - Swipe horizontally on Home, About, or project artwork to browse panels. Native touch direction locks during event dispatch, before a reading scroller can take over. Horizontal movement prevents native panning; vertical reading and pinch zoom stay native. Duplicate touch pointer events cannot cancel the swipe. The original card or caption stays available until release, including across the selection midpoint.
 - Click and drag across Home, About, project artwork, or the thumbnail strip to browse. Prose follows the drag instead of selecting text; links and buttons retain their normal click behavior. Home and About scroll vertically inside their own panels and retain their reading positions when revisited.
@@ -37,7 +39,7 @@ All three main entry routes render the same `src/components/Portfolio.astro` com
 
 The hidden Links panel retains the local ASCII mirror puzzle, trophy, professional links, and compact Credits. The puzzle is idle when not visible; Reset restores its instructions. Credits dismiss on outside press or Escape.
 
-## Content and appearance
+## Legacy gallery content and appearance
 
 Home prose lives in `src/components/HomeContent.astro`; it contains Derek’s supplied introduction, preserving the italic research areas, bold interests, and Rose-Hulman link. The climbing photograph at `public/art/home/climbing.webp` retains the supplied 1536 × 2048 framing. It sits beside the introduction on desktop and below it on phones, loads eagerly on Home, and stays lazy on direct About or project entry. About stays in `src/components/AboutContent.astro` and retains its placeholder copy. The first three projects preview acoustic drone detection with CNN spectrogram analysis, an academic-advising RAG chatbot, and 2D lightning simulation with a probabilistic potential model. Their covers are reproducible technical illustrations (a synthetic-audio STFT, a planned RAG workflow, and a separate lattice-growth calculation); their copy describes project directions without claiming measured results. The drone project uses the six-section case-study layout. Art contains Derek’s own work and edited copy from his supplied draft.
 
@@ -117,15 +119,15 @@ npm run test:flows
 npm run export:preview
 ```
 
-The exported `portfolio-preview.html` contains the unified production document, scripts, styles, gallery images, and local article media directly, with no nested iframe or empty JavaScript-created document. It renders Home markup before scripts run. Preview-only WebP copies are bounded to 1440 × 1080 without cropping or recoloring; production originals are untouched. The Art version is about 2.4 MB, down from 8.9 MB. Section changes and Back/Forward use the same persistent production gallery controller and a local hash bridge, including `#about?interests` and `#projects?project=art`. Menu state stays inside the document if the viewer denies access to its parent or browser storage. Email and LinkedIn retain their external destinations. Run `node --test checks/preview-export.mjs` after exporting to check direct markup, inline scripts, image embedding, aspect ratios, and the file-size budget.
+The exported `portfolio-preview.html` starts with visible native Home markup and embeds Home, Work, About, Resume, the preserved Art gallery, scripts, styles, project data, and local images without an iframe. A local hash bridge switches the native pages and delegates same-page Work or Art navigation to its real controller. Back/Forward retain the controller's route and history state. Preview-only image copies are resized without cropping or recoloring; production images remain unchanged. Run `node --test checks/preview-export.mjs` after exporting to check markup, route switching, script validity, embedded images, original Art aspect ratios, and the size budget.
 
 ## Résumé and update date
 
-The bottom-right date reads Updated today or Updated Nd ago, based on the visitor's calendar day, and shows the full date, time, and timezone on hover or keyboard focus. After 30 days it shows a calendar date. `src/data/publication.js` stamps the static build; `publication-label.js` updates the relative label at local midnight and when the page becomes visible. The timestamp itself stays fixed between builds. Optionally supply an ISO timestamp in `PORTFOLIO_PUBLISHED_AT` to identify a specific release. It describes the site build used for deployment.
+In the retained gallery menu, the bottom-right date reads Updated today or Updated Nd ago, based on the visitor's calendar day, and shows the full date, time, and timezone on hover or keyboard focus. After 30 days it shows a calendar date. `src/data/publication.js` stamps the static build; `publication-label.js` updates the relative label at local midnight and when the page becomes visible. The timestamp itself stays fixed between builds. Optionally supply an ISO timestamp in `PORTFOLIO_PUBLISHED_AT` to identify a specific release. It describes the site build used for deployment.
 
-The footer contains `contact.stonederek@gmail.com`, `https://www.linkedin.com/in/derekstone0`, and the permanent résumé address `https://stonederek.github.io/resume/`. Email opens a mail client; LinkedIn and Résumé open separate tabs. No phone number, home address, contact form, or extra external services have been added.
+The footer contains `contact.stonederek@gmail.com`, `https://www.linkedin.com/in/derekstone0`, and the permanent résumé address `https://stonederek.github.io/resume/`. Email opens a mail client; LinkedIn opens a separate tab and Resume uses the permanent native page. No phone number, home address, contact form, or extra external services have been added.
 
-The résumé page currently contains a simple availability notice, as requested. When the public résumé is ready, add a PDF as `public/resume.pdf`, commit it, and let GitHub Pages rebuild. Updating that same file keeps the menu address unchanged. The résumé page will then link to the PDF automatically, with a content hash in its internal PDF link to avoid reusing an older cached copy. The public `/resume/` address always stays the same. Check the public PDF for contact details and information you intend to share before adding it. The standalone preview includes the generated résumé page in a small document blob so its menu link also works offline; no résumé document is supplied with this revision.
+The permanent `/resume/` page links to `public/resume.pdf` when that file exists, using a content hash to avoid stale PDF caching. Without a PDF it displays the existing availability notice. Updating the PDF does not change the navigation address. The offline preview embeds the existing PDF and retains a useful Resume page.
 
 ## GitHub Pages
 
@@ -135,7 +137,9 @@ The existing repository is `StoneDerek/stonederek.github.io`, published at `http
 
 ## Verification and performance
 
-There are 23 production-DOM flow tests, 141 unit tests, and two standalone-export checks. Run `npm run test:flows` to rebuild and exercise direct panel/article URLs, thumbnails, mobile controls, keyboard navigation, menu focus and dismissal, touch direction and cancellation, About caption entry/exit before selection, caption colors, About anchors and retained scroll positions, article replacement and interrupted closing, rapid requests, Back/Forward, offline navigation messages, local asset/reference integrity, image warming, the static favicon, selection-update counts, and settled resizing. These tests use Happy DOM with supplied geometry and timing; they do not establish browser rendering, real-device gesture feel, canvas rendering, or measured network performance. The existing GitHub Pages workflow runs both suites after building and before deployment.
+Run `npm test` for the route, history, rendering-helper, input, image-zoom, and lifecycle unit suites. Run `npm run test:flows` to build and exercise both the preserved Art gallery and the real native Home, Work, About, and Resume markup. The Work suite checks current/legacy article links, direct entry, scroll and focus restoration through Back/Forward and Close, native About/Resume navigation, Art compatibility, and preview lifecycle handling. The DOM checks use Happy DOM with supplied geometry and timing; they do not establish browser rendering, physical-device gesture feel, canvas painting, or network performance. GitHub Pages runs the unit and built-page flow checks before deployment.
+
+The remaining performance and browser notes below describe the earlier legacy gallery implementation.
 
 Resizing or hiding the page during a held swipe now settles the nearest panel instead of leaving the track stranded between panels. Closing during an article opening uses that article's return-cover URL. Thumbnail wheel gestures write history only once they settle, keeping intermediate positions out of Back navigation. Initial cover loading is scoped to the entry panel and its neighbors; Home no longer explicitly requests two distant covers eagerly, and the existing controller warms covers as their destination approaches. Native lazy-loading thresholds still depend on the browser.
 

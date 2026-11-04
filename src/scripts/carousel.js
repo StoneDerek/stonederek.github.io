@@ -29,6 +29,7 @@ export function mountPortfolio() {
   const panels = JSON.parse(data.textContent);
   const readAddress = () => new URL(window.__PORTFOLIO_PREVIEW_ADDRESS__ || window.location.href, 'https://portfolio.invalid');
   const initial = resolveGalleryLocation(readAddress(), panels);
+  const galleryPath = /\/art(?:\/index\.html|\/)?$/.test(readAddress().pathname) ? 'art/' : 'projects/';
   let lastAddress = readAddress().pathname + readAddress().hash;
   let pendingPanel = null;
   const slides = [...root.querySelectorAll('[data-slide]')];
@@ -665,7 +666,7 @@ export function mountPortfolio() {
   }
 
   function writeAddress(index, { article = false, replace = false, anchor = '' } = {}) {
-    const address = galleryAddress(index, panels, { base: root.dataset.base, article, anchor });
+    const address = galleryAddress(index, panels, { base: root.dataset.base, article, anchor, galleryPath });
     if (address !== lastAddress) {
       lastAddress = address;
       if (window.__PORTFOLIO_PREVIEW_ADDRESS__ !== undefined) {

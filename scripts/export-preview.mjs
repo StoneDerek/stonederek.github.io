@@ -3,11 +3,12 @@ import { resolve } from 'node:path';
 import { Script } from 'node:vm';
 import { build } from 'esbuild';
 import sharp from 'sharp';
-import { previewAddress, previewHash } from '../src/scripts/gallery-location.js';
-
-// The unified production document already contains Home, About and all projects.
-// Export it directly so attachment viewers never begin with an empty iframe.
-const routes = { home: 'index.html', resume: 'resume/index.html' };
+// Keep a useful native Home document before scripts run. Other native pages
+// and the retained Art gallery are mounted locally by the address bridge.
+const routes = {
+  home: 'index.html', about: 'about/index.html', projects: 'projects/index.html',
+  art: 'art/index.html', resume: 'resume/index.html'
+};
 const pages = {};
 const assets = {};
 const embedded = new Map();
@@ -57,8 +58,7 @@ for (const [route, file] of Object.entries(routes)) {
     await embedImage(path, publicPath);
   }
   for (const [path, token] of embedded) html = html.replaceAll(`="${path}"`, `="${token}"`);
-  if (html.includes('id="portfolio-data"')) {
-    const data = html.match(/<script\b[^>]*\bid="portfolio-data"[^>]*>([\s\S]*?)<\/script>/);
+  for (const data of [...html.matchAll(/<script\b[^>]*\bid="(?:portfolio-data|work-data)"[^>]*>([\s\S]*?)<\/script>/g)]) {
     const projects = JSON.parse(data[1]);
     const base = html.match(/\bdata-asset-base="([^"]*)"/)?.[1] || '/';
     for (const project of projects) {
@@ -98,46 +98,178 @@ for (const [route, file] of Object.entries(routes)) {
   pages[route] = html;
 }
 
-function initializePreview({ resumePDF, resumeHTML }, addressFromHash, hashFromAddress) {
+function initializePreview(payload) {
+  const { pages, assets, resumePDF, base, origin } = payload;
+  const names = new Set(Object.keys(pages));
+  let mountedRoute = 'home';
+  let scheduled = false;
+  let resumeAddress = null;
+
+  const routeFor = address => {
+    const url = new URL(address, origin);
+    const path = url.pathname.replace(/\/index\.html$/, '/');
+    if (!path.startsWith(base)) return null;
+    const part = path.slice(base.length).replace(/^\/+|\/+$/g, '');
+    const route = part === 'work' ? 'projects' : part || 'home';
+    return names.has(route) ? route : null;
+  };
+  const addressFromHash = hash => {
+    const [requested, ...rest] = hash.replace(/^#/, '').split('?');
+    const name = requested === 'work' ? 'projects' : requested;
+    const route = names.has(name) ? name : 'home';
+    const fragment = rest.join('?');
+    return `${base}${route === 'home' ? '' : `${route}/`}${fragment ? `#${fragment}` : ''}`;
+  };
+  const hashFromAddress = address => {
+    const url = new URL(address, origin);
+    return `#${routeFor(address) || 'home'}${url.hash ? `?${url.hash.slice(1)}` : ''}`;
+  };
+  const expand = page => {
+    let html = page;
+    for (const [token, value] of Object.entries(assets)) html = html.replaceAll(token, () => value);
+    return html;
+  };
   let currentAddress = addressFromHash(location.hash);
   window.__PORTFOLIO_PREVIEW_ADDRESS__ = currentAddress;
-  window.__PORTFOLIO_PREVIEW_SET_ADDRESS__ = ({ address, replace }) => {
+
+  function internalAddress(link) {
+    if (link.dataset.previewAddress) return link.dataset.previewAddress;
+    const href = link.getAttribute('href');
+    if (!href || /^(?:mailto:|tel:|data:|blob:)/i.test(href)) return null;
+    const url = new URL(href, new URL(currentAddress, origin));
+    if (url.origin !== origin || !routeFor(url)) return null;
+    return url.pathname + url.hash;
+  }
+
+  function connectLinks() {
+    if (resumePDF && !resumeAddress) {
+      try {
+        resumeAddress = URL.createObjectURL(new Blob([
+          Uint8Array.from(atob(resumePDF), char => char.charCodeAt(0))
+        ], { type: 'application/pdf' }));
+      } catch { /* Existing public PDF URLs remain useful if blobs are denied. */ }
+    }
+    for (const link of document.querySelectorAll('a[href]')) {
+      const raw = link.getAttribute('href');
+      const url = new URL(raw, new URL(currentAddress, origin));
+      if (url.origin === origin && /\/resume\.pdf$/.test(url.pathname)) {
+        link.href = resumeAddress || url.href;
+        continue;
+      }
+      // Legacy gallery links are interpreted by its own controller. Footnotes
+      // also keep their renderer-owned hashes and in-document focus behavior.
+      if (link.matches('[data-site-route], [data-article-jump], .serif-skip-link')) continue;
+      const address = internalAddress(link);
+      if (!address) continue;
+      link.dataset.previewAddress = address;
+      link.href = `${location.href.split('#')[0]}${hashFromAddress(address)}`;
+    }
+  }
+
+  function scrollToAddress(address) {
+    const hash = new URL(address, origin).hash.slice(1);
+    let id = '';
+    try { id = decodeURIComponent(hash); } catch { /* Ignore malformed anchors. */ }
+    const target = id && document.getElementById(id);
+    if (target) target.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }
+
+  function mountAddress(address) {
+    const route = routeFor(address) || 'home';
     currentAddress = address;
+    window.__PORTFOLIO_PREVIEW_ADDRESS__ = address;
+    window.dispatchEvent(new Event('portfolio:preview-unmount'));
+    const next = new DOMParser().parseFromString(expand(pages[route]), 'text/html');
+    for (const node of [document.documentElement, document.body]) {
+      for (const attr of [...node.attributes]) node.removeAttribute(attr.name);
+    }
+    for (const attr of next.documentElement.attributes) document.documentElement.setAttribute(attr.name, attr.value);
+    for (const attr of next.body.attributes) document.body.setAttribute(attr.name, attr.value);
+    document.head.replaceChildren(...[...next.head.childNodes].map(node => document.importNode(node, true)));
+    document.body.replaceChildren(...[...next.body.childNodes].map(node => document.importNode(node, true)));
+    mountedRoute = route;
+    // Scripts inserted by DOMParser/importNode are inert. Replace each with a
+    // new inline script, in source order, after the whole next page is present.
+    for (const old of [...document.scripts]) {
+      if (old.type === 'application/json') continue;
+      const script = document.createElement('script');
+      for (const attr of old.attributes) script.setAttribute(attr.name, attr.value);
+      script.textContent = old.textContent;
+      old.replaceWith(script);
+    }
+    connectLinks();
+    if (route !== 'projects' && route !== 'art') document.querySelector('main')?.focus({ preventScroll: true });
+    window.scrollTo(0, 0);
+    scrollToAddress(address);
+    window.dispatchEvent(new CustomEvent('portfolio:preview-mounted', { detail: { address } }));
+  }
+
+  function scheduleMount() {
+    if (scheduled) return;
+    scheduled = true;
+    queueMicrotask(() => {
+      scheduled = false;
+      mountAddress(currentAddress);
+    });
+  }
+
+  window.__PORTFOLIO_PREVIEW_SET_ADDRESS__ = ({ address, replace = false, state = history.state }) => {
+    currentAddress = address;
+    window.__PORTFOLIO_PREVIEW_ADDRESS__ = address;
     const hash = hashFromAddress(address);
-    if (location.hash === hash) return;
     try {
-      history[replace ? 'replaceState' : 'pushState'](null, '', hash);
-    } catch { /* Embedded viewers can deny history; browsing still works. */ }
+      history[replace ? 'replaceState' : 'pushState'](state, '', hash);
+    } catch { /* Embedded viewers may deny history; local browsing still works. */ }
+    if (routeFor(address) !== mountedRoute) scheduleMount();
   };
   const followHistory = () => {
     const address = addressFromHash(location.hash);
     if (address === currentAddress) return;
     currentAddress = address;
-    window.dispatchEvent(new CustomEvent('portfolio:preview-navigate', { detail: { address } }));
+    window.__PORTFOLIO_PREVIEW_ADDRESS__ = address;
+    if (routeFor(address) !== mountedRoute) mountAddress(address);
+    else {
+      window.dispatchEvent(new CustomEvent('portfolio:preview-navigate', { detail: { address } }));
+      scrollToAddress(address);
+    }
   };
   window.addEventListener('popstate', followHistory);
   window.addEventListener('hashchange', followHistory);
-
-  const connectResume = () => {
-    let resumeAddress;
-    try {
-      if (resumePDF) {
-        resumeAddress = URL.createObjectURL(new Blob([
-          Uint8Array.from(atob(resumePDF), char => char.charCodeAt(0))
-        ], { type: 'application/pdf' }));
-      } else {
-        const home = `${location.href.split('#')[0]}#home`.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
-        const html = resumeHTML.replace(/(<a\b[^>]*\bdata-resume-home\b[^>]*\bhref=")[^"]*(")/, `$1${home}$2`);
-        resumeAddress = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+  document.addEventListener('click', event => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = event.target.closest?.('a[href]');
+    if (!link || link.hasAttribute('download') || link.target === '_blank') return;
+    if (document.querySelector('[data-work-root]') && link.matches('.serif-skip-link, [data-work-project], [data-work-close], [data-work-index]')) return;
+    if (link.matches('.serif-skip-link')) {
+      const target = document.getElementById(link.getAttribute('href').slice(1));
+      if (target) {
+        event.preventDefault();
+        target.focus({ preventScroll: true });
+        target.scrollIntoView({ block: 'start', behavior: 'instant' });
       }
-    } catch { return; }
-    for (const link of document.querySelectorAll('[data-resume-link]')) link.href = resumeAddress;
-    window.addEventListener('pagehide', event => {
-      if (!event.persisted) URL.revokeObjectURL(resumeAddress);
-    });
+      return;
+    }
+    const address = internalAddress(link);
+    if (!address) return;
+    event.preventDefault();
+    window.__PORTFOLIO_PREVIEW_SET_ADDRESS__({ address, state: null });
+    if (routeFor(address) === mountedRoute) {
+      window.dispatchEvent(new CustomEvent('portfolio:preview-navigate', { detail: { address } }));
+      scrollToAddress(address);
+    }
+  });
+  window.addEventListener('pagehide', event => {
+    if (!event.persisted && resumeAddress) URL.revokeObjectURL(resumeAddress);
+  });
+  const initialize = () => {
+    connectLinks();
+    // Let the original Home app finish DOMContentLoaded before unmounting it.
+    // This prevents its queued startup from mounting a second page controller.
+    if (routeFor(currentAddress) !== mountedRoute) scheduleMount();
+    else scrollToAddress(currentAddress);
   };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', connectResume, { once: true });
-  else connectResume();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize, { once: true });
+  else initialize();
 }
 
 function expandPage(page) {
@@ -145,18 +277,23 @@ function expandPage(page) {
   for (const [token, value] of Object.entries(assets)) html = html.replaceAll(token, () => value);
   return html;
 }
-const settings = JSON.stringify({ resumePDF, resumeHTML: resumePDF ? null : expandPage(pages.resume) }).replaceAll('<', '\\u003c');
-const loader = `(${initializePreview.toString()})(${settings},${previewAddress.toString()},${previewHash.toString()});`;
+for (const [route, page] of Object.entries(pages)) {
+  const expanded = expandPage(page);
+  if (/<iframe\b/i.test(expanded) || /__PORTFOLIO_(?:ASSET|RESOURCE)_\d+__/.test(expanded)) {
+    throw new Error(`The ${route} preview contains an iframe or unresolved local asset.`);
+  }
+}
+const home = expandPage(pages.home);
+const base = home.match(/\bdata-base="([^"]*)"/)?.[1] || '/';
+const origin = new URL(home.match(/<link\b[^>]*\brel="canonical"[^>]*\bhref="([^"]+)"/)?.[1] || 'https://stonederek.github.io/').origin;
+const settings = JSON.stringify({ pages, assets, resumePDF, base, origin }).replaceAll('<', '\\u003c');
+const loader = `(${initializePreview.toString()})(JSON.parse(document.getElementById('preview-payload').textContent));`;
 new Script(loader, { filename: 'preview-navigation.js' });
-let output = expandPage(pages.home).replace('<head>', `<head><script>${loader}</script>`);
+let output = home.replace('<head>', () => `<head><script type="application/json" id="preview-payload">${settings}</script><script data-preview-bridge>${loader}</script>`);
 output = output.replace(/<title>[^<]*<\/title>/, '<title>Derek Stone - Portfolio preview</title>');
-// Parse the complete output after expanding assets, including inline data.
 for (const match of output.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
   if (match[1].includes('application/json')) JSON.parse(match[2]);
   else new Script(match[2], { filename: 'complete-preview.js' });
 }
-if (/<iframe\b/i.test(output) || /__PORTFOLIO_(?:ASSET|RESOURCE)_\d+__/.test(output)) {
-  throw new Error('The standalone preview contains an iframe or an unresolved local asset.');
-}
 await writeFile('portfolio-preview.html', output);
-console.log(`Exported the direct-page portfolio preview (${Math.round(Buffer.byteLength(output) / 1024)} KB).`);
+console.log(`Exported the native-page portfolio preview (${Math.round(Buffer.byteLength(output) / 1024)} KB).`);

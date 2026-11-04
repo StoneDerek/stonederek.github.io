@@ -3,15 +3,15 @@ import site from '../data/site.json';
 import projects from '../data/projects.json';
 import { publicationDate } from '../data/publication.js';
 import { resumeURL } from '../data/resume.js';
-const { page = 'home' } = Astro.props;
+const { page = 'home', initialProject = projects[0] } = Astro.props;
 const base = import.meta.env.BASE_URL;
 const url = (path = '') => `${base}${path}`;
 const gallery = page === 'projects';
 const published = publicationDate();
 const cat = ['  ╱|、', '(˚ˎ 。7', ' |、˜〵', 'じしˍ,)ノ'].join('\n');
 const context = gallery ? 'Projects:' : page === 'about' ? 'About' : 'Home';
-const location = gallery ? projects[0].galleryTitle || projects[0].title : '';
-const fullLocation = gallery ? projects[0].title : '';
+const location = gallery ? initialProject.galleryTitle || initialProject.title : '';
+const fullLocation = gallery ? initialProject.title : '';
 ---
 <header class="site-header" data-owner={site.name} data-page={page}>
   <details class="site-menu" data-menu>

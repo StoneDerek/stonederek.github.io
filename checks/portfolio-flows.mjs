@@ -5,12 +5,12 @@ import { Window } from 'happy-dom';
 import { Script } from 'node:vm';
 import { mountPortfolio } from '../src/scripts/carousel.js';
 
-// Exercise production markup and the real controller. This is DOM simulation:
-// geometry, time and canvas text metrics are supplied, not browser rendering.
+// Exercise the preserved Art gallery markup and the real legacy controller,
+// including its historical virtual addresses. Native serif pages and the new
+// Work controller have separate built-page/behavior checks. This is DOM
+// simulation: geometry, time and canvas metrics are not browser rendering.
 async function scene(address = '/', { reduced = true, width = 390, tiles = false, onMount } = {}) {
-  const route = address.split('#')[0];
-  const entry = route.includes('/projects') ? 'projects/' : route.includes('/about') ? 'about/' : '';
-  const html = await readFile(new URL(`../dist/${entry}index.html`, import.meta.url), 'utf8');
+  const html = await readFile(new URL('../dist/art/index.html', import.meta.url), 'utf8');
   const window = new Window({ url: `https://stonederek.github.io${address}`, settings: {
     disableJavaScriptEvaluation: true, disableJavaScriptFileLoading: true, disableCSSFileLoading: true
   } });
@@ -952,24 +952,22 @@ test('replacing Art clears its layout, photos and label, and restores dated proj
   } finally { await s.close(); }
 });
 
-test('all compiled pages have valid local assets, links and accessibility references', async () => {
-  for (const entry of ['', 'about/', 'projects/', 'resume/']) {
+test('the retained Art gallery has valid local assets, links and accessibility references', async () => {
+  for (const entry of ['art/']) {
     const window = new Window({ url: `https://stonederek.github.io/${entry}`, settings: {
       disableJavaScriptEvaluation: true, disableJavaScriptFileLoading: true, disableCSSFileLoading: true
     } });
     try {
       window.document.write(await readFile(new URL(`../dist/${entry}index.html`, import.meta.url), 'utf8'));
-      if (entry !== 'resume/') {
+      if (entry === 'art/') {
         assert.equal(window.document.querySelector('.menu-name').textContent, 'stonederek.github.io');
         const title = window.document.querySelector('#home-title');
         assert.equal(title.textContent, 'Derek Stone');
         assert.equal(title.nextElementSibling.className, 'introduction-divider');
         assert.equal(title.nextElementSibling.getAttribute('aria-hidden'), 'true');
         assert.equal(window.document.querySelector('.introduction-lead').textContent, 'Hi, I’m Derek.');
-        if (entry !== 'projects/') {
-          assert.equal(window.document.querySelector('[data-menu-context]').textContent, entry === 'about/' ? 'About' : 'Home');
-          assert.equal(window.document.querySelector('[data-menu-title]').textContent, '');
-        }
+        assert.equal(window.document.querySelector('[data-menu-context]').textContent, 'Projects:');
+        assert.equal(window.document.querySelector('[data-menu-title]').textContent, 'Art');
       }
       const ids = [...window.document.querySelectorAll('[id]')].map(node => node.id);
       assert.equal(new Set(ids).size, ids.length, `Duplicate IDs in ${entry || 'Home'}`);
@@ -988,7 +986,7 @@ test('all compiled pages have valid local assets, links and accessibility refere
         await access(new URL(`../dist${path}`, import.meta.url));
       }
       const covers = [...window.document.querySelectorAll('[data-slide][data-panel-kind="project"] img')];
-      assert.equal(covers.filter(image => image.loading === 'eager').length, entry === '' ? 0 : entry === 'about/' ? 1 : entry === 'projects/' ? 2 : 0);
+      assert.ok(covers.some(image => image.loading === 'eager'), 'the selected Art cover is available immediately');
     } finally { await window.happyDOM.close(); }
   }
 });
@@ -996,6 +994,10 @@ test('all compiled pages have valid local assets, links and accessibility refere
 test('image warming reaches the next cover before entry without promoting all distant covers', async () => {
   const s = await scene();
   try {
+    // This test drives a historical Home virtual address using the retained
+    // Art component. Reset its Art-specific SSR warming to test the controller
+    // from a controlled cold project-cover state.
+    for (const image of s.root.querySelectorAll('[data-slide][data-panel-kind="project"] img')) image.loading = 'lazy';
     assert.equal(s.find('[data-slide="2"] img').loading, 'lazy');
     s.click('[data-menu-about]');
     assert.equal(s.find('[data-slide="2"] img').loading, 'eager');

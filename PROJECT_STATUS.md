@@ -1,5 +1,15 @@
 # Portfolio continuation
 
+## Serif layout checkpoint — November 4, 2026
+
+The selected Serif direction now has a shared masthead, right-side desktop navigation, a compact native mobile menu, and native Home, Work, About, and Resume documents. Home keeps Derek's supplied copy and climbing photograph; About retains its existing placeholder text. Work uses a two-column grid for Acoustic Drone Detection, RAG Chatbot, and 2D Lightning Simulation, in that order, with one column on phones. The short project titles and secondary method lines remain distinct.
+
+Work opens the existing rich project content in document flow. Current and legacy project links resolve to the same articles. Closing an article or using Back restores the grid's reading position and opening card; direct entries close to Work. Forward restores article reading state. Image inspection, footnotes, and source dialogs reuse the existing renderers. The skip link focuses the active heading without changing an article address.
+
+Art remains in the existing gallery at `/art/`, including its full photos, text formatting, image zoom, and hidden mirror puzzle. `/projects/#links` redirects to `/art/#links`. The puzzle has no new announced navigation entry. The offline export embeds all five native destinations and their real controllers, preserving local page navigation and history without an iframe.
+
+This implementation is based on public main `e2e7b1970f12f0a5a9159a6ef4451a4b74673f9d`. The existing owner-private portfolio preview is the review destination; merging the source review remains a separate step from updating the public GitHub Pages site. The active navigation underline is provisional. A DS monogram, final accent palette, dedicated Art redesign, and factual About copy remain future decisions. The older checkpoints below describe historical gallery releases and are not requirements for the new native pages.
+
 ## Approved Art publication - October 24, 2026
 
 Derek approved publication of the completed update and all six supplied images to the public StoneDerek/stonederek.github.io repository and website. This supersedes the historical publication blockers below. The release is based on current main, retaining the published hyphen replacements and physical dropdown clipping repair. The five updated artwork photos, overprint difference cover, Art formatting, light appearance, and elapsed-time caption animation remain as approved. The preview delivery issue was handled separately with an interactive in-chat presentation.

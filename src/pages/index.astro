@@ -1,4 +1,7 @@
 ---
-import Portfolio from '../components/Portfolio.astro';
+import SerifShell from '../components/SerifShell.astro';
+import HomeContent from '../components/HomeContent.astro';
 ---
-<Portfolio section="home" />
+<SerifShell page="home" contentId="home-content">
+  <HomeContent active={true} />
+</SerifShell>
