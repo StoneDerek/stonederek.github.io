@@ -6,13 +6,43 @@ const channel = value => {
 };
 const luminance = ([red, green, blue]) => .2126 * channel(red) + .7152 * channel(green) + .0722 * channel(blue);
 const contrast = (first, second) => (Math.max(first, second) + .05) / (Math.min(first, second) + .05);
-const svgAttribute = value => String(value).replace(/[&"<>]/g, character => ({ '&': '&amp;', '"': '&quot;', '<': '&lt;', '>': '&gt;' })[character]);
+export function navigationInkTiles(rect, zones) {
+  const boundaries = (size, edges) => [...new Set([0, size, ...edges.map(edge => Math.max(0, Math.min(size, edge)))])].sort((a, b) => a - b);
+  const xs = boundaries(rect.width, zones.flatMap(zone => [zone.x, zone.x + zone.width]));
+  const ys = boundaries(rect.height, zones.flatMap(zone => [zone.y, zone.y + zone.height]));
+  const tiles = [];
+  let previousRow = new Map();
+  // Disjoint fills paint each glyph edge once, without loading an image per frame.
+  for (let row = 0; row < ys.length - 1; row++) {
+    const top = ys[row], bottom = ys[row + 1], middleY = (top + bottom) / 2;
+    const runs = [];
+    for (let column = 0; column < xs.length - 1; column++) {
+      const left = xs[column], right = xs[column + 1], middleX = (left + right) / 2;
+      const ink = zones.find(zone => middleX >= zone.x && middleX < zone.x + zone.width && middleY >= zone.y && middleY < zone.y + zone.height)?.ink || 'var(--page-text)';
+      const previous = runs.at(-1);
+      if (previous?.ink === ink) previous.width = right - previous.x;
+      else runs.push({ ink, x: left, y: top, width: right - left, height: bottom - top });
+    }
+    const currentRow = new Map();
+    for (const run of runs) {
+      const key = `${run.x},${run.width},${run.ink}`;
+      const previous = previousRow.get(key);
+      if (previous) previous.height = bottom - previous.y;
+      else tiles.push(run);
+      currentRow.set(key, previous || run);
+    }
+    previousRow = currentRow;
+  }
+  return tiles;
+}
 
-function inkPaint(rect, zones, pageInk) {
-  // Flatten the colors before clipping, so each glyph edge is painted only once.
-  const rectangles = [...zones].reverse().map(zone => `<rect x="${zone.x}" y="${zone.y}" width="${zone.width}" height="${zone.height}" fill="${zone.ink}"/>`).join('');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${rect.width}" height="${rect.height}" viewBox="0 0 ${rect.width} ${rect.height}" preserveAspectRatio="none"><rect width="100%" height="100%" fill="${svgAttribute(pageInk)}"/>${rectangles}</svg>`;
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+function inkPaint(rect, zones) {
+  const tiles = navigationInkTiles(rect, zones);
+  return {
+    layers: tiles.map(tile => `linear-gradient(${tile.ink}, ${tile.ink})`).join(', '),
+    positions: tiles.map(tile => `${tile.x}px ${tile.y}px`).join(', '),
+    sizes: tiles.map(tile => `${tile.width}px ${tile.height}px`).join(', ')
+  };
 }
 
 export function intersectRectangles(first, second) {
@@ -59,7 +89,6 @@ export function mountNavigationContrast(nav) {
   const main = doc.querySelector('main');
   if (!view || !main || !view.MutationObserver) return () => {};
   const links = [...nav.querySelectorAll('a[href]')];
-  const inkSource = nav.closest('.serif-site') || nav;
   const controller = new view.AbortController();
   const desktop = view.matchMedia('(min-width: 880px)');
   const inks = new WeakMap();
@@ -70,7 +99,7 @@ export function mountNavigationContrast(nav) {
   const clear = link => {
     if (!rendered.has(link)) return;
     link.removeAttribute('data-nav-image-overlap');
-    link.style.removeProperty('--nav-image-paint');
+    for (const property of ['--nav-ink-layers', '--nav-ink-positions', '--nav-ink-sizes']) link.style.removeProperty(property);
     rendered.delete(link);
   };
 
@@ -133,8 +162,6 @@ export function mountNavigationContrast(nav) {
     if (disposed || doc.hidden) return;
     if (!desktop.matches || nav.getBoundingClientRect().width === 0) { links.forEach(clear); return; }
     const images = readImages();
-    const pageStyle = view.getComputedStyle(inkSource);
-    const pageInk = pageStyle.getPropertyValue('--page-text').trim() || pageStyle.color || darkInk;
     const updates = links.map(link => {
       const rect = link.getBoundingClientRect();
       const zones = [];
@@ -149,11 +176,14 @@ export function mountNavigationContrast(nav) {
     });
     for (const { link, rect, zones } of updates) {
       if (!zones.length) { clear(link); continue; }
-      const paint = inkPaint(rect, zones, pageInk);
-      if (rendered.get(link) === paint) continue;
+      const paint = inkPaint(rect, zones);
+      const signature = JSON.stringify(paint);
+      if (rendered.get(link) === signature) continue;
       link.dataset.navImageOverlap = '';
-      link.style.setProperty('--nav-image-paint', paint);
-      rendered.set(link, paint);
+      link.style.setProperty('--nav-ink-layers', paint.layers);
+      link.style.setProperty('--nav-ink-positions', paint.positions);
+      link.style.setProperty('--nav-ink-sizes', paint.sizes);
+      rendered.set(link, signature);
     }
     if (main.querySelector('[data-art-root]:is(.is-moving, .is-dragging, .is-lifting)')) schedule();
   }

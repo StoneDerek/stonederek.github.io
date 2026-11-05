@@ -2,9 +2,9 @@
 @media (min-width: 880px) {
   .serif-site .serif-navigation-desktop .serif-nav-link[data-nav-image-overlap] {
     position: relative;
-    background-image: var(--nav-image-paint);
-    background-position: 0 0;
-    background-size: 100% 100%;
+    background-image: var(--nav-ink-layers);
+    background-position: var(--nav-ink-positions);
+    background-size: var(--nav-ink-sizes);
     background-repeat: no-repeat;
     background-clip: text;
     -webkit-background-clip: text;
@@ -16,9 +16,9 @@
     content: '';
     position: absolute;
     inset: 0;
-    background-image: var(--nav-image-paint);
-    background-position: 0 0;
-    background-size: 100% 100%;
+    background-image: var(--nav-ink-layers);
+    background-position: var(--nav-ink-positions);
+    background-size: var(--nav-ink-sizes);
     background-repeat: no-repeat;
     background-clip: border-box;
     -webkit-background-clip: border-box;
