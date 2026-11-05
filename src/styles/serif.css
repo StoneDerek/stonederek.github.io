@@ -12,6 +12,7 @@
   --secondary-font: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 148px;
+  grid-template-rows: auto 1fr auto;
   align-content: start;
   align-items: start;
   column-gap: 48px;
@@ -120,7 +121,7 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
 
 @media (min-width: 880px) {
   .serif-site[data-page='work'] { grid-template-columns: minmax(0, 1fr) 112px; column-gap: clamp(64px, 8vw, 144px); width: 100%; margin-inline: 0; padding-inline: max(48px, env(safe-area-inset-left)) max(48px, env(safe-area-inset-right)); }
-  .serif-site[data-page='work'] :is(.serif-main, .serif-footer) { width: min(100%, 1108px); }
+  .serif-site[data-page='work'] .serif-main { width: min(100%, 1108px); }
   .serif-site[data-page='work']:not([data-work-view='article']) .serif-main { margin-top: clamp(112px, 12vw, 220px); }
   .serif-site[data-page='work'] .serif-navigation-desktop { width: 112px; justify-self: end; }
 }

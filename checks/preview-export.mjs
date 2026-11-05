@@ -237,6 +237,8 @@ test('compiled apps preserve theme preferences, individual Art selection/history
       const chapters = [...details.querySelectorAll('.case-study-section')];
       assert.equal(chapters.length, 5);
       assert.deepEqual(chapters.map(chapter => chapter.hidden), chapters.map((_, i) => i !== index));
+      assert.deepEqual(chapters.map(chapter => chapter.inert), chapters.map((_, i) => i !== index));
+      assert.deepEqual(chapters.map(chapter => chapter.getAttribute('aria-hidden')), chapters.map((_, i) => String(i !== index)));
       assert.ok([...details.querySelectorAll('.case-study-section h2')].every(heading => heading.hidden));
       assert.deepEqual([...details.querySelectorAll('.project-footnote')].filter(note => !note.hidden).map(note => note.id),
         ['project-note-art-1', 'project-note-art-2', 'project-note-art-3']);

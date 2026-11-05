@@ -13,6 +13,7 @@ import '../styles/dark.css';
 
 const { page = 'home', contentId = `${page}-content` } = Astro.props;
 const base = import.meta.env.BASE_URL;
+const mastheadName = site.name.replace(/\s+/g, '_');
 const published = publicationDate();
 const labels = { home: 'Portfolio', work: 'Work', about: 'About', art: 'Art', resume: 'Resume' };
 const context = page === 'home' ? '' : labels[page] || '';
@@ -31,7 +32,7 @@ const description = page === 'work' ? `Projects, experiments, and work in progre
   <a class="serif-skip-link" href={`#${contentId}`}>Skip to content</a>
   <header class="serif-masthead">
     <div class="serif-brand">
-      <span class="serif-identity">{site.name}</span>
+      <span class="serif-identity">{mastheadName}</span>
       {context && <span class="serif-context">/{context}</span>}
     </div>
     <details class="serif-mobile-menu" data-serif-menu>

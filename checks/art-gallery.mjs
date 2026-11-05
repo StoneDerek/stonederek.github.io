@@ -131,6 +131,8 @@ async function scene(address = '/art/#artwork=03', { reduced = true } = {}) {
     const chapters = [...root.querySelectorAll('[data-art-details] .case-study-section')];
     assert.equal(chapters.length, 5);
     assert.deepEqual(chapters.map(chapter => chapter.hidden), chapters.map((_, i) => i !== index));
+    assert.deepEqual(chapters.map(chapter => chapter.inert), chapters.map((_, i) => i !== index));
+    assert.deepEqual(chapters.map(chapter => chapter.getAttribute('aria-hidden')), chapters.map((_, i) => String(i !== index)));
     assert.ok([...root.querySelectorAll('[data-art-details] .case-study-section h2')].every(heading => heading.hidden), 'original prose does not gain a visible number heading');
     assert.equal(root.querySelector('.art-caption, [data-art-step], [data-art-count]'), null);
     assert.ok([...root.querySelectorAll('[data-art-select]')].every(button => !button.textContent.trim()));

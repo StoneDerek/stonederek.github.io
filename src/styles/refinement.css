@@ -24,7 +24,7 @@
   text-decoration: underline;
   text-underline-offset: 4px;
 }
-.serif-site .serif-footer { grid-template-columns: minmax(0, 1fr); align-items: start; justify-items: start; gap: 0; padding-top: 0; border-top: 0; font-family: var(--secondary-font); font-size: 13px; font-weight: 400; line-height: 1.35; letter-spacing: 0; }
+.serif-site .serif-footer { --footer-gutter: 48px; --footer-left-gutter: max(var(--footer-gutter), env(safe-area-inset-left)); --footer-right-gutter: max(var(--footer-gutter), env(safe-area-inset-right)); grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr); align-self: end; align-items: start; justify-items: start; width: calc(var(--layout-viewport-width, 100vw) - var(--footer-left-gutter) - var(--footer-right-gutter)); max-width: none; margin-left: calc(var(--footer-left-gutter) - var(--site-content-left, calc((100vw - 100%) / 2))); gap: 0; padding-top: 0; border-top: 0; font-family: var(--secondary-font); font-size: 13px; font-weight: 400; line-height: 1.35; letter-spacing: 0; }
 .serif-site .serif-footer a { min-height: 0; line-height: inherit; }
 .serif-site .serif-footer-links { flex-direction: row; align-items: baseline; gap: 0 12px; margin-top: 12px; }
 .serif-site[data-page] .serif-footer .theme-text-toggle { min-height: 0; line-height: inherit; }
@@ -47,5 +47,8 @@
 .serif-site[data-page='home'] .profile-action-value { display: block; color: var(--serif-accent); font-size: 24px; line-height: 30px; font-weight: 400; text-decoration: underline; text-underline-offset: 4px; }
 @media (min-width: 880px) {
   .serif-site[data-page='home'] { grid-template-columns: minmax(0, 1fr) 112px; column-gap: clamp(64px, 8vw, 144px); width: 100%; margin-inline: 0; padding-inline: max(48px, env(safe-area-inset-left)) max(48px, env(safe-area-inset-right)); }
-  .serif-site[data-page='home'] :is(.serif-main, .serif-footer) { width: min(100%, 1180px); }
+  .serif-site[data-page='home'] .serif-main { width: min(100%, 1180px); }
+}
+@media (max-width: 879px) {
+  .serif-site .serif-footer { --footer-gutter: 24px; }
 }

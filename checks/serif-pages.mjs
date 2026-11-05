@@ -36,7 +36,7 @@ test('native serif pages provide matching desktop/mobile destinations and useful
       const skip = doc.querySelector('.serif-skip-link');
       assert.ok(doc.getElementById(skip.getAttribute('href').slice(1)));
       const brand = doc.querySelector('.serif-brand');
-      assert.equal(brand.querySelector('.serif-identity').textContent, 'Derek Stone');
+      assert.equal(brand.querySelector('.serif-identity').textContent, 'Derek_Stone');
       assert.equal(brand.querySelector('.serif-context')?.textContent || '', active === 'Home' ? '' : `/${active}`);
       const updated = doc.querySelector('.serif-footer time[data-publication-date]');
       assert.ok(updated);

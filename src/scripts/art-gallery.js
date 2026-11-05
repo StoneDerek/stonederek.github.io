@@ -101,6 +101,7 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
     selected = index;
     root.dataset.artIndex = String(index);
     title.textContent = `Untitled #${index + 1}`;
+    alignArtworkTitle(index);
     items.forEach((item, i) => {
       item.hidden = false;
       item.classList.toggle('is-active', i === index);
@@ -115,10 +116,20 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
       button.tabIndex = i === index ? 0 : -1;
     });
     if (focusedThumbnail) choices[index].focus({ preventScroll: true });
-    chapters.forEach((chapter, i) => { chapter.hidden = i !== index; });
+    chapters.forEach((chapter, i) => {
+      chapter.hidden = i !== index;
+      chapter.inert = i !== index;
+      chapter.setAttribute('aria-hidden', String(i !== index));
+    });
     for (let i = Math.max(0, index - 1); i <= Math.min(items.length - 1, index + 1); i++) {
       items[i].querySelector('img').loading = 'eager';
     }
+  }
+
+  function alignArtworkTitle(index = selected) {
+    if (index < 0) return;
+    const width = parseFloat(items[index].querySelector('img').style.width);
+    if (width > 0) root.style.setProperty('--art-title-inset', `${Math.max(0, (stageWidth - width) / 2)}px`);
   }
 
   function positionTrack() {
@@ -228,6 +239,7 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
     thumbnailGroup.style.paddingInline = `${railCenterPadding}px`;
     presentCards(lift);
     render(position);
+    alignArtworkTitle();
     alignSelectionFrame();
   }
 
