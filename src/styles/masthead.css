@@ -89,7 +89,7 @@ html:has(.serif-site) { scrollbar-gutter: stable; }
     width: 112px;
     max-width: 100%;
     max-height: max(44px, calc(80svh - var(--menu-top-space) - var(--menu-bottom-space)));
-    margin-left: max(0px, calc((100% - 112px) * 2 / 3));
+    margin-left: max(0px, calc((100% - 112px) * 2 / 3 + 8px));
     padding: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
