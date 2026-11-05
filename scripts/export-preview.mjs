@@ -51,9 +51,10 @@ for (const [route, file] of Object.entries(routes)) {
   // The standalone address bridge handles navigation without fetching routes.
   html = html.replace(/<meta\b[^>]*name="astro-view-transitions-enabled"[^>]*>/g, '')
     .replace(/(<meta\b[^>]*name="astro-view-transitions-fallback"[^>]*content=")(?:animate|swap)("[^>]*>)/g, '$1none$2');
-  for (const match of html.matchAll(/(?:src|href)="([^"]+\.(?:webp|svg|png|jpg))"/g)) {
+  for (const match of html.matchAll(/(?:src|href)="([^"]+\.(?:webp|svg|png|jpg)(?:[?#][^"]*)?)"/g)) {
     const path = match[1];
-    const publicPath = path.match(/\/(art|thumbnails)\/.+$/)?.[0].slice(1) || path.match(/favicon\.svg$/)?.[0];
+    const pathname = path.split(/[?#]/, 1)[0];
+    const publicPath = pathname.match(/\/(art|thumbnails)\/.+$/)?.[0].slice(1) || pathname.match(/favicon\.svg$/)?.[0];
     if (!publicPath) throw new Error(`Cannot locate preview asset: ${path}`);
     await embedImage(path, publicPath);
   }

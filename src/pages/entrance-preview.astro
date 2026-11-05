@@ -1,0 +1,54 @@
+---
+import { faviconURL } from '../data/favicon.js';
+const home = import.meta.env.BASE_URL;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="only light" />
+    <title>Derek Stone — Entrance Preview</title>
+    <link rel="icon" href={faviconURL(home)} type="image/svg+xml" />
+  </head>
+  <body>
+    <header class="preview-tools">
+      <span class="preview-label">Entrance preview</span>
+      <div class="preview-actions">
+        <a href={home} target="_blank" rel="noopener">Open full page</a>
+        <button type="button" data-replay>Replay entrance</button>
+      </div>
+    </header>
+    <iframe src={home} title="Derek Stone portfolio entrance preview" data-entrance-frame></iframe>
+    <script>
+      const frame = document.querySelector<HTMLIFrameElement>('[data-entrance-frame]');
+      document.querySelector('[data-replay]')?.addEventListener('click', () => {
+        if (!frame) return;
+        let page: Document | null = null;
+        try { page = frame.contentDocument; } catch { /* The frame may have left the portfolio. */ }
+        const introduction = page?.querySelector<HTMLElement>('[data-home-entry]');
+        if (!introduction || page?.querySelector('#portfolio')?.getAttribute('data-panel') !== '0') {
+          frame.src = frame.getAttribute('src') || '/';
+          return;
+        }
+        introduction.dispatchEvent(new Event('portfolio:replay-home-entry'));
+      });
+    </script>
+    <style>
+      :global(*) { box-sizing: border-box; }
+      :global(html) { height: 100%; color-scheme: only light; background: #fff; }
+      :global(body) { margin: 0; height: 100svh; display: grid; grid-template-rows: auto minmax(0, 1fr); font-family: Arial, Helvetica, sans-serif; color: #211b2b; background: #fff; }
+      .preview-tools { min-height: 56px; padding: 6px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid #d6d0df; font-size: 13px; }
+      .preview-label { color: #645d70; }
+      .preview-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+      .preview-actions :is(a, button) { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 10px 14px; border-radius: 6px; font: inherit; color: inherit; }
+      a { text-underline-offset: 4px; }
+      button { border: 0; background: #ded3ff; cursor: pointer; }
+      button:hover { background: #ccbaf5; }
+      :is(a, button):focus-visible { outline: 2px solid #241a36; outline-offset: 2px; }
+      iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+      @media (max-width: 480px) { .preview-label { display: none; } }
+    </style>
+  </body>
+</html>
