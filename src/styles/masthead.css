@@ -28,6 +28,9 @@ html:has(.serif-site) { scrollbar-gutter: stable; }
   white-space: nowrap;
 }
 .serif-site .serif-mobile-menu { pointer-events: auto; }
+.serif-site .serif-menu-close-label { display: none; }
+.serif-site .serif-mobile-menu[open] .serif-menu-open-label { display: none; }
+.serif-site .serif-mobile-menu[open] .serif-menu-close-label { display: inline; }
 
 @media (min-width: 880px) {
   .serif-site .serif-navigation-desktop {
@@ -50,5 +53,59 @@ html:has(.serif-site) { scrollbar-gutter: stable; }
   .serif-site .serif-mobile-menu { position: absolute; top: 0; right: 0; width: 72px; }
   .serif-site .serif-mobile-menu > summary { padding-inline: 8px; list-style: none; }
   .serif-site .serif-mobile-menu > summary::-webkit-details-marker { display: none; }
-  .serif-site .serif-navigation-mobile { position: absolute; top: 100%; right: 0; width: 180px; padding: 4px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--canvas); }
+  .serif-site .serif-mobile-menu[open] {
+    --menu-top-space: calc(var(--site-content-top, max(20px, env(safe-area-inset-top))) + 52px);
+    --menu-bottom-space: max(24px, env(safe-area-inset-bottom));
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 1;
+    width: auto;
+  }
+  .serif-site .serif-mobile-menu[open] > summary {
+    position: absolute;
+    top: var(--site-content-top, max(20px, env(safe-area-inset-top)));
+    right: var(--site-content-right, max(20px, env(safe-area-inset-right)));
+    z-index: 2;
+    width: 72px;
+  }
+  .serif-site .serif-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: color-mix(in srgb, var(--page-text) 8%, transparent);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    touch-action: none;
+  }
+  .serif-site .serif-mobile-menu-panel {
+    position: relative;
+    width: 100%;
+    padding: var(--menu-top-space) var(--site-content-right, max(20px, env(safe-area-inset-right))) var(--menu-bottom-space) var(--site-content-left, max(20px, env(safe-area-inset-left)));
+    background: var(--canvas);
+    color: var(--page-text);
+  }
+  .serif-site .serif-mobile-menu .serif-navigation-mobile {
+    position: static;
+    width: 112px;
+    max-width: 100%;
+    max-height: max(44px, calc(80svh - var(--menu-top-space) - var(--menu-bottom-space)));
+    margin-left: auto;
+    padding: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .serif-site .serif-mobile-menu .serif-nav-list { padding: 0; }
+  .serif-site .serif-mobile-menu .serif-nav-link { min-height: 44px; padding: 10px 0; border: 0; border-radius: 0; }
+  .serif-site:has(.serif-mobile-menu[open]) .serif-brand {
+    position: fixed;
+    top: var(--site-content-top, max(20px, env(safe-area-inset-top)));
+    left: var(--site-content-left, max(20px, env(safe-area-inset-left)));
+    z-index: 2;
+    margin-left: 0;
+  }
+  html:has(.serif-mobile-menu[open]),
+  body:has(.serif-mobile-menu[open]) { overflow: hidden; }
 }

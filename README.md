@@ -26,6 +26,8 @@ Opening an article records the Work scroll position and triggering card. Closing
 
 The masthead displays plain **Derek_Stone**, with a smaller underscore and conditional /Work, /About and /Art suffixes. `interactions.css` supplies shared accent hover and keyboard-focus feedback. Floating navigation uses one pure black or white ink choice per whole image, shared across overlapping lines; image-edge clipping and accent underline/focus feedback remain. The compact secondary-type footer follows content, reaches the bottom of short pages and uses one viewport gutter across page layouts; viewport measurements exclude the scrollbar strip. Content-to-footer gaps are 96px on desktop and 64px on phones.
 
+On mobile, the native Menu disclosure opens a full-width top panel with the same navigation links. The underlying page is softly blurred and tinted, with background interaction suspended until the menu closes. Escape, tapping the backdrop or activating a link dismisses it. Keyboard focus stays in the open menu, and widening to desktop or unmounting releases the menu state. The navigation can scroll within the panel on short screens.
+
 The following controls describe the historical gallery controller retained for compatibility checks, using an explicitly labeled test fixture. Current Art and Work behavior is checked against the native pages and compiled offline app.
 
 ## Historical gallery controller reading and controls

@@ -36,8 +36,11 @@ const description = page === 'work' ? `Projects, experiments, and work in progre
       {context && <span class="serif-context">/{context}</span>}
     </div>
     <details class="serif-mobile-menu" data-serif-menu>
-      <summary>Menu</summary>
-      <SerifNavigation page={page} mode="mobile" />
+      <summary aria-controls="serif-mobile-navigation"><span class="serif-menu-open-label">Menu</span><span class="serif-menu-close-label">Close</span></summary>
+      <div class="serif-menu-backdrop" data-serif-menu-backdrop aria-hidden="true"></div>
+      <div id="serif-mobile-navigation" class="serif-mobile-menu-panel">
+        <SerifNavigation page={page} mode="mobile" />
+      </div>
     </details>
   </header>
   <SerifNavigation page={page} />

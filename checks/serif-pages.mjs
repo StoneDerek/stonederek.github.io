@@ -32,7 +32,10 @@ test('native serif pages provide matching desktop/mobile destinations and useful
       for (const link of doc.querySelectorAll('[data-resume-link]')) {
         assert.equal(new URL(link.href).pathname, '/resume.pdf', 'Resume opens the PDF directly');
       }
-      assert.ok(doc.querySelector('details[data-serif-menu] > summary'));
+      const mobileMenu = doc.querySelector('details[data-serif-menu]');
+      assert.ok(mobileMenu?.querySelector(':scope > summary'));
+      assert.ok(mobileMenu.querySelector('[data-serif-menu-backdrop]'));
+      assert.ok(mobileMenu.querySelector('.serif-mobile-menu-panel > nav'));
       const skip = doc.querySelector('.serif-skip-link');
       assert.ok(doc.getElementById(skip.getAttribute('href').slice(1)));
       const brand = doc.querySelector('.serif-brand');
