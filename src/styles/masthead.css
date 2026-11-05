@@ -32,7 +32,8 @@ html:has(.serif-site) { scrollbar-gutter: stable; }
   .serif-site .serif-navigation-desktop {
     position: fixed;
     top: max(36px, env(safe-area-inset-top));
-    right: max(48px, env(safe-area-inset-right));
+    left: 76vw;
+    right: auto;
     width: 112px;
     z-index: 30;
   }
