@@ -43,7 +43,7 @@
 .serif-site[data-page='home'] .introduction-lead { font-size: 17px; line-height: 1.65; font-weight: 400; }
 .serif-site[data-page='home'] .profile-actions { gap: 32px; }
 .serif-site[data-page='home'] .profile-actions a { display: block; min-height: 44px; padding: 0; text-decoration: none; }
-.serif-site[data-page='home'] .profile-action-label { display: block; font-family: var(--secondary-font); font-size: 12px; line-height: 18px; }
+.serif-site[data-page='home'] .profile-action-label { display: block; color: var(--page-text) !important; font-family: var(--secondary-font); font-size: 12px; line-height: 18px; }
 .serif-site[data-page='home'] .profile-action-value { display: block; color: var(--serif-accent); font-size: 24px; line-height: 30px; font-weight: 400; text-decoration: underline; text-underline-offset: 4px; }
 @media (min-width: 880px) {
   .serif-site[data-page='home'] { grid-template-columns: minmax(0, 1fr) 112px; column-gap: clamp(64px, 8vw, 144px); width: 100%; margin-inline: 0; padding-inline: max(48px, env(safe-area-inset-left)) max(48px, env(safe-area-inset-right)); }

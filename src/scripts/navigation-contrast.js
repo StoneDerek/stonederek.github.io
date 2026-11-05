@@ -6,6 +6,44 @@ const channel = value => {
 };
 const luminance = ([red, green, blue]) => .2126 * channel(red) + .7152 * channel(green) + .0722 * channel(blue);
 const contrast = (first, second) => (Math.max(first, second) + .05) / (Math.min(first, second) + .05);
+export function navigationInkTiles(rect, zones) {
+  const boundaries = (size, edges) => [...new Set([0, size, ...edges.map(edge => Math.max(0, Math.min(size, edge)))])].sort((a, b) => a - b);
+  const xs = boundaries(rect.width, zones.flatMap(zone => [zone.x, zone.x + zone.width]));
+  const ys = boundaries(rect.height, zones.flatMap(zone => [zone.y, zone.y + zone.height]));
+  const tiles = [];
+  let previousRow = new Map();
+  // Disjoint fills paint each glyph edge once, without loading an image per frame.
+  for (let row = 0; row < ys.length - 1; row++) {
+    const top = ys[row], bottom = ys[row + 1], middleY = (top + bottom) / 2;
+    const runs = [];
+    for (let column = 0; column < xs.length - 1; column++) {
+      const left = xs[column], right = xs[column + 1], middleX = (left + right) / 2;
+      const ink = zones.find(zone => middleX >= zone.x && middleX < zone.x + zone.width && middleY >= zone.y && middleY < zone.y + zone.height)?.ink || 'var(--page-text)';
+      const previous = runs.at(-1);
+      if (previous?.ink === ink) previous.width = right - previous.x;
+      else runs.push({ ink, x: left, y: top, width: right - left, height: bottom - top });
+    }
+    const currentRow = new Map();
+    for (const run of runs) {
+      const key = `${run.x},${run.width},${run.ink}`;
+      const previous = previousRow.get(key);
+      if (previous) previous.height = bottom - previous.y;
+      else tiles.push(run);
+      currentRow.set(key, previous || run);
+    }
+    previousRow = currentRow;
+  }
+  return tiles;
+}
+
+function inkPaint(rect, zones) {
+  const tiles = navigationInkTiles(rect, zones);
+  return {
+    layers: tiles.map(tile => `linear-gradient(${tile.ink}, ${tile.ink})`).join(', '),
+    positions: tiles.map(tile => `${tile.x}px ${tile.y}px`).join(', '),
+    sizes: tiles.map(tile => `${tile.width}px ${tile.height}px`).join(', ')
+  };
+}
 
 export function intersectRectangles(first, second) {
   const left = Math.max(first.left, second.left), top = Math.max(first.top, second.top);
@@ -61,7 +99,7 @@ export function mountNavigationContrast(nav) {
   const clear = link => {
     if (!rendered.has(link)) return;
     link.removeAttribute('data-nav-image-overlap');
-    for (const property of ['--nav-image-layers', '--nav-image-positions', '--nav-image-sizes']) link.style.removeProperty(property);
+    for (const property of ['--nav-ink-layers', '--nav-ink-positions', '--nav-ink-sizes']) link.style.removeProperty(property);
     rendered.delete(link);
   };
 
@@ -134,21 +172,17 @@ export function mountNavigationContrast(nav) {
         if (!ink) continue;
         zones.unshift({ ink, x: overlap.left - rect.left, y: overlap.top - rect.top, width: overlap.width, height: overlap.height });
       }
-      return { link, zones };
+      return { link, rect, zones };
     });
-    for (const { link, zones } of updates) {
+    for (const { link, rect, zones } of updates) {
       if (!zones.length) { clear(link); continue; }
-      const value = {
-        layers: [...zones.map(zone => `linear-gradient(${zone.ink}, ${zone.ink})`), 'linear-gradient(var(--page-text), var(--page-text))'].join(', '),
-        positions: [...zones.map(zone => `${zone.x}px ${zone.y}px`), '0 0'].join(', '),
-        sizes: [...zones.map(zone => `${zone.width}px ${zone.height}px`), '100% 100%'].join(', ')
-      };
-      const signature = JSON.stringify(value);
+      const paint = inkPaint(rect, zones);
+      const signature = JSON.stringify(paint);
       if (rendered.get(link) === signature) continue;
       link.dataset.navImageOverlap = '';
-      link.style.setProperty('--nav-image-layers', value.layers);
-      link.style.setProperty('--nav-image-positions', value.positions);
-      link.style.setProperty('--nav-image-sizes', value.sizes);
+      link.style.setProperty('--nav-ink-layers', paint.layers);
+      link.style.setProperty('--nav-ink-positions', paint.positions);
+      link.style.setProperty('--nav-ink-sizes', paint.sizes);
       rendered.set(link, signature);
     }
     if (main.querySelector('[data-art-root]:is(.is-moving, .is-dragging, .is-lifting)')) schedule();
