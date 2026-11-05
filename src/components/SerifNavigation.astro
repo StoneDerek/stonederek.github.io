@@ -1,8 +1,6 @@
 ---
 import site from '../data/site.json';
 import { resumeURL } from '../data/resume.js';
-import ThemeControl from './ThemeControl.astro';
-import { appearanceEnabled } from '../scripts/theme.js';
 
 const { page = 'home', mode = 'desktop' } = Astro.props;
 const base = import.meta.env.BASE_URL;
@@ -32,5 +30,4 @@ const links = [
       </li>
     ))}
   </ul>
-  {appearanceEnabled && <ThemeControl id={`navigation-theme-${mode}`} />}
 </nav>

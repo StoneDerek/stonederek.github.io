@@ -1,16 +1,16 @@
-/* Keep the name's center stable; the category never contributes to its width. */
+/* Keep the name's left edge stable; the category extends to its right. */
 html:has(.serif-site) { scrollbar-gutter: stable; }
 .serif-site .serif-masthead {
   position: relative;
   grid-column: 1 / -1;
   grid-row: 1;
   grid-template-columns: minmax(0, 1fr);
-  justify-items: center;
+  justify-items: start;
   gap: 0;
   min-height: 44px;
   pointer-events: none;
 }
-.serif-site .serif-brand { position: relative; width: max-content; pointer-events: auto; }
+.serif-site .serif-brand { position: relative; width: max-content; margin-left: calc(50% - 10vw); pointer-events: auto; }
 .serif-site .serif-identity { display: flex; align-items: center; min-height: 44px; }
 .serif-site .serif-context {
   position: absolute;
@@ -20,18 +20,31 @@ html:has(.serif-site) { scrollbar-gutter: stable; }
   align-items: center;
   min-height: 44px;
   padding-left: 3px;
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 400;
-  line-height: 30px;
+  line-height: 32px;
   letter-spacing: -.025em;
   white-space: nowrap;
 }
 .serif-site .serif-mobile-menu { pointer-events: auto; }
 
+@media (min-width: 880px) {
+  .serif-site .serif-navigation-desktop {
+    position: fixed;
+    top: max(36px, env(safe-area-inset-top));
+    right: max(48px, env(safe-area-inset-right));
+    width: 112px;
+    z-index: 30;
+  }
+  .serif-site .serif-navigation-desktop .serif-nav-list { gap: 0; }
+  .serif-site .serif-navigation-desktop .serif-nav-link { min-height: 0; padding: 0; border: 0; border-radius: 0; font-size: 16px; line-height: 24px; font-weight: 400; }
+}
+
 @media (max-width: 879px) {
   .serif-site .serif-masthead { z-index: 30; min-height: 68px; }
+  .serif-site .serif-brand { margin-left: 0; }
   .serif-site .serif-identity { padding: 8px 0; font-size: 22px; line-height: 28px; }
-  .serif-site .serif-context { top: 44px; left: 50%; min-height: 20px; padding-left: 0; transform: translateX(-50%); font-size: 15px; line-height: 20px; }
+  .serif-site .serif-context { top: 0; left: 100%; min-height: 44px; padding-left: 3px; font-size: 15px; line-height: 20px; }
   .serif-site .serif-mobile-menu { position: absolute; top: 0; right: 0; width: 72px; }
   .serif-site .serif-mobile-menu > summary { padding-inline: 8px; list-style: none; }
   .serif-site .serif-mobile-menu > summary::-webkit-details-marker { display: none; }

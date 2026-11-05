@@ -57,6 +57,9 @@ test('every embedded native page has self-contained images/styles and parseable 
         assert.equal(doc.querySelectorAll('[data-art-item]').length, 5);
         assert.equal(doc.querySelectorAll('[data-art-select]').length, 5);
         assert.equal(doc.querySelector('#portfolio, [data-work-project]'), null);
+        assert.equal(doc.querySelector('[data-art-title]').textContent, 'Untitled #1');
+        assert.equal(doc.querySelector('.art-caption, [data-art-step], [data-art-count]'), null);
+        assert.ok([...doc.querySelectorAll('[data-art-select]')].every(button => !button.textContent.trim()));
       }
     });
   }
@@ -145,13 +148,21 @@ test('compiled apps preserve theme preferences, individual Art selection/history
     window.scrollTo = (left, top) => { scrollY = typeof left === 'object' ? left.top : top; };
     window.HTMLElement.prototype.scrollIntoView = () => {};
     window.HTMLElement.prototype.getAnimations = () => [];
+    const captures = new WeakMap();
+    window.HTMLElement.prototype.setPointerCapture = function(id) { captures.set(this, id); };
+    window.HTMLElement.prototype.hasPointerCapture = function(id) { return captures.get(this) === id; };
+    window.HTMLElement.prototype.releasePointerCapture = function() { captures.delete(this); };
     window.HTMLElement.prototype.getBoundingClientRect = function() {
-      const width = this.matches('.thumbnail') ? 88 : this.matches('.caption-word, [data-title-metrics]') ? this.textContent.length * 8 : 390;
-      return { x: 0, y: 0, left: 0, top: 0, right: width, bottom: 64, width, height: 64 };
+      const artThumb = this.hasAttribute('data-art-select');
+      const width = artThumb ? 80 : this.hasAttribute('data-art-item') ? 351 : this.matches('.thumbnail') ? 88 : this.matches('.caption-word, [data-title-metrics]') ? this.textContent.length * 8 : 390;
+      const left = artThumb ? 155 + Number(this.dataset.artSelect) * 88 - (window.document.querySelector('[data-art-rail]')?.scrollLeft || 0) : 0;
+      return { x: left, y: 0, left, top: 0, right: left + width, bottom: 64, width, height: 64 };
     };
     Object.defineProperties(window.HTMLElement.prototype, {
       clientWidth: { configurable: true, get() { return this.matches('.thumbnail') ? 88 : 390; } },
-      clientHeight: { configurable: true, get() { return 844; } }
+      clientHeight: { configurable: true, get() { return 844; } },
+      offsetWidth: { configurable: true, get() { return this.hasAttribute('data-art-select') ? 80 : this.hasAttribute('data-art-item') ? 351 : 390; } },
+      offsetLeft: { configurable: true, get() { return this.hasAttribute('data-art-select') ? Number(this.dataset.artSelect) * 88 : 0; } }
     });
     window.HTMLCanvasElement.prototype.getContext = function() {
       return this.classList.contains('laser-canvas') ? null : { measureText: text => ({ width: text.length * 8 }) };
@@ -187,16 +198,17 @@ test('compiled apps preserve theme preferences, individual Art selection/history
       assert.equal(window.document.documentElement.dataset.theme, theme);
       assert.equal(window.document.documentElement.dataset.themePreference, preference);
       const switches = [...window.document.querySelectorAll('[data-theme-switch]')];
-      assert.equal(switches.length, 2);
+      assert.equal(switches.length, 1);
       for (const toggle of switches) {
         assert.equal(toggle.closest('[data-theme-control]').hidden, false);
         assert.equal(toggle.getAttribute('aria-checked'), String(theme === 'dark'));
+        assert.equal(toggle.querySelector('[data-theme-action]').textContent, theme === 'dark' ? 'Light mode' : 'Dark mode');
       }
     };
     assertTheme('light', 'system');
     const themeEvents = [];
     window.document.addEventListener('portfolio:theme-change', event => themeEvents.push(event.detail.resolved));
-    window.document.querySelector('.serif-navigation-desktop [data-theme-switch]').click();
+    window.document.querySelector('.serif-footer [data-theme-switch]').click();
     assertTheme('dark', 'dark');
     assert.equal(window.localStorage.getItem('derek-stone-theme'), 'dark');
     assert.deepEqual(themeEvents, ['dark']);
@@ -204,6 +216,7 @@ test('compiled apps preserve theme preferences, individual Art selection/history
     await flush();
     assertTheme('dark', 'dark');
     const artRoot = window.document.querySelector('[data-art-root]');
+    const stage = artRoot.querySelector('[data-art-stage]');
     assert.ok(artRoot, 'the inline Art gallery mounts without the old portfolio controller');
     assert.equal(window.document.querySelector('#portfolio'), null);
     assert.equal(window.document.querySelector('[data-work-root]'), null);
@@ -212,15 +225,19 @@ test('compiled apps preserve theme preferences, individual Art selection/history
       assert.equal(Number(artRoot.dataset.artIndex), index);
       const items = [...artRoot.querySelectorAll('[data-art-item]')];
       assert.equal(items.length, 5);
-      assert.deepEqual(items.map(item => item.hidden), items.map((_, i) => i !== index));
+      assert.ok(items.every(item => !item.hidden));
+      assert.deepEqual(items.map(item => item.getAttribute('aria-hidden')), items.map((_, i) => String(i !== index)));
       const current = [...artRoot.querySelectorAll('[data-art-select][aria-current="true"]')];
       assert.equal(current.length, 1);
       assert.equal(Number(current[0].dataset.artSelect), index);
-      assert.equal(artRoot.querySelector('[data-art-count]').textContent.replace(/\s/g, ''), `0${index + 1}/05`);
+      assert.equal(artRoot.querySelector('[data-art-title]').textContent, `Untitled #${index + 1}`);
+      assert.equal(artRoot.querySelector('.art-caption, [data-art-step], [data-art-count]'), null);
+      assert.ok([...artRoot.querySelectorAll('[data-art-select]')].every(button => !button.textContent.trim()));
       const details = artRoot.querySelector('[data-art-details]');
       const chapters = [...details.querySelectorAll('.case-study-section')];
       assert.equal(chapters.length, 5);
       assert.deepEqual(chapters.map(chapter => chapter.hidden), chapters.map((_, i) => i !== index));
+      assert.ok([...details.querySelectorAll('.case-study-section h2')].every(heading => heading.hidden));
       const reference = [1, null, 2, null, 3][index];
       assert.deepEqual([...details.querySelectorAll('.project-footnote')].filter(note => !note.hidden).map(note => note.id),
         reference ? [`project-note-art-${reference}`] : []);
@@ -245,29 +262,37 @@ test('compiled apps preserve theme preferences, individual Art selection/history
     assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, '/art/#artwork=03', 'a note keeps the selected artwork URL');
     artRoot.querySelector('[data-article-jump="project-ref-art-2"]').click(); await flush();
     assert.equal(window.document.activeElement.id, 'project-ref-art-2');
+    const track = artRoot.querySelector('[data-art-track]');
+    const translation = () => Number(track.style.transform.match(/translate(?:3d|X)\(\s*([-+e.\d]+)px/)[1]);
+    const heldStart = translation();
+    const pointer = (type, x) => stage.dispatchEvent(new window.PointerEvent(type, {
+      pointerId: 13, pointerType: 'mouse', isPrimary: true, button: 0, clientX: x, clientY: 150, bubbles: true, cancelable: true
+    }));
+    pointer('pointerdown', 250); pointer('pointermove', 150); await flush();
+    assert.ok(translation() < heldStart && translation() > heldStart - 351, 'the compiled gallery follows a fractional held drag');
+    assert.ok(artRoot.querySelector('[data-art-rail]').scrollLeft > 176 && artRoot.querySelector('[data-art-rail]').scrollLeft < 264);
+    assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, '/art/#artwork=03', 'held motion preserves the current history destination');
+    pointer('pointercancel', 150); await flush(); assertArtwork(2);
     window.history.back(); await flush();
     assertArtwork(1);
     window.history.forward(); await flush();
     assertArtwork(2);
-    artRoot.querySelector('[data-art-step="1"]').click(); await flush();
+    const key = (value, target = stage) => target.dispatchEvent(new window.KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true }));
+    key('ArrowRight'); await flush();
     assertArtwork(3);
     assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, '/art/#artwork=04');
-    const stage = artRoot.querySelector('[data-art-stage]');
-    const key = (value, target = stage) => target.dispatchEvent(new window.KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true }));
     key('End'); await flush();
     assertArtwork(4);
     let historyLength = window.history.length;
     key('ArrowRight'); await flush();
     assertArtwork(4);
     assert.equal(window.history.length, historyLength, 'the gallery stops at its last artwork without adding history');
-    assert.ok([...artRoot.querySelectorAll('[data-art-step="1"]')].every(button => button.disabled));
     key('Home'); await flush();
     assertArtwork(0);
     historyLength = window.history.length;
     key('ArrowLeft'); await flush();
     assertArtwork(0);
     assert.equal(window.history.length, historyLength, 'the gallery stops at its first artwork');
-    assert.ok([...artRoot.querySelectorAll('[data-art-step="-1"]')].every(button => button.disabled));
     key('ArrowRight'); await flush();
     assertArtwork(1);
     const opener = artRoot.querySelector('[data-art-item="1"] [data-image-open]');
@@ -329,7 +354,7 @@ test('compiled apps preserve theme preferences, individual Art selection/history
     assert.equal(window.document.querySelector('[data-art-puzzle]').hidden, false);
     assert.equal(window.document.activeElement, window.document.querySelector('[data-art-puzzle]'));
     assertTheme('dark', 'dark');
-    window.document.querySelector('.serif-navigation-desktop [data-theme-switch]').click();
+    window.document.querySelector('.serif-footer [data-theme-switch]').click();
     assertTheme('light', 'light');
     assert.equal(window.localStorage.getItem('derek-stone-theme'), 'light');
     assert.deepEqual(themeEvents, ['dark', 'light'], 'each toggle has one active theme controller after repeated page mounts');

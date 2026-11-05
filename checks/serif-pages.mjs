@@ -46,13 +46,14 @@ test('native serif pages provide matching desktop/mobile destinations and useful
       assert.equal(doc.querySelector('.serif-footer a[href*="#links"]'), null, 'mirror puzzle remains a hidden discovery in Art');
       assert.equal(doc.querySelector('meta[name="color-scheme"]').content, 'light dark');
       assert.equal(doc.documentElement.hasAttribute('data-appearance-enabled'), true);
-      const appearance = [...doc.querySelectorAll('nav[aria-label="Main navigation"] [data-theme-control]')];
-      assert.equal(appearance.length, 2);
-      for (const control of appearance) {
-        assert.equal(control.querySelector('[data-theme-switch]').getAttribute('role'), 'switch');
-        assert.ok(doc.getElementById(control.getAttribute('aria-labelledby')));
-      }
-      assert.equal(doc.querySelector('main [data-theme-control]'), null, 'appearance belongs to shared navigation');
+      assert.equal(doc.querySelector('nav [data-theme-control], main [data-theme-control]'), null);
+      const appearance = [...doc.querySelectorAll('[data-theme-control]')];
+      assert.equal(appearance.length, 1);
+      assert.ok(appearance[0].matches('.serif-footer button[data-theme-switch]'));
+      assert.equal(appearance[0].getAttribute('role'), 'switch');
+      assert.equal(appearance[0].getAttribute('aria-label'), 'Dark mode');
+      assert.equal(appearance[0].querySelector('[data-theme-action]').textContent, 'Dark mode');
+      assert.equal(doc.querySelector('[data-theme-status], [data-theme-system]'), null);
     });
   }
 });
@@ -64,7 +65,8 @@ test('Work contains exactly the three current projects with the RAG hierarchy an
     const cards = [...doc.querySelectorAll('[data-work-project]')];
     assert.deepEqual(cards.map(card => card.dataset.workProject), ['acoustic-drone-detection', 'rag-chatbot', '2d-lightning-simulation']);
     assert.deepEqual(cards.map(card => card.querySelector('h2').textContent), ['Acoustic Drone Detection', 'RAG Chatbot', '2D Lightning Simulation']);
-    assert.equal(cards[1].querySelector('.work-project-method').textContent, 'for Academic Advising');
+    assert.equal(cards[1].querySelector('.work-project-method').textContent, 'informed Academic Advising');
+    assert.equal(cards[2].querySelector('.work-project-method').textContent, 'of a Probabilistic Potential Model');
     for (const card of cards) {
       assert.equal(card.getAttribute('href'), `/projects/#project=${card.dataset.workProject}`);
       const image = card.querySelector('img');
@@ -103,15 +105,23 @@ test('Home and About preserve the supplied introduction, photo and established a
     assert.equal(explore.length, 1);
     assert.equal(explore[0].getAttribute('role'), null);
   });
-  await page('about/', doc => {
+  await page('about/', async doc => {
     assert.ok(doc.querySelector('#about-title').classList.contains('native-profile-title'));
     assert.equal(doc.querySelector('#about-title').getAttribute('aria-label'), 'About');
     assert.ok(doc.getElementById('interests'));
-    assert.ok(doc.querySelector('.about-contents a[href="#interests"]'));
+    assert.equal(doc.querySelector('.about-contents, .about-heading .profile-eyebrow, .about-section-number'), null);
+    assert.ok([...doc.querySelectorAll('.about-story h2')].every(heading => heading.classList.contains('sr-only')));
+    const legacy = new Window({ settings: { disableJavaScriptEvaluation: true, disableJavaScriptFileLoading: true, disableCSSFileLoading: true } });
+    try {
+      legacy.document.write(await readFile(new URL('./fixtures/legacy-portfolio.html', import.meta.url), 'utf8'));
+      const paragraphs = source => [...source.querySelectorAll('.about-story p')].map(p => p.textContent.trim());
+      assert.deepEqual(paragraphs(doc), paragraphs(legacy.document), 'the simpler layout preserves every existing body paragraph');
+      assert.equal(doc.querySelector('.about-heading > p:last-child').textContent.trim(), legacy.document.querySelector('.about-heading > p:last-child').textContent.trim());
+    } finally { await legacy.happyDOM.close(); }
   });
 });
 
-test('Art is an inline gallery of only five original artworks with its overview and separate hidden puzzle', async () => {
+test('Art contains only five original photographs, image thumbnails and its selected artwork title', async () => {
   await page('art/', doc => {
     const root = doc.querySelector('[data-art-root]');
     assert.ok(root);
@@ -119,17 +129,23 @@ test('Art is an inline gallery of only five original artworks with its overview 
     const stage = root.querySelector('[data-art-stage]');
     const details = root.querySelector('[data-art-details]');
     assert.ok(stage && details);
+    assert.ok(stage.querySelector('[data-art-track]'));
+    assert.ok(root.querySelector('[data-art-rail]'));
+    assert.equal(root.querySelector('[data-art-title]').textContent, 'Untitled #1');
+    assert.equal(root.querySelector('.art-caption, [data-art-step], [data-art-count]'), null);
     assert.ok(root.closest('main'), 'the gallery belongs to the normal page content');
-    assert.equal(stage.contains(details), false, 'artwork prose sits below the framed gallery');
+    assert.equal(stage.contains(details), false, 'original artwork prose stays below the gallery');
     const items = [...root.querySelectorAll('[data-art-item]')];
     const choices = [...root.querySelectorAll('[data-art-select]')];
     assert.equal(items.length, 5);
     assert.deepEqual(choices.map(choice => choice.dataset.artSelect), ['0', '1', '2', '3', '4']);
     assert.ok(choices.every(choice => choice.tagName === 'BUTTON'));
+    assert.ok(choices.every(choice => choice.textContent.trim() === ''), 'thumbnails do not add number labels');
     const paths = ['stellers-jay', 'broken-line-chicken', 'ink-chicken', 'bird-stamp', 'watercolors'];
     for (const [index, item] of items.entries()) {
       assert.ok(item.querySelector(`img[src="/art/collection/${paths[index]}.webp"]`));
-      assert.equal(item.hidden, index !== 0);
+      assert.equal(item.hidden, false, 'adjacent artwork stays in the continuous gallery track');
+      assert.equal(item.getAttribute('aria-hidden'), String(index !== 0));
     }
     assert.equal(choices.filter(choice => choice.getAttribute('aria-current') === 'true').length, 1);
     assert.equal(root.dataset.artIndex, '0');

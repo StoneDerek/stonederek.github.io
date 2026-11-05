@@ -44,9 +44,14 @@ export function mountTheme({ enabled = true } = {}) {
     if (color) color.content = state.resolved === 'dark' ? '#17171b' : '#ffffff';
     doc.querySelectorAll('[data-theme-control]').forEach(control => {
       control.hidden = false;
-      control.querySelector('[data-theme-switch]').setAttribute('aria-checked', String(state.resolved === 'dark'));
-      control.querySelector('[data-theme-status]').textContent = state.choice === 'system' ? 'Following system' : 'Saved preference';
-      control.querySelector('[data-theme-system]').hidden = state.choice === 'system';
+      const toggle = control.matches?.('[data-theme-switch]') ? control : control.querySelector('[data-theme-switch]');
+      toggle?.setAttribute('aria-checked', String(state.resolved === 'dark'));
+      const action = control.querySelector('[data-theme-action]');
+      if (action) action.textContent = state.resolved === 'dark' ? 'Light mode' : 'Dark mode';
+      const status = control.querySelector('[data-theme-status]');
+      if (status) status.textContent = state.choice === 'system' ? 'Following system' : 'Saved preference';
+      const system = control.querySelector('[data-theme-system]');
+      if (system) system.hidden = state.choice === 'system';
     });
   }
   function apply(choice = state.choice, remember = false) {

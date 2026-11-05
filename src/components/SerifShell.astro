@@ -4,6 +4,8 @@ import { resumeURL } from '../data/resume.js';
 import { publicationDate } from '../data/publication.js';
 import Layout from '../layouts/Layout.astro';
 import SerifNavigation from './SerifNavigation.astro';
+import ThemeControl from './ThemeControl.astro';
+import { appearanceEnabled } from '../scripts/theme.js';
 import '../styles/serif.css';
 import '../styles/masthead.css';
 import '../styles/refinement.css';
@@ -46,6 +48,7 @@ const description = page === 'work' ? `Projects, experiments, and work in progre
     <div class="serif-footer-links">
       <a href={resumeURL(base)} data-resume-link>Resume</a>
       <a href={site.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn (opens in a new tab)">LinkedIn</a>
+      {appearanceEnabled && <ThemeControl compact={true} />}
     </div>
     <span class="publication serif-publication"><time class="menu-published" data-publication-date datetime={published.iso} tabindex="0" aria-describedby="publication-tooltip">Updated {published.label}</time><span class="publication-tooltip" id="publication-tooltip" role="tooltip">Last updated {published.label}</span></span>
   </footer>

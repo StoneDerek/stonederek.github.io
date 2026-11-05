@@ -38,7 +38,7 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
 .serif-site .serif-skip-link { position: absolute; z-index: 80; top: 8px; left: 8px; padding: 12px 16px; transform: translateY(-200%); background: var(--page-text); color: #fff; font-size: 16px; }
 .serif-site .serif-skip-link:focus { transform: none; }
 .serif-site .serif-masthead { grid-column: 1; grid-row: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 16px; min-width: 0; }
-.serif-site .serif-identity { display: block; width: fit-content; margin: 0; font-size: 26px; font-weight: 400; line-height: 30px; letter-spacing: -.025em; text-decoration: none; }
+.serif-site .serif-identity { display: block; width: fit-content; margin: 0; font-size: 28px; font-weight: 400; line-height: 32px; letter-spacing: -.025em; text-decoration: none; }
 .serif-site .serif-navigation-desktop { position: sticky; top: max(36px, env(safe-area-inset-top)); grid-column: 2; grid-row: 1 / 4; }
 .serif-site .serif-nav-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .serif-site .serif-professional-start { margin-top: 20px; }
@@ -65,7 +65,7 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
 .serif-site .work-project-method { margin: 1px 0 0; color: var(--page-text); font-size: 16px; line-height: 22px; }
 .serif-site .work-project-open:hover .work-project-title { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
 .serif-site[data-page='work'] .work-coming-soon { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; min-width: 0; min-height: 180px; aspect-ratio: 4 / 3; padding: 24px; color: var(--muted); }
-.serif-site[data-page='work'] .work-coming-cat { margin: 0; padding: 0; font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace; font-size: 20px; font-weight: 400; line-height: 1.2; white-space: pre; }
+.serif-site[data-page='work'] .work-coming-cat { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: 400; font-variant-ligatures: none; letter-spacing: 0; line-height: 1.1; text-align: left; white-space: pre; }
 .serif-site[data-page='work'] .work-coming-soon p { margin: 0; font-size: 16px; line-height: 24px; }
 
 /* Work articles keep the existing content and image viewer in document flow. */
@@ -118,7 +118,7 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
 .serif-site .about-story p { line-height: 1.65; }
 
 @media (min-width: 880px) {
-  .serif-site[data-page='work'] { grid-template-columns: minmax(0, 1fr) 112px; column-gap: clamp(64px, 8vw, 144px); width: 100%; margin-inline: 0; padding-inline: max(28px, env(safe-area-inset-left)) max(28px, env(safe-area-inset-right)); }
+  .serif-site[data-page='work'] { grid-template-columns: minmax(0, 1fr) 112px; column-gap: clamp(64px, 8vw, 144px); width: 100%; margin-inline: 0; padding-inline: max(48px, env(safe-area-inset-left)) max(48px, env(safe-area-inset-right)); }
   .serif-site[data-page='work'] :is(.serif-main, .serif-footer) { width: min(100%, 1108px); }
   .serif-site[data-page='work']:not([data-work-view='article']) .serif-main { margin-top: clamp(112px, 12vw, 220px); }
   .serif-site[data-page='work'] .serif-navigation-desktop { width: 112px; justify-self: end; }

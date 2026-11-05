@@ -60,15 +60,16 @@ test('offline system following uses the outer preference rather than the iframe 
   } finally { s.restore(); }
 });
 
-function scene({ blocked = false, controlCount = 1 } = {}) {
+function scene({ blocked = false, controlCount = 1, compact = false, dark = false } = {}) {
   const names = ['document', 'window', 'CustomEvent'];
   const previous = new Map(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   const document = new EventTarget(), window = new EventTarget(), media = new EventTarget();
-  const saved = new Map(); media.matches = false;
+  const saved = new Map(); media.matches = dark;
   const variants = Array.from({ length: controlCount }, () => {
-    const toggle = { setAttribute(name, value) { this[name] = value; } }, status = {}, reset = {};
-    const control = { hidden: true, querySelector: name => name === '[data-theme-switch]' ? toggle : name === '[data-theme-status]' ? status : reset };
-    return { toggle, status, reset, control };
+    const toggle = { setAttribute(name, value) { this[name] = value; } }, status = {}, reset = {}, action = {};
+    const control = compact ? { ...toggle, hidden: true, matches: name => name === '[data-theme-switch]', querySelector: name => name === '[data-theme-action]' ? action : null }
+      : { hidden: true, querySelector: name => ({ '[data-theme-switch]': toggle, '[data-theme-status]': status, '[data-theme-system]': reset })[name] || null };
+    return { toggle: compact ? control : toggle, status, reset, control, action };
   });
   const { toggle, status, reset, control } = variants[0];
   const meta = {};
@@ -76,7 +77,7 @@ function scene({ blocked = false, controlCount = 1 } = {}) {
   document.querySelector = selector => selector.includes('meta') ? meta : null;
   document.querySelectorAll = () => variants.map(item => item.control);
   window.matchMedia = () => media;
-  window.__PORTFOLIO_THEME_STATE__ = { choice: 'system', resolved: 'light' };
+  window.__PORTFOLIO_THEME_STATE__ = { choice: 'system', resolved: dark ? 'dark' : 'light' };
   window.localStorage = { setItem(key, value) { if (blocked) throw new Error('blocked'); saved.set(key, value); },
     removeItem(key) { if (blocked) throw new Error('blocked'); saved.delete(key); } };
   const message = []; window.__PORTFOLIO_PREVIEW_SET_THEME__ = state => message.push(state);
@@ -128,7 +129,7 @@ test('changes in another tab update controls without writing the preference back
   } finally { s.restore(); }
 });
 
-test('desktop and mobile controls reflect the same saved and system preference', () => {
+test('legacy controls reflect the same saved and system preference', () => {
   const s = scene({ controlCount: 2 });
   try {
     s.click('[data-theme-switch]');
@@ -146,6 +147,25 @@ test('desktop and mobile controls reflect the same saved and system preference',
       assert.equal(item.status.textContent, 'Following system');
       assert.equal(item.reset.hidden, true);
     }
+  } finally { s.restore(); }
+});
+
+test('the compact footer toggle names the next action and retains an accessible dark-mode state', () => {
+  const s = scene({ compact: true, dark: true });
+  try {
+    assert.equal(s.document.documentElement.dataset.themePreference, 'system');
+    assert.equal(s.variants[0].action.textContent, 'Light mode');
+    assert.equal(s.toggle['aria-checked'], 'true');
+    s.click('[data-theme-switch]');
+    assert.equal(s.document.documentElement.dataset.theme, 'light');
+    assert.equal(s.saved.get(themeStorageKey), 'light');
+    assert.equal(s.variants[0].action.textContent, 'Dark mode');
+    assert.equal(s.toggle['aria-checked'], 'false');
+    s.click('[data-theme-switch]');
+    assert.equal(s.document.documentElement.dataset.theme, 'dark');
+    assert.equal(s.saved.get(themeStorageKey), 'dark');
+    assert.equal(s.variants[0].action.textContent, 'Light mode');
+    assert.equal(s.toggle['aria-checked'], 'true');
   } finally { s.restore(); }
 });
 

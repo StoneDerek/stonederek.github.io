@@ -60,18 +60,8 @@
 :root[data-theme='dark'] .serif-site[data-page] :is(.image-viewer-zoom-controls, .image-viewer-close) { background: var(--native-button); }
 :root[data-theme='dark'] .serif-site[data-page] :is(.image-viewer-close:hover, .image-viewer-zoom:not([aria-disabled='true']):hover) { background: #46404f; }
 :root[data-theme='dark'] .serif-site[data-page] .project-image-viewer::backdrop { background: rgb(6 6 9 / .78); }
-.serif-site[data-page] .serif-navigation .theme-control { width: 100%; margin-top: 28px; }
-.serif-site[data-page] .serif-navigation .theme-control h2 { margin-bottom: 8px; color: var(--muted); font-size: 12px; }
-.serif-site[data-page] .serif-navigation .theme-switch { min-height: 44px; padding: 3px; border-radius: 6px; background: var(--canvas); }
-.serif-site[data-page] .serif-navigation .theme-switch::before { inset: 3px auto 3px 3px; width: calc(50% - 3px); border-radius: 3px; background: var(--native-button); }
-.serif-site[data-page] .serif-navigation .theme-option { gap: 0; padding: 8px 2px; font-size: 12px; }
-.serif-site[data-page] .serif-navigation .theme-option svg { display: none; }
-.serif-site[data-page] .serif-navigation .theme-switch .theme-option { color: var(--muted); }
-.serif-site[data-page] .serif-navigation .theme-switch[aria-checked='false'] .theme-option-light,
-.serif-site[data-page] .serif-navigation .theme-switch[aria-checked='true'] .theme-option-dark { color: var(--page-text); }
-.serif-site[data-page] .serif-navigation .theme-control-note { display: block; min-height: 20px; margin-top: 4px; font-size: 11px; line-height: 20px; }
-.serif-site[data-page] .serif-navigation [data-theme-status] { display: block; }
-.serif-site[data-page] .serif-navigation [data-theme-system] { padding: 8px 0; font-size: 12px; }
+.serif-site[data-page] .theme-text-toggle { display: inline-flex; align-items: center; width: fit-content; min-height: 44px; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; text-align: left; }
+.serif-site[data-page] .theme-text-toggle:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 @media (max-width: 879px) {
   .serif-site[data-page] .serif-navigation-mobile { max-height: calc(100svh - 96px); overflow-y: auto; }
 }

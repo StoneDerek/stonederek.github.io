@@ -1,7 +1,10 @@
 ---
-const { id = 'theme-control' } = Astro.props;
+const { id = 'theme-control', compact = false } = Astro.props;
 const labelId = `${id}-label`;
 ---
+{compact ? (
+  <button type="button" class="theme-text-toggle" data-theme-control data-theme-switch role="switch" aria-checked="false" aria-label="Dark mode" hidden><span data-theme-action>Dark mode</span></button>
+) : (
 <section class="theme-control" data-theme-control aria-labelledby={labelId} hidden>
   <h2 id={labelId}>Appearance</h2>
   <button type="button" class="theme-switch" data-theme-switch role="switch" aria-checked="false" aria-label="Dark mode">
@@ -10,3 +13,4 @@ const labelId = `${id}-label`;
   </button>
   <p class="theme-control-note"><span data-theme-status aria-live="polite">Following system</span><button type="button" data-theme-system hidden>Use system</button></p>
 </section>
+)}

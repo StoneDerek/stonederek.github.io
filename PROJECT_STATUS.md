@@ -1,5 +1,17 @@
 # Portfolio continuation
 
+## Annotated corrections — November 4, 2026
+
+Apply the user’s annotations directly. Art uses the original continuous gallery movement and draggable/clickable/wheel thumbnail behavior, with only five artwork photographs. The outer enclosure, subtitle, arrow buttons, thumbnail numbers, visible counter, and numeric prose headings are removed. The selected title is Untitled #N. The gallery extends across the available page width while remaining below full-screen height. In-text links and note numbers are neutral; reference URLs use blue-violet.
+
+The masthead name is left-aligned at a stable anchor, never centered as a group or independently. Footer contents are grouped on the left without the divider. A single plain Light mode/Dark mode action in the footer replaces the sidebar appearance panel and its heading/status/system copy. About uses one plain prose column with no contents sidebar, visible section labels, or separator lines. Existing paragraph text remains unchanged. The original cat’s glyphs and sans-serif rendering are retained; an eating/building pose remains only the user’s proposed concept, with no new accessories added. Card labels use informed Academic Advising and of a Probabilistic Potential Model.
+
+Desktop navigation uses one shared right-edge anchor, the same 16px text and 24px line spacing on every page. Work and Home use 48px outer gutters; the masthead is 28px. The Home greeting uses body-sized type and its two existing links use the reference’s small-label/larger-text treatment. Accent usage, theme-control placement, and whitespace/composition research are recorded in docs/design-reference-notes.md. The reference uses compact related groups against larger open zones; no universal padding value, centering rule, or automatic green accent is implied.
+
+These corrections supersede the centered masthead, framed Art gallery and sidebar appearance control described in the previous checkpoint.
+
+The reference notes also record the user’s typography observation: Paradigm primarily uses a serif, with a contrasting sans-serif treatment for the small Founded/Investments labels in the supplied About reference. This is not a single-font rule or authorization to change portfolio typography.
+
 ## Native page refinements — November 4, 2026
 
 The latest feedback replaces full-screen mixed Art navigation with a framed gallery of only the five original artworks. Neighbors, thumbnails, arrows, keyboard/swipe selection, rich descriptions, related footnotes, image zoom, and history remain available. The mirror puzzle is separate at the existing hidden hash, never a gallery item.
