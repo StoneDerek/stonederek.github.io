@@ -84,7 +84,7 @@ The case-study facts and sections are optional. Empty entries are omitted, and s
 
 Inline paragraph runs may be strings or objects with `text`, `bold`, `italic`, and an HTTP(S) `href`. The renderer creates text nodes and a small set of elements rather than accepting HTML. Numbered references render as bracketed links to notes at the bottom; each note number links back to its reference. These jumps preserve the article URL and move keyboard focus within the article. Captions and other project fields remain plain text.
 
-Edit `src/data/site.json` for the name, header domain, email, LinkedIn URL, default title, and description. Styling lives in `src/styles/portfolio.css`; the shared app starts in `src/scripts/app.js` and uses `carousel.js`. Existing project transitions, menus, case-study rendering, and puzzle modules remain separate. The browser tab uses one static black-on-white `ds.` icon from `public/favicon.svg` across all pages, themes, and the offline preview. Navigation does not rewrite it or embed a separate icon for each panel.
+Edit `src/data/site.json` for the name, header domain, email, LinkedIn URL, default title, and description. Styling lives in `src/styles/portfolio.css`; the shared app starts in `src/scripts/app.js` and uses `carousel.js`. Existing project transitions, menus, case-study rendering, and puzzle modules remain separate. The browser tab uses one static black-on-white `DS` icon from `public/favicon.svg`, with the same Georgia/Times serif font stack as the native pages, across all pages, themes, and the offline preview. Navigation does not rewrite it or embed a separate icon for each panel.
 
 ## Art collection
 
