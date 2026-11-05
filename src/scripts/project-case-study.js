@@ -86,13 +86,13 @@ export function mountProjectCaseStudy(host, { base = '/', reducedMotion } = {}) 
         if (!run || typeof run !== 'object') continue;
         if (Number.isInteger(run.footnote) && footnotes.some(note => note.number === run.footnote)) {
           const marker = element('span', 'project-noteref');
-          const link = element('a', '', String(run.footnote));
+          const link = element('a', '', `[${run.footnote}]`);
           link.id = `project-ref-${slug}-${run.footnote}`;
           link.href = `#project-note-${slug}-${run.footnote}`;
           link.dataset.articleJump = `project-note-${slug}-${run.footnote}`;
           link.setAttribute('role', 'doc-noteref');
           link.setAttribute('aria-label', `Footnote ${run.footnote}`);
-          marker.append('[', link, ']');
+          marker.append(link);
           if (parent.textContent && !/\s$/.test(parent.textContent)) parent.append(' ');
           parent.append(marker);
           continue;
@@ -186,14 +186,14 @@ export function mountProjectCaseStudy(host, { base = '/', reducedMotion } = {}) 
           for (const [index, paragraph] of (note.paragraphs || []).entries()) {
             const text = element('p');
             if (index === 0) {
-              const back = element(note.backlink === false ? 'span' : 'a', 'footnote-number', String(note.number));
+              const back = element(note.backlink === false ? 'span' : 'a', 'footnote-number', `[${note.number}]`);
               if (note.backlink !== false) {
                 back.href = `#project-ref-${slug}-${note.number}`;
                 back.dataset.articleJump = `project-ref-${slug}-${note.number}`;
                 back.setAttribute('role', 'doc-backlink');
                 back.setAttribute('aria-label', `Back to reference ${note.number}`);
               }
-              text.append('[', back, '] ');
+              text.append(back, ' ');
             }
             appendInline(text, paragraph);
             entry.append(text);

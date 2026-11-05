@@ -54,7 +54,7 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
 .serif-site .serif-main { grid-column: 1; grid-row: 2; min-width: 0; margin-top: 72px; }
 .serif-site .serif-page-title { margin: 0; font-size: 40px; line-height: 44px; font-weight: 400; letter-spacing: -.025em; }
 .serif-site .serif-page-intro { max-width: 39ch; margin: 16px 0 0; font-size: 18px; line-height: 28px; }
-.serif-site .serif-footer { grid-column: 1; grid-row: 3; display: grid; gap: 8px; min-width: 0; margin-top: 72px; padding-top: 24px; border-top: 1px solid var(--rule); font-size: 13px; line-height: 24px; }
+.serif-site .serif-footer { grid-column: 1; grid-row: 3; display: grid; gap: 8px; min-width: 0; margin-top: 96px; padding-top: 24px; border-top: 1px solid var(--rule); font-size: 13px; line-height: 24px; }
 .serif-site .serif-footer a { display: inline-flex; align-items: center; width: fit-content; min-height: 44px; text-decoration: none; }
 .serif-site .serif-email { max-width: 100%; overflow-wrap: anywhere; }
 .serif-site .serif-footer-links { display: flex; flex-wrap: wrap; gap: 4px 24px; }
@@ -63,12 +63,12 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
 .serif-site .work-project { min-width: 0; margin: 0; }
 .serif-site .work-project-open { display: block; min-width: 0; text-decoration: none; }
 .serif-site .work-project-image { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; background: #f0edf3; }
-.serif-site .work-project-title { margin: 14px 0 0; font-size: 18px; line-height: 23px; font-weight: 400; letter-spacing: 0; }
+.serif-site .work-project-title { margin: 14px 0 0; font-size: 16px; line-height: 22px; font-weight: 400; letter-spacing: 0; }
 .serif-site .work-project-method { margin: 1px 0 0; color: var(--page-text); font-size: 16px; line-height: 22px; }
 .serif-site .work-project-open:hover .work-project-title { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
 .serif-site[data-page='work'] .work-coming-soon { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; min-width: 0; min-height: 180px; aspect-ratio: 4 / 3; padding: 24px; color: var(--muted); }
 .serif-site[data-page='work'] .work-coming-cat { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: 400; font-variant-ligatures: none; letter-spacing: 0; line-height: 1.1; text-align: left; white-space: pre; }
-.serif-site[data-page='work'] .work-coming-soon p { margin: 0; font-size: 16px; line-height: 24px; }
+.serif-site[data-page='work'] .work-coming-soon p { margin: 0; font-family: var(--secondary-font); font-size: 16px; line-height: 24px; }
 
 /* Work articles keep the existing content and image viewer in document flow. */
 .serif-site .work-article { position: static; inset: auto; z-index: auto; width: auto; height: auto; overflow: visible; scrollbar-gutter: auto; background: #fff; color: var(--page-text); overscroll-behavior: auto; }
@@ -143,9 +143,9 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
   .serif-site .serif-main { margin-top: 40px; }
   .serif-site .serif-page-title { font-size: 34px; line-height: 38px; }
   .serif-site .serif-page-intro { max-width: 34ch; margin-top: 14px; font-size: 17px; line-height: 26px; }
-  .serif-site .serif-footer { margin-top: 48px; }
+  .serif-site .serif-footer { margin-top: 64px; }
   .serif-site .work-project-grid { grid-template-columns: minmax(0, 1fr); row-gap: 32px; margin-top: 0; }
-  .serif-site .work-project-title { font-size: 18px; line-height: 23px; }
+  .serif-site .work-project-title { font-size: 16px; line-height: 22px; }
   .serif-site .work-article .project-toolbar { gap: 8px 16px; }
   .serif-site .work-article .project-view-number { margin-left: auto; }
   .serif-site .work-article .project-view-meta { order: 3; flex-basis: 100%; }

@@ -316,6 +316,15 @@ test('compiled apps preserve theme preferences, individual Art selection/history
     artRoot.querySelector('[data-image-zoom]').click(); await flush();
     assert.equal(artRoot.querySelector('[data-image-canvas]').hasAttribute('data-zoomed'), true);
     assert.ok(parseInt(artRoot.querySelector('[data-image-scale]').textContent) > fitted);
+    const scaleControl = artRoot.querySelector('[data-image-scale]');
+    assert.equal(scaleControl.tagName, 'BUTTON');
+    scaleControl.click(); await flush();
+    assert.equal(scaleControl.textContent, '100%');
+    for (let i = 0; i < 8; i++) artRoot.querySelector('[data-image-zoom]').click();
+    await flush();
+    assert.equal(scaleControl.textContent, '400%');
+    key('1', fullImage); await flush();
+    assert.equal(scaleControl.textContent, '100%');
     key('ArrowRight', fullImage); await flush();
     assertArtwork(1);
     assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, viewerAddress, 'inspection does not select another artwork or change the URL');

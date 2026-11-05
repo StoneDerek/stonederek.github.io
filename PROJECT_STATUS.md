@@ -1,5 +1,13 @@
 # Portfolio continuation
 
+## Current review corrections — November 5, 2026
+
+Work cards show Untitled #1–#3 on the first line and their complete existing subject/method text on the second line; both use 16px type. More coming soon uses the secondary font. The displayed Derek_Stone underscore is 70% of the surrounding name size. Footer separation is 96px on desktop and 64px on phones while retaining its shared left edge and bottom-of-short-page behavior.
+
+Navigation chooses one pure #000000 or #ffffff ink per whole source image, cached and shared across every line that overlaps that image. Local per-line brightness sampling is removed. Full bracketed note markers, including the brackets, use the accent and have no underline. The Art thumbnail strip uses the available gallery width; clicks and dragging remain, while wheel input is left to page scrolling. Artwork titles are nudged 12px left of the selected photo edge.
+
+The native image viewer uses secondary type, regular labels, flat controls and an opaque theme-colored toolbar. Zoom can magnify to 400% of source size, with finer 25% steps. Clicking the percentage or pressing 1 opens actual size; Fit or 0 restores the fitted view. Cursor-centered wheel zoom, panning, touch pinch and existing history/focus behavior remain available inside the viewer.
+
 ## Detailed corrections — November 5, 2026
 
 Footer content uses compact rows and a wrapping utility-link group in the secondary mono font; links and the theme toggle no longer impose 44px row heights. The update date uses the same compact line spacing. Home action labels use the secondary font and the linked values use the existing blue-violet accent. The masthead reads Derek_Stone as plain text with no Home link or hover underline; the existing /Work, /About and /Art suffixes remain conditional, with no literal parentheses. Links and enabled clickable controls use the existing accent on hover and keyboard focus, including image controls, without recoloring image pixels.

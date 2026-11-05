@@ -5,7 +5,7 @@ export function fitImage(width, height, viewportWidth, viewportHeight) {
   const fit = Math.min(1, viewportWidth / width, viewportHeight / height);
   return constrainImage({
     width: width * fit, height: height * fit, viewportWidth, viewportHeight,
-    fit, maxZoom: 1 / fit, zoom: 1, x: 0, y: 0
+    fit, maxZoom: 4 / fit, zoom: 1, x: 0, y: 0
   });
 }
 

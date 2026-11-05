@@ -64,9 +64,8 @@ test('Work contains exactly the three current projects with the RAG hierarchy an
     assert.ok(root);
     const cards = [...doc.querySelectorAll('[data-work-project]')];
     assert.deepEqual(cards.map(card => card.dataset.workProject), ['acoustic-drone-detection', 'rag-chatbot', '2d-lightning-simulation']);
-    assert.deepEqual(cards.map(card => card.querySelector('h2').textContent), ['Acoustic Drone Detection', 'RAG Chatbot', '2D Lightning Simulation']);
-    assert.equal(cards[1].querySelector('.work-project-method').textContent, 'informed Academic Advising');
-    assert.equal(cards[2].querySelector('.work-project-method').textContent, 'of a Probabilistic Potential Model');
+    assert.deepEqual(cards.map(card => card.querySelector('h2').textContent), ['Untitled #1', 'Untitled #2', 'Untitled #3']);
+    assert.deepEqual(cards.map(card => card.querySelector('.work-project-method').textContent), ['Acoustic Drone Detection with CNN Spectrogram Analysis', 'RAG Chatbot informed Academic Advising', '2D Lightning Simulation of a Probabilistic Potential Model']);
     for (const card of cards) {
       assert.equal(card.getAttribute('href'), `/projects/#project=${card.dataset.workProject}`);
       const image = card.querySelector('img');

@@ -224,7 +224,7 @@ test('a held Art drag visibly follows fractional movement, then springs to its r
   } finally { await s.close(); }
 });
 
-test('thumbnail click, drag and wheel keep the rail coupled to the gallery and commit once per gesture', async () => {
+test('thumbnail clicks and dragging select artwork while wheel input stays available to the page', async () => {
   const s = await scene('/art/#artwork=02', { reduced: false });
   try {
     let entries = s.window.history.length;
@@ -245,13 +245,12 @@ test('thumbnail click, drag and wheel keep the rail coupled to the gallery and c
     for (let i = 0; i < 3; i++) {
       const event = new s.window.WheelEvent('wheel', { deltaY: 22, bubbles: true, cancelable: true });
       s.rail.dispatchEvent(event);
-      assert.equal(event.defaultPrevented, true);
+      assert.equal(event.defaultPrevented, false, 'the thumbnail bar does not intercept page scrolling');
       await s.frame();
     }
-    assert.ok(s.translation() < wheelStart);
-    assert.equal(s.window.history.length, entries, 'wheel samples share a single unfinished gesture');
-    await s.settle(); s.assertArtwork(3);
-    assert.equal(s.window.history.length, entries + 1);
+    assert.equal(s.translation(), wheelStart);
+    await s.settle(); s.assertArtwork(2);
+    assert.equal(s.window.history.length, entries, 'wheel input does not select artwork or add history');
   } finally { await s.close(); }
 });
 

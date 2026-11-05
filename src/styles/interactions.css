@@ -32,7 +32,7 @@ input[type='image']:not(:disabled, [aria-disabled='true'], [aria-disabled='true'
 }
 
 /* Existing filled controls need a neutral surface behind accent-colored ink. */
-:where(.skip-link, .serif-skip-link, .image-viewer-close, .image-viewer-zoom, .close-button, .victory-close, .laser-hint button, .portfolio .back-button, .portfolio .source-dialog-close, .portfolio .mobile-controls button, .portfolio .profile-button, .profile-shell .profile-button, .profile-shell .about-projects-link):not(:disabled, [aria-disabled='true'], [aria-disabled='true'] *, [inert], [inert] *):is(:hover, :focus-visible) {
+:where(.skip-link, .serif-skip-link, .portfolio .image-viewer-close, .portfolio .image-viewer-zoom, .close-button, .victory-close, .laser-hint button, .portfolio .back-button, .portfolio .source-dialog-close, .portfolio .mobile-controls button, .portfolio .profile-button, .profile-shell .profile-button, .profile-shell .about-projects-link):not(:disabled, [aria-disabled='true'], [aria-disabled='true'] *, [inert], [inert] *):is(:hover, :focus-visible) {
   background: var(--native-canvas, var(--canvas, #fff)) !important;
   box-shadow: inset 0 0 0 1px var(--interaction-accent);
 }
@@ -45,4 +45,11 @@ input[type='image']:not(:disabled, [aria-disabled='true'], [aria-disabled='true'
   color: var(--ink) !important;
   outline: 2px solid var(--interaction-accent) !important;
   outline-offset: -3px;
+}
+
+/* Each complete bracketed note marker is one accent-colored, un-underlined link. */
+.project-noteref a,
+.project-footnotes .footnote-number {
+  color: var(--interaction-accent) !important;
+  text-decoration: none !important;
 }

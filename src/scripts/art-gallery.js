@@ -62,8 +62,6 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
   let drag = null;
   let dragFrame = 0;
   let pendingDrag = null;
-  let wheelPosition = null;
-  let wheelTimer = 0;
   let resizeFrame = 0;
   let suppressClickUntil = 0;
   let resolvedAddress = null;
@@ -250,12 +248,6 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
     root.classList.remove('is-moving');
   }
 
-  function stopWheel() {
-    view.clearTimeout(wheelTimer);
-    wheelTimer = 0;
-    wheelPosition = null;
-  }
-
   function stopDragFrame() {
     view.cancelAnimationFrame(dragFrame);
     dragFrame = 0;
@@ -286,7 +278,7 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
       alignSelectionFrame();
       restorePanelAccess();
       root.classList.remove('is-moving');
-      root.dataset.artSettled = String(wheelPosition === null && Math.abs(position - Math.round(position)) < .001);
+      root.dataset.artSettled = String(Math.abs(position - Math.round(position)) < .001);
       if (focusThumbnail) choices[selected].focus({ preventScroll: true });
       if (announce && announcement) announcement.textContent = `Untitled #${selected + 1}, artwork ${selected + 1} of ${items.length}`;
       if (history) writeAddress(selected);
@@ -317,13 +309,12 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
 
   function select(index, options) {
     cancelDrag();
-    stopWheel();
     revealGallery();
     animateTo(index, options);
   }
 
   function showPuzzle() {
-    cancelDrag(); stopWheel(); stopAnimation(); closeOverlays();
+    cancelDrag(); stopAnimation(); closeOverlays();
     animateLift(0, { duration: 0 });
     render(Math.round(position));
     root.dataset.artSettled = 'true';
@@ -350,7 +341,7 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
   function beginDrag(event, surface, unit) {
     if (!event.isPrimary || event.button !== 0 || doc.querySelector('dialog[open]') || drag || !puzzle.hidden) return false;
     suppressClickUntil = 0;
-    stopDragFrame(); stopWheel(); stopAnimation();
+    stopDragFrame(); stopAnimation();
     destination = position;
     const capture = event.nativeTouch ? null : event.target.closest('button') || surface;
     const pointerTouch = event.pointerType === 'touch';
@@ -473,26 +464,10 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
     listen(surface, 'selectstart', event => event.preventDefault());
     listen(surface, 'dragstart', event => event.preventDefault());
   }
-  listen(rail, 'wheel', event => {
-    if (event.ctrlKey || doc.querySelector('dialog[open]') || drag || !puzzle.hidden) return;
-    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-    if (!delta) return;
-    event.preventDefault();
-    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rail.clientWidth : 1;
-    wheelPosition = clamp((wheelPosition ?? position) + delta * unit / stride);
-    animateTo(wheelPosition, { response: 140, announce: false, history: false });
-    root.dataset.artSettled = 'false';
-    view.clearTimeout(wheelTimer);
-    wheelTimer = view.setTimeout(() => {
-      const next = Math.round(wheelPosition);
-      wheelPosition = null; wheelTimer = 0;
-      animateTo(next);
-    }, 160);
-  }, { passive: false });
   function settleInterrupted({ immediate = false } = {}) {
     const target = Math.round(drag ? drag.start : destination);
-    const history = !drag && (animationHistory || wheelPosition !== null);
-    cancelDrag(); stopWheel();
+    const history = !drag && animationHistory;
+    cancelDrag();
     if (!puzzle.hidden) { stopAnimation(); return; }
     animateTo(target, { immediate, velocity: 0, history });
   }
@@ -527,7 +502,7 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
   return () => {
     if (disposed) return;
     disposed = true;
-    cancelDrag(); stopWheel(); stopAnimation();
+    cancelDrag(); stopAnimation();
     view.cancelAnimationFrame(liftFrame);
     view.cancelAnimationFrame(resizeFrame);
     controller.abort();

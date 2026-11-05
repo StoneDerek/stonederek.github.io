@@ -13,6 +13,7 @@ export function mountProjectImageViewer(root, article, { reducedMotion } = {}) {
   const scaleLabel = dialog.querySelector('[data-image-scale]');
   const label = dialog.querySelector('[data-image-label]');
   const canvas = dialog.querySelector('[data-image-canvas]');
+  const zoomStep = 1.25;
   const doc = root.ownerDocument;
   const view = doc.defaultView;
   reducedMotion ||= view.matchMedia('(prefers-reduced-motion: reduce)');
@@ -67,7 +68,9 @@ export function mountProjectImageViewer(root, article, { reducedMotion } = {}) {
     fitButton.setAttribute('aria-disabled', String(target.zoom <= 1.001));
     // Percentages refer to source pixels: 100% is actual size.
     scaleLabel.textContent = `${Math.round(target.zoom * image.fit * 100)}%`;
-    scaleLabel.setAttribute('aria-label', `Zoom level: ${scaleLabel.textContent}${target.zoom <= 1.001 ? ', fitted' : ''}`);
+    const actualSize = Math.abs(target.zoom * image.fit - 1) < .001;
+    scaleLabel.setAttribute('aria-disabled', String(actualSize));
+    scaleLabel.setAttribute('aria-label', `Zoom level: ${scaleLabel.textContent}${target.zoom <= 1.001 ? ', fitted' : ''}. ${actualSize ? 'Actual size' : 'Show actual size (100%)'}`);
   }
 
   function setZoom(level, point, smooth = false) {
@@ -214,8 +217,13 @@ export function mountProjectImageViewer(root, article, { reducedMotion } = {}) {
     animate({ opacity: 0, transform: 'scale(.985)' }, { opacity: 1, transform: 'none' }, 180);
   });
   listen(fullImage, 'load', layout);
-  listen(zoomButton, 'click', () => zoomBy(1.5));
-  listen(zoomOut, 'click', () => zoomBy(1 / 1.5));
+  const actualSize = () => {
+    if (!image || Math.abs((zoomTarget || image).zoom * image.fit - 1) < .001) return;
+    clearPointers(); setZoom(1 / image.fit, undefined, true);
+  };
+  listen(zoomButton, 'click', () => zoomBy(zoomStep));
+  listen(zoomOut, 'click', () => zoomBy(1 / zoomStep));
+  listen(scaleLabel, 'click', actualSize);
   listen(fitButton, 'click', () => {
     if (!image || (zoomTarget || image).zoom <= 1.001) return;
     clearPointers(); setZoom(1, undefined, true);
@@ -290,8 +298,9 @@ export function mountProjectImageViewer(root, article, { reducedMotion } = {}) {
     if (!image || closing || event.ctrlKey || event.metaKey || event.altKey) return;
     const amount = event.shiftKey ? 160 : 48;
     const directions = { ArrowLeft: [amount, 0], ArrowRight: [-amount, 0], ArrowUp: [0, amount], ArrowDown: [0, -amount] };
-    if (['+', '='].includes(event.key)) zoomBy(1.5);
-    else if (['-', '−', '_'].includes(event.key)) zoomBy(1 / 1.5);
+    if (['+', '='].includes(event.key)) zoomBy(zoomStep);
+    else if (['-', '−', '_'].includes(event.key)) zoomBy(1 / zoomStep);
+    else if (event.key === '1') actualSize();
     else if (['0', 'f', 'F'].includes(event.key)) setZoom(1, undefined, true);
     else if (directions[event.key] && image.zoom > 1.001) {
       cancelMotion(); stopZoom();

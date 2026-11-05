@@ -1,13 +1,10 @@
-const darkInk = '#211b2b';
-const lightInk = '#eeebf3';
-const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+const darkInk = '#000000';
+const lightInk = '#ffffff';
 const channel = value => {
   const scaled = value / 255;
   return scaled <= .04045 ? scaled / 12.92 : ((scaled + .055) / 1.055) ** 2.4;
 };
 const luminance = ([red, green, blue]) => .2126 * channel(red) + .7152 * channel(green) + .0722 * channel(blue);
-const darkLuminance = luminance([33, 27, 43]);
-const lightLuminance = luminance([238, 235, 243]);
 const contrast = (first, second) => (Math.max(first, second) + .05) / (Math.min(first, second) + .05);
 
 export function intersectRectangles(first, second) {
@@ -36,20 +33,16 @@ export function imagePaintBounds(rect, width, height, fit = 'fill', position = '
   return { left, top, right: left + drawnWidth, bottom: top + drawnHeight, width: drawnWidth, height: drawnHeight };
 }
 
-// Evaluate the source region beneath the link, not the photo's overall average.
-export function sourceRegionInk(pixels, width, height, region, backdrop = [255, 255, 255]) {
-  const left = clamp(Math.floor(region.left * width), 0, width - 1);
-  const top = clamp(Math.floor(region.top * height), 0, height - 1);
-  const right = clamp(Math.ceil(region.right * width), left + 1, width);
-  const bottom = clamp(Math.ceil(region.bottom * height), top + 1, height);
+// One source-wide choice is shared by every navigation line over the image.
+export function sourceImageInk(pixels) {
   let total = 0, count = 0;
-  for (let y = top; y < bottom; y++) for (let x = left; x < right; x++) {
-    const index = (y * width + x) * 4, alpha = pixels[index + 3] / 255;
-    total += luminance([0, 1, 2].map(channel => pixels[index + channel] * alpha + backdrop[channel] * (1 - alpha)));
+  for (let index = 0; index + 3 < pixels.length; index += 4) {
+    const alpha = pixels[index + 3] / 255;
+    total += luminance([0, 1, 2].map(channel => pixels[index + channel] * alpha + 255 * (1 - alpha)));
     count++;
   }
   const average = total / Math.max(1, count);
-  return contrast(darkLuminance, average) >= contrast(lightLuminance, average) ? darkInk : lightInk;
+  return contrast(0, average) >= contrast(1, average) ? darkInk : lightInk;
 }
 
 export function mountNavigationContrast(nav) {
@@ -60,7 +53,7 @@ export function mountNavigationContrast(nav) {
   const links = [...nav.querySelectorAll('a[href]')];
   const controller = new view.AbortController();
   const desktop = view.matchMedia('(min-width: 880px)');
-  const samples = new WeakMap();
+  const inks = new WeakMap();
   const rendered = new WeakMap();
   let frame = 0, disposed = false;
   const listen = (target, type, handler, options) => target?.addEventListener(type, handler,
@@ -72,23 +65,23 @@ export function mountNavigationContrast(nav) {
     rendered.delete(link);
   };
 
-  function pixelsFor(image) {
+  function inkFor(image) {
     const source = image.currentSrc || image.src;
-    const old = samples.get(image);
-    if (old?.source === source) return old.pixels;
+    const old = inks.get(image);
+    if (old?.source === source) return old.ink;
     if (!(image.complete && image.naturalWidth > 0)) return null;
     try {
       const canvas = doc.createElement('canvas');
       canvas.width = canvas.height = 96;
       const context = canvas.getContext('2d', { willReadFrequently: true });
-      if (!context) return null;
+      if (!context) { inks.set(image, { source, ink: null }); return null; }
       context.drawImage(image, 0, 0, 96, 96);
-      const pixels = context.getImageData(0, 0, 96, 96).data;
-      samples.set(image, { source, pixels });
-      return pixels;
+      const ink = sourceImageInk(context.getImageData(0, 0, 96, 96).data);
+      inks.set(image, { source, ink });
+      return ink;
     } catch {
       // Cross-origin imagery without CORS cannot be sampled; keep normal ink.
-      samples.set(image, { source, pixels: null });
+      inks.set(image, { source, ink: null });
       return null;
     }
   }
@@ -121,7 +114,7 @@ export function mountNavigationContrast(nav) {
           top: clipY ? clip.top : visible.top, bottom: clipY ? clip.bottom : visible.bottom
         });
       }
-      if (visible) result.push({ image, painted, visible });
+      if (visible) result.push({ image, visible });
     }
     return result;
   }
@@ -131,22 +124,14 @@ export function mountNavigationContrast(nav) {
     if (disposed || doc.hidden) return;
     if (!desktop.matches || nav.getBoundingClientRect().width === 0) { links.forEach(clear); return; }
     const images = readImages();
-    const background = view.getComputedStyle(nav.closest('.serif-site') || doc.body).backgroundColor.match(/[\d.]+/g);
-    const backdrop = background?.length >= 3 ? background.slice(0, 3).map(Number) : [255, 255, 255];
     const updates = links.map(link => {
       const rect = link.getBoundingClientRect();
       const zones = [];
       for (const image of images) {
         const overlap = intersectRectangles(rect, image.visible);
         if (!overlap) continue;
-        const pixels = pixelsFor(image.image);
-        if (!pixels) continue;
-        const ink = sourceRegionInk(pixels, 96, 96, {
-          left: (overlap.left - image.painted.left) / image.painted.width,
-          right: (overlap.right - image.painted.left) / image.painted.width,
-          top: (overlap.top - image.painted.top) / image.painted.height,
-          bottom: (overlap.bottom - image.painted.top) / image.painted.height
-        }, backdrop);
+        const ink = inkFor(image.image);
+        if (!ink) continue;
         zones.unshift({ ink, x: overlap.left - rect.left, y: overlap.top - rect.top, width: overlap.width, height: overlap.height });
       }
       return { link, zones };
@@ -176,7 +161,7 @@ export function mountNavigationContrast(nav) {
   listen(view, 'resize', schedule, { passive: true });
   listen(desktop, 'change', schedule);
   listen(doc, 'portfolio:theme-change', schedule);
-  listen(doc, 'load', event => { if (event.target?.tagName === 'IMG') { samples.delete(event.target); schedule(); } }, { capture: true });
+  listen(doc, 'load', event => { if (event.target?.tagName === 'IMG') { inks.delete(event.target); schedule(); } }, { capture: true });
   listen(doc, 'visibilitychange', () => {
     if (doc.hidden) { view.cancelAnimationFrame(frame); frame = 0; }
     else schedule();

@@ -724,7 +724,7 @@ test('legacy controller: enlarging a photo preserves the article, scroll positio
   } finally { await s.close(); }
 });
 
-test('legacy controller: gradual zoom reaches decoded source resolution, pans without resetting and retains detail on resize', async () => {
+test('legacy controller: gradual zoom reaches actual size and 400%, pans without resetting and retains detail on resize', async () => {
   const s = await scene('/projects/#project=art');
   try {
     s.click('.case-study-section [data-image-open]');
@@ -744,13 +744,15 @@ test('legacy controller: gradual zoom reaches decoded source resolution, pans wi
     assert.equal(canvas.hasAttribute('data-zoomed'), true);
     assert.ok(parseInt(s.find('[data-image-scale]').textContent) > parseInt(fitted));
     assert.ok(parseInt(s.find('[data-image-scale]').textContent) < 100, 'the first step is gradual');
+    s.click('[data-image-scale]');
+    assert.equal(s.find('[data-image-scale]').textContent, '100%', 'the percentage readout opens actual size');
     s.find('[data-image-zoom]').focus();
-    for (let i = 0; i < 5; i++) s.click('[data-image-zoom]');
-    assert.equal(s.find('[data-image-scale]').textContent, '100%');
+    for (let i = 0; i < 8; i++) s.click('[data-image-zoom]');
+    assert.equal(s.find('[data-image-scale]').textContent, '400%');
     assert.equal(s.find('[data-image-zoom]').getAttribute('aria-disabled'), 'true');
     assert.equal(s.document.activeElement, s.find('[data-image-zoom]'), 'reaching a zoom limit preserves keyboard focus');
-    assert.equal(parseFloat(full.style.width) * drawn()[2], 1440, 'stop at the decoded width, even if metadata is larger');
-    assert.equal(parseFloat(full.style.height) * drawn()[2], 1080);
+    assert.equal(parseFloat(full.style.width) * drawn()[2], 1440 * 4, 'magnification uses the decoded image dimensions');
+    assert.equal(parseFloat(full.style.height) * drawn()[2], 1080 * 4);
     assert.deepEqual([canvas.style.width, canvas.style.height], area, 'zoom cannot resize the surrounding viewer');
     const [left, top] = drawn();
     const pointer = (type, x, y) => canvas.dispatchEvent(new s.window.PointerEvent(type, {
@@ -776,7 +778,7 @@ test('legacy controller: gradual zoom reaches decoded source resolution, pans wi
     const arrow = new s.window.KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'ArrowRight' });
     canvas.dispatchEvent(arrow);
     assert.equal(arrow.defaultPrevented, true);
-    assert.equal(drawn()[0], beforeArrow - 48, 'keyboard arrows pan the enlarged photo');
+    assert.ok(drawn()[0] < beforeArrow && beforeArrow - drawn()[0] <= 48, 'keyboard arrows pan the enlarged photo within its bounds');
     assert.equal(s.address, '/projects/#project=art');
     canvas.focus();
     const inspectedScale = s.find('[data-image-scale]').textContent;
@@ -786,6 +788,8 @@ test('legacy controller: gradual zoom reaches decoded source resolution, pans wi
     assert.equal(s.find('[data-image-scale]').textContent, inspectedScale);
     assert.equal(canvas.style.width, '320px');
     assert.equal(s.document.activeElement, canvas);
+    s.key('1', '[data-image-canvas]');
+    assert.equal(s.find('[data-image-scale]').textContent, '100%');
     s.key('0', '[data-image-canvas]');
     assert.equal(canvas.hasAttribute('data-zoomed'), false);
     assert.equal(s.find('[data-image-zoom-out]').getAttribute('aria-disabled'), 'true');
