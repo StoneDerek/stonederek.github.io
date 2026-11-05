@@ -22,19 +22,23 @@ test('pan boundaries keep every image edge reachable without exposing empty spac
   for (const [width, height] of [[4000, 3000], [3000, 4000], [4000, 500], [500, 4000]]) {
     const image = zoomImage(fitImage(width, height, 800, 600), 100);
     const start = panImage(image, 1e6, 1e6), end = panImage(image, -1e6, -1e6);
-    const expectedX = width <= 800 ? (800 - width) / 2 : 0;
-    const expectedY = height <= 600 ? (600 - height) / 2 : 0;
+    const expectedX = width * 4 <= 800 ? (800 - width * 4) / 2 : 0;
+    const expectedY = height * 4 <= 600 ? (600 - height * 4) / 2 : 0;
     near(start.x, expectedX); near(start.y, expectedY);
-    near(end.x, width <= 800 ? expectedX : 800 - width);
-    near(end.y, height <= 600 ? expectedY : 600 - height);
+    near(end.x, width * 4 <= 800 ? expectedX : 800 - width * 4);
+    near(end.y, height * 4 <= 600 ? expectedY : 600 - height * 4);
   }
 });
 
-test('zoom stops at source resolution and never makes a small photo blurry', () => {
+test('zoom reaches actual size and can magnify up to 400% while Fit remains unscaled', () => {
   for (const [width, height] of [[4000, 3000], [1440, 1080], [160, 100]]) {
-    const image = zoomImage(fitImage(width, height, 800, 600), 100);
-    near(image.width * image.zoom, width);
-    near(image.height * image.zoom, height);
+    const fit = fitImage(width, height, 800, 600);
+    const actual = zoomImage(fit, 1 / fit.fit);
+    near(actual.width * actual.zoom, width);
+    near(actual.height * actual.zoom, height);
+    const image = zoomImage(fit, 100);
+    near(image.width * image.zoom, width * 4);
+    near(image.height * image.zoom, height * 4);
     const fitted = zoomImage(image, .001);
     near(fitted.zoom, 1);
     assert.ok(fitted.width <= 800 && fitted.height <= 600);

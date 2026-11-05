@@ -7,6 +7,18 @@ import { galleryAddress, resolveGalleryLocation, sectionForPanel, previewAddress
 const projects = JSON.parse(await readFile(new URL('../src/data/projects.json', import.meta.url), 'utf8'));
 const panels = galleryPanels(projects);
 
+test('Art entry keeps the existing gallery and mirror puzzle reachable', () => {
+  const art = panels.findIndex(panel => panel.slug === 'art');
+  for (const base of ['/', '/portfolio/']) {
+    assert.deepEqual(resolveGalleryLocation(`${base}art/`, panels), { panel: art, article: null, anchor: '' });
+    assert.deepEqual(resolveGalleryLocation(`${base}art/index.html#project=art`, panels), { panel: art, article: art, anchor: '' });
+    assert.deepEqual(resolveGalleryLocation(`${base}art/#links`, panels), { panel: panels.length, article: null, anchor: '' });
+    assert.equal(galleryAddress(art, panels, { base, galleryPath: 'art/' }), `${base}art/`);
+    assert.equal(galleryAddress(art, panels, { base, galleryPath: 'art/', article: true }), `${base}art/#project=art`);
+    assert.equal(galleryAddress(panels.length, panels, { base, galleryPath: 'art/' }), `${base}art/#links`);
+  }
+});
+
 test('Home and About are content panels before the existing unmodified projects', () => {
   assert.equal(firstProjectPanel, 2);
   assert.deepEqual(panels.slice(0, 2).map(panel => [panel.kind, panel.title]), [['home', 'Home'], ['about', 'About']]);
@@ -84,16 +96,4 @@ test('offline addresses preserve every panel, article, and profile anchor', () =
   for (const address of addresses) assert.equal(previewAddress(previewHash(address)), address);
   assert.equal(previewAddress('#missing'), '/');
   assert.equal(previewAddress(''), '/');
-});
-
-test('only one shared gallery component serves all three direct entry routes', async () => {
-  for (const [page, section] of [['index', 'home'], ['about', 'about'], ['projects', 'projects']]) {
-    const source = await readFile(new URL(`../src/pages/${page}.astro`, import.meta.url), 'utf8');
-    assert.match(source, /import Portfolio from/);
-    assert.ok(source.includes(`<Portfolio section="${section}" />`));
-  }
-  const layout = await readFile(new URL('../src/layouts/Layout.astro', import.meta.url), 'utf8');
-  const header = await readFile(new URL('../src/components/SiteHeader.astro', import.meta.url), 'utf8');
-  assert.doesNotMatch(layout, /ClientRouter|section-navigation/);
-  assert.doesNotMatch(header, /page-links/);
 });

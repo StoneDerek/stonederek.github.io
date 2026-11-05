@@ -1,0 +1,55 @@
+/* Shared feedback uses the established accent without changing idle treatments. */
+:root { --interaction-accent: var(--native-focus, #5b3fd6); }
+:root[data-theme='dark'] { --interaction-accent: var(--native-focus, #ac9cff); }
+@media (prefers-color-scheme: dark) {
+  :root[data-appearance-enabled]:not([data-theme]) { --interaction-accent: var(--native-focus, #ac9cff); }
+}
+.serif-site { --interaction-accent: var(--serif-accent, var(--native-focus, #5b3fd6)); }
+
+/* This interaction-only override also covers the more specific Art/Work links. */
+:where(a[href], button, summary, [role~='button'], [role~='link'], [role~='switch'], input:is([type='button'], [type='submit'], [type='reset'], [type='image'])):not(:disabled, [aria-disabled='true'], [aria-disabled='true'] *, [inert], [inert] *):is(:hover, :focus-visible) {
+  color: var(--interaction-accent) !important;
+}
+:where(a[href], button, summary, [role~='button'], [role~='link'], [role~='switch'], input:is([type='button'], [type='submit'], [type='reset'], [type='image'])):not(:disabled, [aria-disabled='true'], [aria-disabled='true'] *, [inert], [inert] *):is(:hover, :focus-visible) :where(*) {
+  color: inherit !important;
+}
+:where(a[href], button, summary, [role~='button'], [role~='link'], [role~='switch'], input:is([type='button'], [type='submit'], [type='reset'], [type='image'])):not(:disabled, [aria-disabled='true'], [aria-disabled='true'] *, [inert], [inert] *):focus-visible {
+  outline: 2px solid var(--interaction-accent) !important;
+  outline-offset: 3px;
+}
+
+/* Image targets mark the photograph itself, including contain-framed Art. */
+:where(a[href], button, [role~='button'], [role~='link']):has(img):not(:disabled, [aria-disabled='true'], [aria-disabled='true'] *, [inert], [inert] *):is(:hover, :focus-visible) img {
+  outline: 2px solid var(--interaction-accent) !important;
+  outline-offset: -2px;
+}
+:where(a[href], button, [role~='button'], [role~='link']):has(img):not(:disabled, [aria-disabled='true'], [aria-disabled='true'] *, [inert], [inert] *):focus-visible {
+  outline: none !important;
+}
+input[type='image']:not(:disabled, [aria-disabled='true'], [aria-disabled='true'] *, [inert], [inert] *):is(:hover, :focus-visible) {
+  outline: 2px solid var(--interaction-accent) !important;
+  outline-offset: -2px;
+}
+
+/* Existing filled controls need a neutral surface behind accent-colored ink. */
+:where(.skip-link, .serif-skip-link, .portfolio .image-viewer-close, .portfolio .image-viewer-zoom, .close-button, .victory-close, .laser-hint button, .portfolio .back-button, .portfolio .source-dialog-close, .portfolio .mobile-controls button, .portfolio .profile-button, .profile-shell .profile-button, .profile-shell .about-projects-link):not(:disabled, [aria-disabled='true'], [aria-disabled='true'] *, [inert], [inert] *):is(:hover, :focus-visible) {
+  background: var(--native-canvas, var(--canvas, #fff)) !important;
+  box-shadow: inset 0 0 0 1px var(--interaction-accent);
+}
+:where(.caption-link):not(:disabled, [aria-disabled='true'], [aria-disabled='true'] *, [inert], [inert] *):is(:hover, :focus-visible)::before {
+  background: var(--native-canvas, var(--canvas, #fff)) !important;
+}
+
+/* The legacy menu is itself a colored surface; retain its contrast-safe ink. */
+.site-menu :where(a[href], button, summary):not(:disabled, [aria-disabled='true'], [aria-disabled='true'] *, [inert], [inert] *):is(:hover, :focus-visible) {
+  color: var(--ink) !important;
+  outline: 2px solid var(--interaction-accent) !important;
+  outline-offset: -3px;
+}
+
+/* Each complete bracketed note marker is one accent-colored, un-underlined link. */
+.project-noteref a,
+.project-footnotes .footnote-number {
+  color: var(--interaction-accent) !important;
+  text-decoration: none !important;
+}

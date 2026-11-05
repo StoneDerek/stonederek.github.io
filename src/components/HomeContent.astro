@@ -3,25 +3,26 @@ import ThemeControl from './ThemeControl.astro';
 import { appearanceEnabled } from '../scripts/theme.js';
 import { prepareHomeEntrance } from '../scripts/home-entry.js';
 const base = import.meta.env.BASE_URL;
-const { active = false } = Astro.props;
+const { active = false, animate = active, showThemeControl = true } = Astro.props;
+const hasEntryMotion = active && animate;
 ---
-      <section class:list={['home-introduction', { 'has-entry-motion': active }]} data-home-entry={active ? '' : undefined} aria-labelledby="home-title">
+      <section class:list={['home-introduction', { 'has-entry-motion': hasEntryMotion }]} data-home-entry={hasEntryMotion ? '' : undefined} aria-labelledby="home-title">
         <div class="introduction-copy">
-          <h1 id="home-title">Derek Stone</h1>
+          <h1 id="home-title" class="native-profile-title">Derek Stone</h1>
           <span class="introduction-divider" aria-hidden="true"></span>
           <p class="introduction-lead">Hi, I’m Derek.</p>
-          {appearanceEnabled && <ThemeControl />}
+          {appearanceEnabled && showThemeControl && <ThemeControl />}
           <div class="introduction-content">
           <div class="introduction-prose">
             <p>I’m an Electrical Engineering student at <a href="https://www.rose-hulman.edu/" target="_blank" rel="noopener noreferrer">Rose-Hulman Institute of Technology</a>. I have experience in <em>simulation</em> and <em>ML research</em>. I’m looking to get more hands-on experience and exposure to cutting-edge technologies. I’m particularly interested in <strong>semiconductors</strong>, <strong>photonics</strong>, and <strong>hardware design</strong>.</p>
             <p>I love to work on challenging and unique problems, especially when they give me the chance to learn something new. Thank you for taking the time to visit my website, and I hope you’ll enjoy seeing some of the things I’ve done.</p>
           </div>
-          <div class="profile-actions"><a class="profile-button" href={`${base}projects/`} data-site-route="projects">Explore projects</a><a class="profile-text-link" href={`${base}about/`} data-site-route="about">More about me</a></div>
+          <div class="profile-actions"><a class="profile-button" href={`${base}projects/`} data-site-route="projects"><span class="profile-action-label">Explore </span><span class="profile-action-value">projects</span></a><a class="profile-text-link" href={`${base}about/`} data-site-route="about"><span class="profile-action-label">More </span><span class="profile-action-value">about me</span></a></div>
           </div>
         </div>
         <figure class="introduction-photo">
           <img src={`${base}art/home/climbing.webp`} alt="A climber reaching between holds on an indoor climbing wall." width="1536" height="2048" loading={active ? 'eager' : 'lazy'} fetchpriority={active ? 'high' : 'auto'} decoding="async" draggable="false" />
         </figure>
       </section>
-      {active && <script is:inline set:html={`(${prepareHomeEntrance.toString()})(document.currentScript.previousElementSibling);`} />}
+      {hasEntryMotion && <script is:inline set:html={`(${prepareHomeEntrance.toString()})(document.currentScript.previousElementSibling);`} />}
 

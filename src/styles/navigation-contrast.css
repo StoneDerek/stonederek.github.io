@@ -1,0 +1,18 @@
+/* Contrast zones affect glyphs only; the page and photographs stay unchanged. */
+@media (min-width: 880px) {
+  .serif-navigation-desktop .serif-nav-link[data-nav-image-overlap] {
+    background-image: var(--nav-image-layers);
+    background-position: var(--nav-image-positions);
+    background-size: var(--nav-image-sizes);
+    background-repeat: no-repeat;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  /* Keep adaptive ink over imagery; hover/focus still exposes the chosen accent. */
+  .serif-navigation-desktop .serif-nav-link[data-nav-image-overlap]:is(:hover, :focus-visible) {
+    text-decoration: underline;
+    text-decoration-color: var(--interaction-accent, var(--serif-accent));
+    text-underline-offset: 4px;
+  }
+}

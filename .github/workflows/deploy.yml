@@ -27,7 +27,7 @@ jobs:
       - name: Check portfolio behavior before publishing
         run: |
           npm test
-          node --test checks/portfolio-flows.mjs
+          node --test checks/portfolio-flows.mjs checks/serif-pages.mjs checks/art-gallery.mjs
 
   deploy:
     needs: build

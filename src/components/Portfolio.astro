@@ -11,19 +11,20 @@ import { galleryPanels, firstProjectPanel } from '../data/gallery-panels.js';
 import { resumeURL } from '../data/resume.js';
 const base = import.meta.env.BASE_URL;
 const url = (path) => `${base}${path}`;
-const { section = 'home' } = Astro.props;
+const { section = 'home', initialSlug = '' } = Astro.props;
 const panels = galleryPanels(projects);
-const selected = section === 'home' ? 0 : section === 'about' ? 1 : firstProjectPanel;
+const requestedPanel = panels.findIndex(panel => panel.slug === initialSlug);
+const selected = requestedPanel >= firstProjectPanel ? requestedPanel : section === 'home' ? 0 : section === 'about' ? 1 : firstProjectPanel;
 const palette = panels[selected].palette;
-const first = projects[0];
+const first = projects.find(project => project.slug === initialSlug) || projects[0];
 const linksLogo = ['      _', '     | |', '   __| |___', '  / _` / __|', ' | (_| \\__ \\_', '  \\__,_|___(_)'].join('\n');
 const serialized = JSON.stringify(panels).replace(/</g, '\\u003c');
 ---
-<Layout title={`${site.name} - ${section === 'home' ? 'Portfolio' : section === 'about' ? 'About' : 'Projects'}`} description={section === 'projects' ? `Projects, experiments, and work in progress by ${site.name}.` : section === 'about' ? `About ${site.name}.` : site.description}>
+<Layout title={`${site.name} - ${initialSlug === 'art' ? 'Art' : section === 'home' ? 'Portfolio' : section === 'about' ? 'About' : 'Projects'}`} description={initialSlug === 'art' ? `Art and a personal collection by ${site.name}.` : section === 'projects' ? `Projects, experiments, and work in progress by ${site.name}.` : section === 'about' ? `About ${site.name}.` : site.description}>
   <main id="portfolio" class="portfolio" data-base={base} data-panel-kind={panels[selected].kind} data-initial-panel={selected} style={`--accent:${palette.accent};--ink:${palette.ink};--caption-color:${palette.caption || palette.accent}`}>
     <a class="skip-link" href={section === 'home' ? '#home-title' : section === 'about' ? '#about-title' : '#project-caption'}>Skip to content</a>
 
-    <SiteHeader page={section} unified />
+    <SiteHeader page={section} unified initialProject={first} />
 
 
     <section class="carousel" aria-roledescription="carousel" aria-label="Home, About, and selected projects" tabindex="0">
@@ -135,14 +136,14 @@ const serialized = JSON.stringify(panels).replace(/</g, '\\u003c');
         <span class="image-viewer-label" data-image-label>Image</span>
         <div class="image-viewer-zoom-controls" role="group" aria-label="Image zoom">
           <button type="button" class="image-viewer-zoom" data-image-zoom-out aria-label="Zoom out" title="Zoom out (−)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg></button>
-          <span class="image-viewer-scale" data-image-scale aria-label="Zoom level">100%</span>
+        <button type="button" class="image-viewer-scale" data-image-scale aria-label="View at actual size (100%)" title="Actual size (1)">100%</button>
           <button type="button" class="image-viewer-zoom" data-image-zoom aria-label="Zoom in" title="Zoom in (+)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14" /></svg></button>
           <button type="button" class="image-viewer-zoom image-viewer-fit" data-image-fit aria-label="Fit image to viewer" title="Fit image (0)">Fit</button>
         </div>
         <button type="button" class="image-viewer-close" data-image-close aria-label="Close enlarged image" title="Close enlarged image" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
       </div>
       <figure class="image-viewer-figure">
-        <div class="image-viewer-canvas" data-image-canvas tabindex="0" role="group" aria-label="Image inspection. Use plus and minus to zoom, arrow keys to pan, and zero to fit."><img data-image-full alt="" decoding="async" draggable="false" /></div>
+      <div class="image-viewer-canvas" data-image-canvas tabindex="0" role="group" aria-label="Image inspection. Use plus and minus to zoom, arrow keys to pan, one for actual size, and zero to fit."><img data-image-full alt="" decoding="async" draggable="false" /></div>
         <figcaption data-image-caption hidden></figcaption>
       </figure>
     </dialog>

@@ -1,0 +1,43 @@
+/* Native viewer utilities use the same secondary type as the page utilities. */
+.serif-site[data-page] .image-viewer-toolbar {
+  gap: 12px;
+  padding: 4px 12px;
+  background: var(--canvas);
+  color: var(--page-text);
+  font-family: var(--secondary-font);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.serif-site[data-page] .image-viewer-toolbar :is(.image-viewer-label, .image-viewer-scale, button) {
+  font: inherit;
+}
+.serif-site[data-page] .image-viewer-zoom-controls {
+  gap: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.serif-site[data-page] .image-viewer-toolbar :is(.image-viewer-zoom, .image-viewer-close, .image-viewer-scale) {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+}
+.serif-site[data-page] .image-viewer-toolbar :is(.image-viewer-zoom, .image-viewer-close, .image-viewer-scale):hover {
+  background: transparent;
+}
+.serif-site[data-page] .image-viewer-scale { display: grid; place-items: center; }
+.serif-site[data-page] .image-viewer-close svg {
+  width: 16px;
+  height: 16px;
+}
+@media (max-width: 600px) {
+  .serif-site[data-page] .image-viewer-toolbar { gap: 8px; }
+}

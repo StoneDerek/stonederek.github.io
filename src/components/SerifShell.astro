@@ -1,0 +1,57 @@
+---
+import site from '../data/site.json';
+import { resumeURL } from '../data/resume.js';
+import { publicationDate } from '../data/publication.js';
+import Layout from '../layouts/Layout.astro';
+import SerifNavigation from './SerifNavigation.astro';
+import ThemeControl from './ThemeControl.astro';
+import { appearanceEnabled } from '../scripts/theme.js';
+import '../styles/serif.css';
+import '../styles/masthead.css';
+import '../styles/refinement.css';
+import '../styles/dark.css';
+
+const { page = 'home', contentId = `${page}-content` } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const mastheadWords = site.name.trim().split(/\s+/);
+const published = publicationDate();
+const labels = { home: 'Portfolio', work: 'Work', about: 'About', art: 'Art', resume: 'Resume' };
+const context = page === 'home' ? '' : labels[page] || '';
+const title = `${site.name} - ${labels[page] || 'Portfolio'}`;
+const description = page === 'work' ? `Projects, experiments, and work in progress by ${site.name}.` : page === 'about' ? `About ${site.name}.` : page === 'art' ? `A personal collection of artworks by ${site.name}.` : page === 'resume' ? `The latest resume for ${site.name}.` : site.description;
+---
+<Layout title={title} description={description}>
+<div
+  id={page === 'work' ? 'work-portfolio' : undefined}
+  class="serif-site"
+  data-page={page}
+  data-work-root={page === 'work' ? '' : undefined}
+  data-base={base}
+  data-owner={page === 'work' ? site.name : undefined}
+>
+  <a class="serif-skip-link" href={`#${contentId}`}>Skip to content</a>
+  <header class="serif-masthead">
+    <div class="serif-brand">
+      <span class="serif-identity"><span>{mastheadWords.map((word, index) => <Fragment>{index > 0 && <span class="serif-name-underscore">_</span>}{word}</Fragment>)}</span></span>
+      {context && <span class="serif-context">/{context}</span>}
+    </div>
+    <details class="serif-mobile-menu" data-serif-menu>
+      <summary>Menu</summary>
+      <SerifNavigation page={page} mode="mobile" />
+    </details>
+  </header>
+  <SerifNavigation page={page} />
+  <main id={contentId} class="serif-main" tabindex="-1">
+    <slot />
+  </main>
+  <footer class="serif-footer">
+    <a class="serif-email" href={`mailto:${site.email}`}>{site.email}</a>
+    <div class="serif-footer-links">
+      <a href={resumeURL(base)} data-resume-link>Resume</a>
+      <a href={site.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn (opens in a new tab)">LinkedIn</a>
+      {appearanceEnabled && <ThemeControl compact={true} />}
+    </div>
+    <span class="publication serif-publication"><time class="menu-published" data-publication-date datetime={published.iso} tabindex="0" aria-describedby="publication-tooltip">Updated {published.label}</time><span class="publication-tooltip" id="publication-tooltip" role="tooltip">Last updated {published.label}</span></span>
+  </footer>
+</div>
+</Layout>

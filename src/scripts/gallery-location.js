@@ -7,7 +7,8 @@ export function sectionForPanel(index) {
 export function resolveGalleryLocation(address, panels) {
   const url = new URL(address, 'https://portfolio.invalid');
   const path = url.pathname.replace(/\/index\.html$/, '/').replace(/\/$/, '');
-  const section = path.endsWith('/about') ? 'about' : path.endsWith('/projects') ? 'projects' : 'home';
+  const artRoute = path.endsWith('/art');
+  const section = path.endsWith('/about') ? 'about' : path.endsWith('/projects') || artRoute ? 'projects' : 'home';
   if (section !== 'projects') {
     let anchor = '';
     try { anchor = decodeURIComponent(url.hash.slice(1)); } catch { /* Ignore malformed anchors. */ }
@@ -20,19 +21,24 @@ export function resolveGalleryLocation(address, panels) {
   if (article >= firstProjectPanel) return { panel: article, article, anchor: '' };
   if (query.has('links')) return { panel: panels.length, article: null, anchor: '' };
   const slide = project(query.get('slide'));
-  return { panel: slide >= firstProjectPanel ? slide : firstProjectPanel, article: null, anchor: '' };
+  const art = project('art');
+  const fallback = artRoute && art >= firstProjectPanel ? art : firstProjectPanel;
+  return { panel: slide >= firstProjectPanel ? slide : fallback, article: null, anchor: '' };
 }
 
-export function galleryAddress(index, panels, { base = '/', article = false, anchor = '' } = {}) {
+export function galleryAddress(index, panels, { base = '/', article = false, anchor = '', galleryPath = 'projects/' } = {}) {
   const root = `${base.replace(/\/$/, '')}/`;
+  const path = galleryPath === 'art/' ? 'art/' : 'projects/';
+  const art = panels.findIndex(panel => panel.slug === 'art');
+  const initial = path === 'art/' && art >= firstProjectPanel ? art : firstProjectPanel;
   const panel = Math.max(0, Math.min(panels.length, Math.round(index)));
   if (article) {
     if (panels[panel]?.kind !== 'project') throw new TypeError('Only project panels have articles');
-    return `${root}projects/#project=${encodeURIComponent(panels[panel].slug)}`;
+    return `${root}${path}#project=${encodeURIComponent(panels[panel].slug)}`;
   }
   if (panel < firstProjectPanel) return `${root}${panel === 1 ? 'about/' : ''}${anchor ? `#${encodeURIComponent(anchor)}` : ''}`;
-  if (panel === panels.length) return `${root}projects/#links`;
-  return `${root}projects/${panel === firstProjectPanel ? '' : `#slide=${encodeURIComponent(panels[panel].slug)}`}`;
+  if (panel === panels.length) return `${root}${path}#links`;
+  return `${root}${path}${panel === initial ? '' : `#slide=${encodeURIComponent(panels[panel].slug)}`}`;
 }
 
 // The downloaded preview uses the same persistent gallery app and hash routes.

@@ -1,5 +1,51 @@
 # Portfolio continuation
 
+## Current review corrections — November 5, 2026
+
+Work cards show Untitled #1–#3 on the first line and their complete existing subject/method text on the second line; both use 16px type. More coming soon uses the secondary font. The displayed Derek_Stone underscore is 70% of the surrounding name size. Footer separation is 96px on desktop and 64px on phones while retaining its shared left edge and bottom-of-short-page behavior.
+
+Navigation chooses one pure #000000 or #ffffff ink per whole source image, cached and shared across every line that overlaps that image. Local per-line brightness sampling is removed. Full bracketed note markers, including the brackets, use the accent and have no underline. The Art thumbnail strip uses the available gallery width; clicks and dragging remain, while wheel input is left to page scrolling. Artwork titles are nudged 12px left of the selected photo edge.
+
+The native image viewer uses secondary type, regular labels, flat controls and an opaque theme-colored toolbar. Zoom can magnify to 400% of source size, with finer 25% steps. Clicking the percentage or pressing 1 opens actual size; Fit or 0 restores the fitted view. Cursor-centered wheel zoom, panning, touch pinch and existing history/focus behavior remain available inside the viewer.
+
+## Detailed corrections — November 5, 2026
+
+Footer content uses compact rows and a wrapping utility-link group in the secondary mono font; links and the theme toggle no longer impose 44px row heights. The update date uses the same compact line spacing. Home action labels use the secondary font and the linked values use the existing blue-violet accent. The masthead reads Derek_Stone as plain text with no Home link or hover underline; the existing /Work, /About and /Art suffixes remain conditional, with no literal parentheses. Links and enabled clickable controls use the existing accent on hover and keyboard focus, including image controls, without recoloring image pixels.
+
+The shared footer follows the page content and sits at the bottom of short pages. Its left edge uses the same viewport gutter across categories, independently of About’s centered reading column, with safe-area handling and layout-width measurements that exclude the scrollbar gutter. Artwork titles align with the selected photograph’s left edge rather than the left neighboring slide. Floating desktop navigation adapts its text ink over image intersections while retaining accent hover/focus feedback.
+
+Art’s collection disclosure is at the top. The visible Enlarge label is removed while the image still opens its existing viewer. Notes 1–3 remain together at the bottom in secondary type, without separator rules or selection-based filtering. The prose area reserves the intrinsic height of the longest artwork description, so the endnotes stay at the same vertical position across selections and adapt to the reading width. Inactive descriptions remain invisible, inert and hidden from assistive technology. Returning from a note reveals the corresponding artwork before focusing its inline reference. Gallery photo fitting, smaller neighbors, rounded corners during movement and thumbnail alignment follow the original gallery treatment; the outside remains unframed and bounded below full-screen height.
+
+## Annotated corrections — November 4, 2026
+
+Apply the user’s annotations directly. Art uses the original continuous gallery movement and draggable/clickable/wheel thumbnail behavior, with only five artwork photographs. The outer enclosure, subtitle, arrow buttons, thumbnail numbers, visible counter, and numeric prose headings are removed. The selected title is Untitled #N. The gallery extends across the available page width while remaining below full-screen height. In-text links and note numbers are neutral; reference URLs use blue-violet.
+
+The masthead name is left-aligned at a stable anchor, never centered as a group or independently. Footer contents are grouped on the left without the divider. A single plain Light mode/Dark mode action in the footer replaces the sidebar appearance panel and its heading/status/system copy. About uses one plain prose column with no contents sidebar, visible section labels, or separator lines. Existing paragraph text remains unchanged. The original cat’s glyphs and sans-serif rendering are retained; an eating/building pose remains only the user’s proposed concept, with no new accessories added. Card labels use informed Academic Advising and of a Probabilistic Potential Model.
+
+Desktop navigation uses one shared left-edge anchor at 76vw, matching the marked reference column, with the same 16px text and 24px line spacing on every page. The latest annotation marks the masthead and project grid OK; their placement remains unchanged. Work and Home use 48px outer gutters; the masthead is 28px. The Home greeting uses body-sized type and its two existing links use the reference’s small-label/larger-text treatment. Accent usage, theme-control placement, and whitespace/composition research are recorded in docs/design-reference-notes.md. The reference uses compact related groups against larger open zones; no universal padding value, centering rule, or automatic green accent is implied.
+
+These corrections supersede the centered masthead, framed Art gallery and sidebar appearance control described in the previous checkpoint.
+
+The reference notes also record the user’s typography observation: Paradigm primarily uses a serif, with a contrasting sans-serif treatment for the small Founded/Investments labels in the supplied About reference. This is not a single-font rule or authorization to change portfolio typography.
+
+## Native page refinements — November 4, 2026
+
+The latest feedback replaces full-screen mixed Art navigation with a framed gallery of only the five original artworks. Neighbors, thumbnails, arrows, keyboard/swipe selection, rich descriptions, related footnotes, image zoom, and history remain available. The mirror puzzle is separate at the existing hidden hash, never a gallery item.
+
+The name has a stable centered horizontal anchor; category suffixes extend independently. Work is left-aligned with right-edge navigation, 4:3 screenshot covers, smaller unnumbered title/method text, and the original cat beside More coming soon. Home/About repeated headings are visually hidden, Explore projects is a plain link, and native Home has no entrance animation. Resume opens the existing PDF directly; its old route redirects. The existing update date now appears in the shared footer. Light/dark appearance is enabled through a shared control, using saved or system preference without changing image pixels.
+
+The logomark remains a design decision, with an established, institutional direction closer to Citadel than a technology-startup treatment. No unapproved mark was added. Source screenshot crop metadata is in `docs/project-cover-sources.md`. These decisions supersede the earlier full-screen Art checkpoint below.
+
+## Serif layout checkpoint — November 4, 2026
+
+The selected Serif direction now has a shared masthead, right-side desktop navigation, a compact native mobile menu, and native Home, Work, About, and Resume documents. Home keeps Derek's supplied copy and climbing photograph; About retains its existing placeholder text. Work uses a two-column grid for Acoustic Drone Detection, RAG Chatbot, and 2D Lightning Simulation, in that order, with one column on phones. The short project titles and secondary method lines remain distinct.
+
+Work opens the existing rich project content in document flow. Current and legacy project links resolve to the same articles. Closing an article or using Back restores the grid's reading position and opening card; direct entries close to Work. Forward restores article reading state. Image inspection, footnotes, and source dialogs reuse the existing renderers. The skip link focuses the active heading without changing an article address.
+
+Art remains in the existing gallery at `/art/`, including its full photos, text formatting, image zoom, and hidden mirror puzzle. `/projects/#links` redirects to `/art/#links`. The puzzle has no new announced navigation entry. The offline export embeds all five native destinations and their real controllers, preserving local page navigation and history without an iframe.
+
+This implementation is based on public main `e2e7b1970f12f0a5a9159a6ef4451a4b74673f9d`. The existing owner-private portfolio preview is the review destination; merging the source review remains a separate step from updating the public GitHub Pages site. The active navigation underline is provisional. A DS monogram, final accent palette, dedicated Art redesign, and factual About copy remain future decisions. The older checkpoints below describe historical gallery releases and are not requirements for the new native pages.
+
 ## Approved Art publication - October 24, 2026
 
 Derek approved publication of the completed update and all six supplied images to the public StoneDerek/stonederek.github.io repository and website. This supersedes the historical publication blockers below. The release is based on current main, retaining the published hyphen replacements and physical dropdown clipping repair. The five updated artwork photos, overprint difference cover, Art formatting, light appearance, and elapsed-time caption animation remain as approved. The preview delivery issue was handled separately with an interactive in-chat presentation.
