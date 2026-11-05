@@ -34,7 +34,7 @@ async function scene(address = '/art/#artwork=03', { reduced = true } = {}) {
   const track = root.querySelector('[data-art-track]');
   const rail = root.querySelector('[data-art-rail]');
   assert.ok(track && rail, 'the artwork and thumbnails retain continuous tracks');
-  const stageWidth = 390, slideWidth = 273, thumbWidth = 80, stride = 88;
+  const stageWidth = 390, slideWidth = 273, thumbWidth = 88, thumbHeight = 58, stride = 88;
   const translation = () => {
     const match = track.style.transform.match(/translate(?:3d|X)\(\s*([-+e.\d]+)px/);
     assert.ok(match, `A pixel transform positions the actual gallery track: ${track.style.transform}`);
@@ -48,18 +48,20 @@ async function scene(address = '/art/#artwork=03', { reduced = true } = {}) {
     const thumb = this.hasAttribute('data-art-select');
     const width = thumb ? thumbWidth : this.hasAttribute('data-art-item') ? slideWidth : stageWidth;
     const left = thumb ? (stageWidth - thumbWidth) / 2 + Number(this.dataset.artSelect) * stride - rail.scrollLeft : 0;
-    return { x: left, y: 0, left, top: 0, right: left + width, bottom: 320, width, height: 320 };
+    const top = thumb ? 3 : 0, height = thumb ? thumbHeight : 320;
+    return { x: left, y: top, left, top, right: left + width, bottom: top + height, width, height };
   };
   Object.defineProperties(window.HTMLElement.prototype, {
     clientWidth: { configurable: true, get() { return this.hasAttribute('data-art-item') ? slideWidth : stageWidth; } },
     clientHeight: { configurable: true, get() { return this === rail ? 64 : 320; } },
     offsetWidth: { configurable: true, get() { return this.hasAttribute('data-art-select') ? thumbWidth : this.hasAttribute('data-art-item') ? slideWidth : stageWidth; } },
+    offsetHeight: { configurable: true, get() { return this.hasAttribute('data-art-select') ? thumbHeight : 320; } },
     offsetLeft: { configurable: true, get() { return this.hasAttribute('data-art-select') ? Number(this.dataset.artSelect) * stride : 0; } }
   });
   const originalStyle = window.getComputedStyle.bind(window);
   window.getComputedStyle = node => new Proxy(originalStyle(node), { get(target, key) {
     if (key === 'width' && node.hasAttribute('data-art-select')) return `${thumbWidth}px`;
-    if (key === 'columnGap') return '8px';
+    if (key === 'columnGap') return '0px';
     return Reflect.get(target, key);
   } });
   let scrolledTarget = null;
@@ -179,12 +181,28 @@ test('a held Art drag visibly follows fractional movement, then springs to its r
   const s = await scene('/art/#artwork=03', { reduced: false });
   try {
     const start = s.translation(), entries = s.window.history.length;
+    const items = [...s.root.querySelectorAll('[data-art-item]')];
+    assert.equal(Number(items[2].style.getPropertyValue('--art-image-scale')), 1);
+    assert.ok(Number(items[1].style.getPropertyValue('--art-image-scale')) < 1, 'neighbor photographs start slightly smaller than the selected photo');
+    for (const item of items) {
+      const photo = item.querySelector('[data-image-open] img');
+      const width = parseFloat(photo.style.width), height = parseFloat(photo.style.height);
+      assert.ok(width > 0 && width <= 273 && height > 0 && height <= 320, 'the complete photo fits within its bounded slide');
+      assert.ok(Math.abs(width / height - Number(photo.getAttribute('width')) / Number(photo.getAttribute('height'))) < .001);
+    }
+    const outline = s.find('[data-art-selection-frame]');
+    const selectedThumb = s.find('[data-art-select="2"]').getBoundingClientRect();
+    assert.equal(parseFloat(outline.style.left), selectedThumb.left - 2);
+    assert.equal(parseFloat(outline.style.top), selectedThumb.top - 2);
+    assert.equal(parseFloat(outline.style.width), selectedThumb.width + 4);
+    assert.equal(parseFloat(outline.style.height), selectedThumb.height + 4);
     s.pointer('pointerdown', 250);
     s.advance(40); s.pointer('pointermove', 209); await s.frame();
     const first = s.translation();
     assert.ok(first < start && first > start - 273, 'a partial drag moves the track by part of one artwork');
     s.advance(40); s.pointer('pointermove', 168); await s.frame();
     const held = s.translation();
+    assert.ok(parseFloat(s.track.style.getPropertyValue('--art-gallery-radius')) > 0, 'the original gallery lift rounds photo corners while dragging');
     assert.ok(held < first && held > start - 273, 'the next pointer sample advances the actual track continuously');
     assert.ok(s.rail.scrollLeft > 2 * 88 && s.rail.scrollLeft < 3 * 88, 'the thumbnail rail follows the same intermediate selection');
     assert.equal(s.root.dataset.artSettled, 'false');
@@ -195,6 +213,10 @@ test('a held Art drag visibly follows fractional movement, then springs to its r
     assert.ok(s.translation() < held && s.translation() > start - 273, 'release advances through an intermediate spring position');
     assert.equal(s.window.history.length, entries);
     await s.settle(); s.assertArtwork(3);
+    assert.equal(parseFloat(s.track.style.getPropertyValue('--art-gallery-radius')), 0, 'corner rounding returns to rest after settling');
+    assert.equal(Number(items[3].style.getPropertyValue('--art-image-scale')), 1);
+    const settledThumb = s.find('[data-art-select="3"]').getBoundingClientRect();
+    assert.equal(parseFloat(outline.style.left), settledThumb.left - 2, 'the accent frame remains centered on the settled thumbnail');
     assert.equal(s.window.history.length, entries + 1);
     assert.equal(s.address, '/art/#artwork=04');
   } finally { await s.close(); }

@@ -15,9 +15,11 @@ The user’s specific Art annotations distinguish neutral in-text links and note
 
 ## Typography: a primary face with a contrasting secondary role
 
-Paradigm uses more than one typeface. In the supplied About statistics reference, the sentence and large figures use serif type, while “Founded” and “Investments” use a contrasting sans-serif treatment. The secondary type distinguishes the compact labels without taking over the composition. The predominance of one face helps the page hold together while the second adds a visible change of role.
+Paradigm uses more than one typeface. In the supplied About statistics reference, the sentence and large figures use serif type, while “Founded” and “Investments” use a contrasting semi-monospace treatment. The secondary type distinguishes the compact labels without taking over the composition. The predominance of one face helps the page hold together while the second adds a visible change of role.
 
-This is a role-based observation from the reference, not a requirement to use one font everywhere or to restyle every label. The screenshot does not establish exact font families or a site-wide rule for secondary type.
+This is a role-based observation from the reference, not a requirement to use one font everywhere or to restyle every label. The screenshot alone does not establish exact font families or a site-wide rule for secondary type.
+
+The [official stylesheet](https://www.paradigm.xyz/_app/immutable/assets/0.B1UVKr4Z.css) confirms the secondary family is Paradigm SemiMono, used by the footer and the About statistic labels; its fallback stack is SFMono-Regular, Menlo, Monaco, Consolas, monospace. The footer uses regular 400 weight, 1.35 line-height and zero letter-spacing. Its small labels and footer therefore differ from the primary serif in family as well as size. The portfolio uses the fallback stack for these secondary roles; it does not bundle Paradigm’s custom font.
 
 ## Light/dark control: placement research
 

@@ -1,5 +1,11 @@
 # Portfolio continuation
 
+## Detailed corrections — November 5, 2026
+
+Footer content uses compact rows and a wrapping utility-link group in the secondary mono font; links and the theme toggle no longer impose 44px row heights. The update date uses the same compact line spacing. Home action labels use the secondary font and the linked values use the existing blue-violet accent. The masthead name is plain text with no Home link or hover underline.
+
+Art’s collection disclosure is at the top. The visible Enlarge label is removed while the image still opens its existing viewer. Notes 1–3 remain together at the bottom in secondary type, without separator rules or selection-based filtering. Returning from a note reveals the corresponding artwork before focusing its inline reference. Gallery photo fitting, smaller neighbors, rounded corners during movement and thumbnail alignment follow the original gallery treatment; the outside remains unframed and bounded below full-screen height.
+
 ## Annotated corrections — November 4, 2026
 
 Apply the user’s annotations directly. Art uses the original continuous gallery movement and draggable/clickable/wheel thumbnail behavior, with only five artwork photographs. The outer enclosure, subtitle, arrow buttons, thumbnail numbers, visible counter, and numeric prose headings are removed. The selected title is Untitled #N. The gallery extends across the available page width while remaining below full-screen height. In-text links and note numbers are neutral; reference URLs use blue-violet.

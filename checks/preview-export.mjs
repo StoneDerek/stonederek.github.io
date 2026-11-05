@@ -238,9 +238,8 @@ test('compiled apps preserve theme preferences, individual Art selection/history
       assert.equal(chapters.length, 5);
       assert.deepEqual(chapters.map(chapter => chapter.hidden), chapters.map((_, i) => i !== index));
       assert.ok([...details.querySelectorAll('.case-study-section h2')].every(heading => heading.hidden));
-      const reference = [1, null, 2, null, 3][index];
       assert.deepEqual([...details.querySelectorAll('.project-footnote')].filter(note => !note.hidden).map(note => note.id),
-        reference ? [`project-note-art-${reference}`] : []);
+        ['project-note-art-1', 'project-note-art-2', 'project-note-art-3']);
       assert.doesNotMatch(details.textContent, /The cover for this section/);
     };
     assertArtwork(1);
@@ -287,6 +286,13 @@ test('compiled apps preserve theme preferences, individual Art selection/history
     key('ArrowRight'); await flush();
     assertArtwork(4);
     assert.equal(window.history.length, historyLength, 'the gallery stops at its last artwork without adding history');
+    artRoot.querySelector('[role="doc-backlink"][data-article-jump="project-ref-art-1"]').click(); await flush();
+    assertArtwork(0);
+    assert.equal(window.document.activeElement.id, 'project-ref-art-1', 'an endnote return reveals and focuses its artwork reference');
+    assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, '/art/#artwork=01');
+    assert.equal(window.history.length, historyLength + 1, 'returning to another artwork adds one destination');
+    window.history.back(); await flush();
+    assertArtwork(4);
     key('Home'); await flush();
     assertArtwork(0);
     historyLength = window.history.length;

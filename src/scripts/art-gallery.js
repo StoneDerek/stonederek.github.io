@@ -37,7 +37,6 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
   } });
   details.querySelector('.case-study-contents')?.remove();
   const chapters = [...details.querySelectorAll('.case-study-section')];
-  const notes = [...details.querySelectorAll('.project-footnote')];
   chapters.forEach((chapter, i) => {
     const heading = chapter.querySelector('h2');
     if (heading) { heading.textContent = `Untitled #${i + 1}`; heading.hidden = true; }
@@ -53,6 +52,10 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
   let stageWidth = 1;
   let slideWidth = 1;
   let stride = 1;
+  let railCenterPadding = 0;
+  let lift = 0;
+  let liftFrame = 0;
+  let galleryInset = 0;
   let animationFrame = 0;
   let motionVelocity = 0;
   let animationHistory = false;
@@ -113,41 +116,119 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
     });
     if (focusedThumbnail) choices[index].focus({ preventScroll: true });
     chapters.forEach((chapter, i) => { chapter.hidden = i !== index; });
-    const references = new Set([...chapters[index].querySelectorAll('[data-article-jump]')].map(link => link.dataset.articleJump));
-    notes.forEach(note => { note.hidden = !references.has(note.id); });
-    const footnotes = details.querySelector('.project-footnotes');
-    if (footnotes) footnotes.hidden = !references.size;
     for (let i = Math.max(0, index - 1); i <= Math.min(items.length - 1, index + 1); i++) {
       items[i].querySelector('img').loading = 'eager';
     }
   }
 
+  function positionTrack() {
+    track.style.transform = `translate3d(${(stageWidth - slideWidth) / 2 - position * (slideWidth - galleryInset)}px, 0, 0)`;
+    const maxInset = Math.min(20, slideWidth * .025);
+    items.forEach((item, i) => {
+      const focus = Math.max(0, 1 - Math.abs(i - position));
+      item.style.setProperty('--art-slide-shift', `${-i * galleryInset}px`);
+      item.style.setProperty('--art-image-scale', 1 - 2 * maxInset / slideWidth * Math.max(lift, 1 - focus));
+    });
+  }
+
   function render(value) {
     position = clamp(value);
-    track.style.transform = `translate3d(${(stageWidth - slideWidth) / 2 - position * slideWidth}px, 0, 0)`;
+    positionTrack();
     rail.scrollLeft = position * stride;
     root.dataset.artPosition = String(position);
     choices.forEach((button, i) => button.style.setProperty('--focus', Math.max(0, 1 - Math.abs(i - position))));
     updateActive(Math.round(position));
   }
 
+  // Reuse the original gallery's inset, radius and elapsed-time lift curve.
+  function presentCards(value) {
+    lift = value;
+    galleryInset = Math.min(20, slideWidth * .025) * lift;
+    track.style.setProperty('--art-gallery-radius', `${Math.min(14, slideWidth * .03) * lift}px`);
+    positionTrack();
+  }
+
+  function animateLift(target, { duration = 220 } = {}) {
+    view.cancelAnimationFrame(liftFrame);
+    liftFrame = 0;
+    const from = lift;
+    if (reducedMotion.matches || !duration || Math.abs(target - from) < .001) {
+      root.classList.remove('is-lifting');
+      presentCards(target);
+      return;
+    }
+    const start = view.performance.now();
+    root.classList.add('is-lifting');
+    const frame = now => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = target === 0 ? progress * progress * (3 - 2 * progress) : 1 - (1 - progress) ** 3;
+      presentCards(from + (target - from) * eased);
+      if (progress < 1) liftFrame = view.requestAnimationFrame(frame);
+      else { liftFrame = 0; root.classList.remove('is-lifting'); }
+    };
+    liftFrame = view.requestAnimationFrame(frame);
+  }
+
+  function alignSelectionFrame() {
+    if (!selectionFrame || selected < 0 || drag || Math.abs(position - Math.round(position)) > .001) return;
+    const scrollLeft = rail.scrollLeft;
+    thumbnailGroup.style.paddingInline = `${railCenterPadding}px`;
+    thumbnailGroup.style.paddingTop = '0px';
+    rail.scrollLeft = scrollLeft;
+    let tile = choices[selected].getBoundingClientRect();
+    thumbnailGroup.style.paddingInline = `${railCenterPadding + Math.round(tile.left) - tile.left}px`;
+    thumbnailGroup.style.paddingTop = `${Math.ceil(tile.top) - tile.top}px`;
+    rail.scrollLeft = scrollLeft;
+    tile = choices[selected].getBoundingClientRect();
+    const strip = selectionFrame.parentElement.getBoundingClientRect();
+    const pixels = view.devicePixelRatio || 1;
+    const border = Math.max(1, Math.round(2 * pixels));
+    Object.assign(selectionFrame.style, {
+      left: `${(Math.round(tile.left * pixels) - border) / pixels - strip.left}px`,
+      top: `${(Math.round(tile.top * pixels) - border) / pixels - strip.top}px`,
+      width: `${(Math.round(tile.width * pixels) + 2 * border) / pixels}px`,
+      height: `${(Math.round(tile.height * pixels) + 2 * border) / pixels}px`,
+      borderWidth: `${border / pixels}px`,
+      borderRadius: `${(Math.round(8 * pixels) + border) / pixels}px`,
+      transform: 'none'
+    });
+  }
+
   function measure() {
     stageWidth = stage.clientWidth || stage.getBoundingClientRect().width || 1;
     slideWidth = items[0].getBoundingClientRect().width || items[0].offsetWidth || stageWidth;
+    const stageHeight = stage.clientHeight || stage.getBoundingClientRect().height || 1;
+    items.forEach(item => {
+      const button = item.querySelector('[data-image-open]');
+      const image = button.querySelector('img');
+      const style = view.getComputedStyle(item);
+      const availableWidth = Math.max(1, slideWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0));
+      const width = image.naturalWidth || Number(image.getAttribute('width'));
+      const height = image.naturalHeight || Number(image.getAttribute('height'));
+      if (!width || !height) return;
+      const fit = Math.min(availableWidth / width, stageHeight / height);
+      image.style.width = `${width * fit}px`;
+      image.style.height = `${height * fit}px`;
+    });
+    const pixels = view.devicePixelRatio || 1;
+    const gap = Math.max(1, Math.round(4 * pixels));
+    const contentWidth = parseFloat(view.getComputedStyle(root).getPropertyValue('--art-thumb-width')) || 80;
+    const contentHeight = Math.max(1, rail.clientHeight - 14);
+    rail.style.setProperty('--art-thumb-gap', `${gap / pixels}px`);
+    rail.style.setProperty('--art-thumb-box-width', `${(Math.round(contentWidth * pixels) + 2 * gap) / pixels}px`);
+    rail.style.setProperty('--art-thumb-box-height', `${(Math.round(contentHeight * pixels) + 2 * gap) / pixels}px`);
     const first = choices[0].getBoundingClientRect();
     const width = choices[0].offsetWidth || first.width || parseFloat(view.getComputedStyle(choices[0]).width) || 1;
     const second = choices[1]?.getBoundingClientRect();
     const offset = choices[1] ? choices[1].offsetLeft - choices[0].offsetLeft : 0;
-    const gap = parseFloat(view.getComputedStyle(thumbnailGroup).columnGap) || 0;
-    stride = offset > 0 ? offset : second && second.left > first.left ? second.left - first.left : width + gap;
-    const padding = Math.max(0, ((rail.clientWidth || rail.getBoundingClientRect().width) - width) / 2);
-    rail.style.setProperty('--art-rail-padding', `${padding}px`);
-    thumbnailGroup.style.paddingInline = `${padding}px`;
-    if (selectionFrame) {
-      selectionFrame.style.width = `${width + 4}px`;
-      selectionFrame.style.height = `${(choices[0].offsetHeight || first.height || 44) + 4}px`;
-    }
+    const columnGap = parseFloat(view.getComputedStyle(thumbnailGroup).columnGap) || 0;
+    stride = offset > 0 ? offset : second && second.left > first.left ? second.left - first.left : width + columnGap;
+    railCenterPadding = Math.max(0, ((rail.clientWidth || rail.getBoundingClientRect().width) - width) / 2);
+    rail.style.setProperty('--art-rail-padding', `${railCenterPadding}px`);
+    thumbnailGroup.style.paddingInline = `${railCenterPadding}px`;
+    presentCards(lift);
     render(position);
+    alignSelectionFrame();
   }
 
   function stopAnimation() {
@@ -184,11 +265,13 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
     stopAnimation();
     destination = clamp(value);
     animationHistory = history;
+    animateLift(0, { duration: immediate ? 0 : 280 });
     const from = position;
     const finish = () => {
       animationFrame = 0;
       motionVelocity = 0;
       render(destination);
+      alignSelectionFrame();
       restorePanelAccess();
       root.classList.remove('is-moving');
       root.dataset.artSettled = String(wheelPosition === null && Math.abs(position - Math.round(position)) < .001);
@@ -229,6 +312,7 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
 
   function showPuzzle() {
     cancelDrag(); stopWheel(); stopAnimation(); closeOverlays();
+    animateLift(0, { duration: 0 });
     render(Math.round(position));
     root.dataset.artSettled = 'true';
     collection.hidden = true;
@@ -279,6 +363,7 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
       drag.moved = true;
       root.classList.add('is-dragging');
       root.dataset.artSettled = 'false';
+      animateLift(1);
     }
     const elapsed = Math.max(1, event.time - drag.lastTime);
     drag.velocity = (drag.lastX - event.clientX) / (elapsed * drag.unit);
@@ -329,6 +414,14 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
     } else root.dataset.artSettled = 'true';
   }
 
+  listen(details, 'click', event => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const backlink = event.target.closest?.('[role="doc-backlink"][data-article-jump]');
+    if (!backlink || !details.contains(backlink)) return;
+    const reference = doc.getElementById(backlink.dataset.articleJump);
+    const index = chapters.indexOf(reference?.closest('.case-study-section'));
+    if (index >= 0 && chapters[index].hidden) select(index, { immediate: true });
+  }, { capture: true });
   listen(root.closest('.serif-site') || root, 'click', event => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
       !event.target.closest?.('.serif-skip-link')) return;
@@ -397,7 +490,10 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
     view.cancelAnimationFrame(resizeFrame);
     resizeFrame = view.requestAnimationFrame(() => { resizeFrame = 0; measure(); });
   });
-  listen(reducedMotion, 'change', event => { if (event.matches && animationFrame) settleInterrupted({ immediate: true }); });
+  listen(reducedMotion, 'change', event => {
+    if (event.matches && animationFrame) settleInterrupted({ immediate: true });
+    if (event.matches && liftFrame) animateLift(drag?.moved ? 1 : 0, { duration: 0 });
+  });
   listen(doc, 'visibilitychange', () => { if (doc.hidden) settleInterrupted({ immediate: true }); });
   listen(root, 'click', event => {
     const credits = root.querySelector('[data-credits]');
@@ -420,6 +516,7 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
     if (disposed) return;
     disposed = true;
     cancelDrag(); stopWheel(); stopAnimation();
+    view.cancelAnimationFrame(liftFrame);
     view.cancelAnimationFrame(resizeFrame);
     controller.abort();
     imageViewer.destroy(); caseStudy.destroy(); laser?.destroy();

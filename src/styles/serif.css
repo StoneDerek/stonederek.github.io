@@ -9,6 +9,7 @@
   --ink: var(--page-text);
   --accent-mark: var(--page-text);
   --serif-font: Georgia, 'Times New Roman', serif;
+  --secondary-font: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 148px;
   align-content: start;
@@ -44,7 +45,7 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
 .serif-site .serif-professional-start { margin-top: 20px; }
 .serif-site .serif-nav-link { display: flex; align-items: center; width: fit-content; min-height: 44px; max-width: 100%; padding: 10px 12px; border: 1px solid transparent; border-radius: 999px; font-size: 16px; font-weight: 400; line-height: 22px; text-decoration: none; }
 .serif-site .serif-nav-link[aria-current='page'],
-.serif-site :is(.serif-nav-link, .serif-identity, .serif-footer a):hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.serif-site :is(.serif-nav-link, .serif-footer a):hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 .serif-site .serif-mobile-menu { display: none; width: 116px; font-size: 16px; line-height: 22px; }
 .serif-site .serif-mobile-menu > summary { min-height: 44px; padding: 10px 12px; text-align: right; cursor: pointer; }
 .serif-site .serif-mobile-menu .serif-nav-list { padding-block: 8px 12px; }
