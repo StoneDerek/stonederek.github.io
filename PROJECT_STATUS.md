@@ -1,5 +1,9 @@
 # Portfolio continuation
 
+## Mobile navigation panel — November 5, 2026
+
+The mobile menu opens as a full-width top panel instead of a small rounded popup. It keeps the existing six destinations, with the name and close control aligned to the page gutters. The page beneath has a subtle 4px backdrop blur and neutral tint. Background content is inert while open; Escape, the backdrop and link activation dismiss it. Keyboard focus stays within the menu, and closing, desktop resizing or cleanup restores background interaction. Short viewports scroll the navigation within the panel.
+
 ## Current review corrections — November 5, 2026
 
 Work cards show Untitled #1–#3 on the first line and their complete existing subject/method text on the second line; both use 16px type. More coming soon uses the secondary font. The displayed Derek_Stone underscore is 70% of the surrounding name size. Footer separation is 96px on desktop and 64px on phones while retaining its shared left edge and bottom-of-short-page behavior.
