@@ -49,7 +49,7 @@ html:has(.serif-site) { scrollbar-gutter: stable; }
   .serif-site .serif-masthead { z-index: 30; min-height: 68px; }
   .serif-site .serif-brand { margin-left: 0; }
   .serif-site .serif-identity { padding: 8px 0; font-size: 22px; line-height: 28px; }
-  .serif-site .serif-context { top: 0; left: 100%; min-height: 44px; padding-left: 3px; font-size: 15px; line-height: 20px; }
+  .serif-site .serif-context { top: 0; left: 100%; min-height: 44px; padding-left: 3px; font-size: 22px; line-height: 28px; }
   .serif-site .serif-mobile-menu { position: absolute; top: 0; right: 0; width: 72px; }
   .serif-site .serif-mobile-menu > summary { padding-inline: 8px; list-style: none; }
   .serif-site .serif-mobile-menu > summary::-webkit-details-marker { display: none; }
