@@ -7,7 +7,7 @@
     "dev": "astro dev --host 0.0.0.0",
     "build": "astro build",
     "test": "node --test",
-    "test:flows": "npm run build && node --test checks/portfolio-flows.mjs checks/serif-pages.mjs",
+    "test:flows": "npm run build && node --test checks/portfolio-flows.mjs checks/serif-pages.mjs checks/art-gallery.mjs",
     "bench:transition": "node scripts/benchmark-transition.mjs",
     "preview": "astro preview --host 0.0.0.0",
     "export:preview": "node scripts/export-preview.mjs"

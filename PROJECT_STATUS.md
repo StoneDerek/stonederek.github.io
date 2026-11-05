@@ -1,5 +1,13 @@
 # Portfolio continuation
 
+## Native page refinements — November 4, 2026
+
+The latest feedback replaces full-screen mixed Art navigation with a framed gallery of only the five original artworks. Neighbors, thumbnails, arrows, keyboard/swipe selection, rich descriptions, related footnotes, image zoom, and history remain available. The mirror puzzle is separate at the existing hidden hash, never a gallery item.
+
+The name has a stable centered horizontal anchor; category suffixes extend independently. Work is left-aligned with right-edge navigation, 4:3 screenshot covers, smaller unnumbered title/method text, and the original cat beside More coming soon. Home/About repeated headings are visually hidden, Explore projects is a plain link, and native Home has no entrance animation. Resume opens the existing PDF directly; its old route redirects. The existing update date now appears in the shared footer. Light/dark appearance is enabled through a shared control, using saved or system preference without changing image pixels.
+
+The logomark remains a design decision, with an established, institutional direction closer to Citadel than a technology-startup treatment. No unapproved mark was added. Source screenshot crop metadata is in `docs/project-cover-sources.md`. These decisions supersede the earlier full-screen Art checkpoint below.
+
 ## Serif layout checkpoint — November 4, 2026
 
 The selected Serif direction now has a shared masthead, right-side desktop navigation, a compact native mobile menu, and native Home, Work, About, and Resume documents. Home keeps Derek's supplied copy and climbing photograph; About retains its existing placeholder text. Work uses a two-column grid for Acoustic Drone Detection, RAG Chatbot, and 2D Lightning Simulation, in that order, with one column on phones. The short project titles and secondary method lines remain distinct.

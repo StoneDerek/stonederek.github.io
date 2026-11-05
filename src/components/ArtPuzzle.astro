@@ -1,0 +1,30 @@
+---
+import ExternalLinkIcon from './ExternalLinkIcon.astro';
+const linksLogo = ['      _', '     | |', '   __| |___', '  / _` / __|', ' | (_| \\__ \\_', '  \\__,_|___(_)'].join('\n');
+---
+<section id="links" class="art-puzzle" data-art-puzzle hidden aria-label="Mirror puzzle" tabindex="-1">
+  <button type="button" class="art-puzzle-return" data-art-return>← Back to Art</button>
+              <div class="laser-experiment" data-laser-experiment role="group" aria-label="ASCII laser puzzle: turn two mirrors to reach the target at the right">
+                <canvas class="laser-canvas" aria-hidden="true"></canvas>
+                <pre class="laser-logo" aria-hidden="true">{linksLogo}</pre>
+                <button type="button" class="laser-control" data-laser-control="mirror" data-mirror="0" aria-label="Rotate first mirror" aria-describedby="laser-instructions"></button>
+                <button type="button" class="laser-control" data-laser-control="mirror" data-mirror="1" aria-label="Rotate second mirror" aria-describedby="laser-instructions"></button>
+                <div class="laser-hint" id="laser-instructions"><span data-laser-status role="status" aria-live="polite">Drag the mirrors to reach the target.</span><span class="sr-only"> Drag sideways or vertically to turn a mirror, or click to turn it by five degrees. Arrow keys turn it by one degree; Shift and arrow keys turn it by five degrees; Alt and arrow keys make a quarter-degree adjustment.</span><button type="button" data-laser-control="trophy" hidden>View trophy</button><button type="button" data-laser-control="reset">Reset</button></div>
+                <dialog class="victory-dialog" data-laser-victory data-laser-control="victory" aria-labelledby="laser-victory-title">
+                  <h2 id="laser-victory-title">You got a trophy!</h2>
+                  <canvas class="trophy-canvas" data-trophy-canvas aria-hidden="true"></canvas>
+                  <button type="button" class="victory-close" data-victory-close autofocus>Back to puzzle</button>
+                </dialog>
+              </div>
+              <details class="credits" data-credits data-end-link>
+                <summary aria-controls="credits-panel">Credits</summary>
+                <section class="credits-panel" id="credits-panel" aria-labelledby="credits-heading" tabindex="0">
+                  <h2 id="credits-heading">Credits</h2>
+                  <ul>
+                    <li><a href="https://bd85bd85.com/" target="_blank" rel="noopener noreferrer">https://bd85bd85.com/<ExternalLinkIcon /></a><p>primary reference for gallery view</p><p>original designed by Ben Lee, developed by <a href="https://geminiservic.es/" target="_blank" rel="noopener noreferrer">geminiservic.es<ExternalLinkIcon /></a></p></li>
+                    <li><a href="https://emojicombos.com/cat" target="_blank" rel="noopener noreferrer">https://emojicombos.com/cat<ExternalLinkIcon /></a><p>source of cat kaomoji featured on dropdown menu (original author unknown)</p></li>
+                    <li><a href="https://asciigenerators.com/" target="_blank" rel="noopener noreferrer">https://asciigenerators.com/<ExternalLinkIcon /></a><p>inspiration for ascii character processing</p></li>
+                  </ul>
+                </section>
+              </details>
+</section>

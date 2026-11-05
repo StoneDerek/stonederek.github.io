@@ -3,12 +3,14 @@ import { mountTheme, appearanceEnabled } from './theme.js';
 import { mountPublicationLabel } from './publication-label.js';
 import { mountWorkPage } from './work-page.js';
 import { mountSerifNavigation } from './serif-navigation.js';
+import { mountArtGallery } from './art-gallery.js';
 
 function start() {
   const theme = mountTheme({ enabled: appearanceEnabled });
   const releasePublication = mountPublicationLabel();
   const cleanup = mountPortfolio();
   const releaseWork = mountWorkPage();
+  const releaseArt = mountArtGallery();
   const releaseNavigation = mountSerifNavigation();
   let disposed = false;
   const stop = () => {
@@ -16,6 +18,7 @@ function start() {
     disposed = true;
     cleanup?.();
     releaseWork?.();
+    releaseArt?.();
     releaseNavigation?.();
     releasePublication();
     theme.destroy?.();

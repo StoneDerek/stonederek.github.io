@@ -21,11 +21,10 @@ async function inspect(source, run) {
   finally { await window.happyDOM.close(); }
 }
 
-test('the exported page has a visible native Home before scripts run and all five local pages', async () => {
+test('the export has a useful Home before scripts run, all native pages and the legacy PDF redirect', async () => {
   await inspect(html, async doc => {
-    assert.equal(doc.querySelector('meta[name="color-scheme"]').content, 'only light');
-    assert.equal(doc.documentElement.hasAttribute('data-appearance-enabled'), false);
-    assert.equal(doc.documentElement.dataset.theme, 'light');
+    assert.equal(doc.querySelector('meta[name="color-scheme"]').content, 'light dark');
+    assert.equal(doc.documentElement.hasAttribute('data-appearance-enabled'), true);
     assert.ok([...doc.querySelectorAll('style')].some(node => node.textContent.includes('data-appearance-enabled')));
     assert.equal(doc.querySelectorAll('iframe').length, 0);
     assert.equal(doc.querySelectorAll('.serif-site[data-page="home"]').length, 1);
@@ -53,7 +52,12 @@ test('every embedded native page has self-contained images/styles and parseable 
         assert.equal(doc.querySelectorAll('[data-work-project]').length, 3);
         assert.equal(doc.querySelectorAll('[data-work-root]').length, 1);
       }
-      if (route === 'art') assert.equal(doc.querySelectorAll('#portfolio').length, 1);
+      if (route === 'art') {
+        assert.equal(doc.querySelectorAll('[data-art-root]').length, 1);
+        assert.equal(doc.querySelectorAll('[data-art-item]').length, 5);
+        assert.equal(doc.querySelectorAll('[data-art-select]').length, 5);
+        assert.equal(doc.querySelector('#portfolio, [data-work-project]'), null);
+      }
     });
   }
   for (const script of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
@@ -64,8 +68,7 @@ test('every embedded native page has self-contained images/styles and parseable 
 
 test('all five Art photos remain self-contained and retain their original aspect ratios', async () => {
   await inspect(expand(payload.pages.art), async doc => {
-    const panels = JSON.parse(doc.querySelector('#portfolio-data').textContent);
-    const art = panels.find(project => project.slug === 'art');
+    const art = JSON.parse(doc.querySelector('#art-data').textContent);
     const photos = art.caseStudy.sections.flatMap(section => section.media || []);
     assert.equal(photos.length, 5);
     for (const photo of photos) {
@@ -77,9 +80,10 @@ test('all five Art photos remain self-contained and retain their original aspect
   });
 });
 
-test('the preview bridge switches native pages, keeps Work history state, and preserves About anchors', async () => {
+test('the preview bridge keeps native navigation/history, About anchors and immediate embedded PDF access', async () => {
   const window = new Window({ url: 'https://preview.invalid/portfolio-preview.html', settings: options });
   const revoked = [];
+  const redirects = [];
   const scrollTargets = [];
   try {
     window.document.write(html);
@@ -87,6 +91,7 @@ test('the preview bridge switches native pages, keeps Work history state, and pr
     window.HTMLElement.prototype.scrollIntoView = function() { scrollTargets.push(this.id); };
     window.URL.createObjectURL = () => 'blob:https://preview.invalid/resume';
     window.URL.revokeObjectURL = value => revoked.push(value);
+    window.location.replace = value => redirects.push(value);
     const code = window.document.querySelector('script[data-preview-bridge]').textContent;
     window.eval(code);
     window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
@@ -116,16 +121,19 @@ test('the preview bridge switches native pages, keeps Work history state, and pr
     assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, '/projects/#project=rag-chatbot');
     assert.deepEqual(window.history.state, state);
     follow('/art/#links'); await flush();
-    assert.ok(window.document.querySelector('#portfolio'));
+    assert.ok(window.document.querySelector('[data-art-root]'));
     assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, '/art/#links');
+    const pdfLinks = [...window.document.querySelectorAll('[data-resume-link]')];
+    assert.ok(pdfLinks.length > 0);
+    for (const link of pdfLinks) assert.equal(link.href, 'blob:https://preview.invalid/resume');
     follow('/resume/'); await flush();
-    assert.ok(window.document.querySelector('.serif-site[data-page="resume"]'));
-    assert.equal(window.document.querySelector('[data-resume-pdf]').href, 'blob:https://preview.invalid/resume');
+    assert.deepEqual(redirects, ['blob:https://preview.invalid/resume']);
+    assert.equal(window.document.querySelector('.serif-site[data-page="resume"]'), null);
     assert.deepEqual(revoked, [], 'local page switches do not fake pagehide and revoke the PDF');
   } finally { await window.happyDOM.close(); }
 });
 
-test('compiled preview apps retain Art on its own route and open real Work articles after page switching', async () => {
+test('compiled apps preserve theme preferences, individual Art selection/history and real Work articles across pages', async () => {
   const window = new Window({ url: 'https://preview.invalid/portfolio-preview.html', settings: options });
   const frames = new Map();
   let frameId = 0, scrollY = 0;
@@ -175,16 +183,118 @@ test('compiled preview apps retain Art on its own route and open real Work artic
       }
       await new Promise(resolve => setTimeout(resolve, 0));
     };
-    window.__PORTFOLIO_PREVIEW_SET_ADDRESS__({ address: '/art/', replace: false, state: null });
+    const assertTheme = (theme, preference) => {
+      assert.equal(window.document.documentElement.dataset.theme, theme);
+      assert.equal(window.document.documentElement.dataset.themePreference, preference);
+      const switches = [...window.document.querySelectorAll('[data-theme-switch]')];
+      assert.equal(switches.length, 2);
+      for (const toggle of switches) {
+        assert.equal(toggle.closest('[data-theme-control]').hidden, false);
+        assert.equal(toggle.getAttribute('aria-checked'), String(theme === 'dark'));
+      }
+    };
+    assertTheme('light', 'system');
+    const themeEvents = [];
+    window.document.addEventListener('portfolio:theme-change', event => themeEvents.push(event.detail.resolved));
+    window.document.querySelector('.serif-navigation-desktop [data-theme-switch]').click();
+    assertTheme('dark', 'dark');
+    assert.equal(window.localStorage.getItem('derek-stone-theme'), 'dark');
+    assert.deepEqual(themeEvents, ['dark']);
+    window.__PORTFOLIO_PREVIEW_SET_ADDRESS__({ address: '/art/#artwork=02', replace: false, state: null });
     await flush();
-    assert.ok(window.document.querySelector('#portfolio'), 'the Art gallery remains mounted after its app initializes');
+    assertTheme('dark', 'dark');
+    const artRoot = window.document.querySelector('[data-art-root]');
+    assert.ok(artRoot, 'the inline Art gallery mounts without the old portfolio controller');
+    assert.equal(window.document.querySelector('#portfolio'), null);
     assert.equal(window.document.querySelector('[data-work-root]'), null);
-    assert.match(window.__PORTFOLIO_PREVIEW_ADDRESS__, /^\/art\//);
-    const artRoot = window.document.querySelector('#portfolio');
-    const panels = JSON.parse(window.document.querySelector('#portfolio-data').textContent);
-    assert.equal(panels[Number(artRoot.dataset.panel)].slug, 'art');
+    assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, '/art/#artwork=02');
+    const assertArtwork = index => {
+      assert.equal(Number(artRoot.dataset.artIndex), index);
+      const items = [...artRoot.querySelectorAll('[data-art-item]')];
+      assert.equal(items.length, 5);
+      assert.deepEqual(items.map(item => item.hidden), items.map((_, i) => i !== index));
+      const current = [...artRoot.querySelectorAll('[data-art-select][aria-current="true"]')];
+      assert.equal(current.length, 1);
+      assert.equal(Number(current[0].dataset.artSelect), index);
+      assert.equal(artRoot.querySelector('[data-art-count]').textContent.replace(/\s/g, ''), `0${index + 1}/05`);
+      const details = artRoot.querySelector('[data-art-details]');
+      const chapters = [...details.querySelectorAll('.case-study-section')];
+      assert.equal(chapters.length, 5);
+      assert.deepEqual(chapters.map(chapter => chapter.hidden), chapters.map((_, i) => i !== index));
+      const reference = [1, null, 2, null, 3][index];
+      assert.deepEqual([...details.querySelectorAll('.project-footnote')].filter(note => !note.hidden).map(note => note.id),
+        reference ? [`project-note-art-${reference}`] : []);
+      assert.doesNotMatch(details.textContent, /The cover for this section/);
+    };
+    assertArtwork(1);
+    artRoot.querySelector('[data-art-select="2"]').click(); await flush();
+    assertArtwork(2);
+    assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, '/art/#artwork=03');
+    const artAddress = window.location.href;
+    const artHistory = JSON.stringify(window.history.state);
+    window.document.querySelector('.serif-skip-link').click(); await flush();
+    assertArtwork(2);
+    assert.equal(window.location.href, artAddress, 'Art skip navigation preserves the selected artwork URL');
+    assert.equal(JSON.stringify(window.history.state), artHistory);
+    assert.equal(window.document.activeElement, artRoot.querySelector('[data-art-stage]'));
+    assert.match(artRoot.querySelector('[data-art-details]').textContent, /depicted in ink using a process called/);
+    assert.match(artRoot.querySelector('[data-art-details]').textContent, /Einstein/);
+    assert.equal(artRoot.querySelector('[data-art-details] img'), null, 'the overview does not duplicate the gallery images');
+    artRoot.querySelector('[data-article-jump="project-note-art-2"]').click(); await flush();
+    assert.equal(window.document.activeElement.id, 'project-note-art-2');
+    assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, '/art/#artwork=03', 'a note keeps the selected artwork URL');
+    artRoot.querySelector('[data-article-jump="project-ref-art-2"]').click(); await flush();
+    assert.equal(window.document.activeElement.id, 'project-ref-art-2');
+    window.history.back(); await flush();
+    assertArtwork(1);
+    window.history.forward(); await flush();
+    assertArtwork(2);
+    artRoot.querySelector('[data-art-step="1"]').click(); await flush();
+    assertArtwork(3);
+    assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, '/art/#artwork=04');
+    const stage = artRoot.querySelector('[data-art-stage]');
+    const key = (value, target = stage) => target.dispatchEvent(new window.KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true }));
+    key('End'); await flush();
+    assertArtwork(4);
+    let historyLength = window.history.length;
+    key('ArrowRight'); await flush();
+    assertArtwork(4);
+    assert.equal(window.history.length, historyLength, 'the gallery stops at its last artwork without adding history');
+    assert.ok([...artRoot.querySelectorAll('[data-art-step="1"]')].every(button => button.disabled));
+    key('Home'); await flush();
+    assertArtwork(0);
+    historyLength = window.history.length;
+    key('ArrowLeft'); await flush();
+    assertArtwork(0);
+    assert.equal(window.history.length, historyLength, 'the gallery stops at its first artwork');
+    assert.ok([...artRoot.querySelectorAll('[data-art-step="-1"]')].every(button => button.disabled));
+    key('ArrowRight'); await flush();
+    assertArtwork(1);
+    const opener = artRoot.querySelector('[data-art-item="1"] [data-image-open]');
+    const viewer = artRoot.querySelector('[data-image-viewer]');
+    const viewerAddress = window.__PORTFOLIO_PREVIEW_ADDRESS__;
+    opener.focus(); opener.click(); await flush();
+    assert.equal(viewer.open, true);
+    const fullImage = artRoot.querySelector('[data-image-full]');
+    assert.equal(fullImage.src, opener.querySelector('img').src);
+    Object.defineProperties(fullImage, { naturalWidth: { value: 1440, configurable: true }, naturalHeight: { value: 1080, configurable: true } });
+    fullImage.dispatchEvent(new window.Event('load'));
+    const fitted = parseInt(artRoot.querySelector('[data-image-scale]').textContent);
+    artRoot.querySelector('[data-image-zoom]').click(); await flush();
+    assert.equal(artRoot.querySelector('[data-image-canvas]').hasAttribute('data-zoomed'), true);
+    assert.ok(parseInt(artRoot.querySelector('[data-image-scale]').textContent) > fitted);
+    key('ArrowRight', fullImage); await flush();
+    assertArtwork(1);
+    assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, viewerAddress, 'inspection does not select another artwork or change the URL');
+    key('0', fullImage); await flush();
+    assert.equal(artRoot.querySelector('[data-image-canvas]').hasAttribute('data-zoomed'), false);
+    viewer.dispatchEvent(new window.Event('cancel', { cancelable: true })); await flush();
+    assert.equal(viewer.open, false);
+    assert.equal(window.document.activeElement, opener);
+    assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, viewerAddress);
     window.__PORTFOLIO_PREVIEW_SET_ADDRESS__({ address: '/projects/', replace: false, state: null });
     await flush();
+    assertTheme('dark', 'dark');
     const card = window.document.querySelector('[data-work-project="rag-chatbot"]');
     assert.match(card.href, /portfolio-preview\.html#projects\?project=rag-chatbot$/);
     scrollY = 432;
@@ -215,8 +325,24 @@ test('compiled preview apps retain Art on its own route and open real Work artic
     window.dispatchEvent(new window.HashChangeEvent('hashchange'));
     await flush();
     assert.equal(window.__PORTFOLIO_PREVIEW_ADDRESS__, '/art/#links');
-    assert.ok(window.document.querySelector('#portfolio'));
-    assert.equal(Number(window.document.querySelector('#portfolio').dataset.panel), panels.length);
+    assert.ok(window.document.querySelector('[data-art-root]'));
+    assert.equal(window.document.querySelector('[data-art-puzzle]').hidden, false);
+    assert.equal(window.document.activeElement, window.document.querySelector('[data-art-puzzle]'));
+    assertTheme('dark', 'dark');
+    window.document.querySelector('.serif-navigation-desktop [data-theme-switch]').click();
+    assertTheme('light', 'light');
+    assert.equal(window.localStorage.getItem('derek-stone-theme'), 'light');
+    assert.deepEqual(themeEvents, ['dark', 'light'], 'each toggle has one active theme controller after repeated page mounts');
+    for (const legacy of ['project=art', 'slide=art']) {
+      window.location.hash = `#art?${legacy}`;
+      window.dispatchEvent(new window.HashChangeEvent('hashchange'));
+      await flush();
+      assert.equal(Number(window.document.querySelector('[data-art-root]').dataset.artIndex), 0);
+      assert.equal(window.document.querySelector('[data-art-puzzle]').hidden, true);
+    }
+    window.__PORTFOLIO_PREVIEW_SET_ADDRESS__({ address: '/about/', replace: false, state: null });
+    await flush();
+    assertTheme('light', 'light');
   } finally {
     window.dispatchEvent(new window.Event('portfolio:preview-unmount'));
     await window.happyDOM.close();

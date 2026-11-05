@@ -10,7 +10,7 @@ const sections = [
   ['outside-engineering', 'Ut enim ad minim'],
 ];
 ---
-<header class="about-heading"><p class="profile-eyebrow">About me</p><h1 id={target('about-title')} tabindex="-1">Lorem ipsum<br />dolor sit<span class="name-period">.</span></h1><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p></header>
+<header class="about-heading"><p class="profile-eyebrow">About me</p><h1 id={target('about-title')} class="native-profile-title" aria-label="About" tabindex="-1">Lorem ipsum<br />dolor sit<span class="name-period">.</span></h1><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p></header>
 <div class="about-layout">
   <nav class="about-contents" aria-label="On this page"><span>On this page</span>{sections.map(([id, title]) => <a href={`#${target(id)}`}>{title}</a>)}<a class="about-projects-link" href={`${base}projects/`} data-site-route="projects">Explore projects</a></nav>
   <article class="about-story">

@@ -1,0 +1,77 @@
+:root {
+  --native-canvas: #fff;
+  --native-text: #211b2b;
+  --native-muted: #645d70;
+  --native-rule: #e5e1e9;
+  --native-surface: #f8f7f9;
+  --native-neighbor: #eeeaf0;
+  --native-focus: #5b3fd6;
+  --native-art-accent: #c90062;
+  --native-button: #eeeaf0;
+}
+:root[data-appearance-enabled] { color-scheme: light dark; }
+:root[data-appearance-enabled][data-theme='light'] { color-scheme: light; }
+:root[data-appearance-enabled][data-theme='dark'] {
+  color-scheme: dark;
+  --native-canvas: #17171b;
+  --native-text: #eeebf3;
+  --native-muted: #b7b1c4;
+  --native-rule: #39353f;
+  --native-surface: #222127;
+  --native-neighbor: #292730;
+  --native-focus: #ac9cff;
+  --native-art-accent: #ff85b7;
+  --native-button: #302d39;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-appearance-enabled]:not([data-theme]) {
+    color-scheme: dark;
+    --native-canvas: #17171b;
+    --native-text: #eeebf3;
+    --native-muted: #b7b1c4;
+    --native-rule: #39353f;
+    --native-surface: #222127;
+    --native-neighbor: #292730;
+    --native-focus: #ac9cff;
+    --native-art-accent: #ff85b7;
+    --native-button: #302d39;
+  }
+}
+.serif-site[data-page] {
+  --canvas: var(--native-canvas);
+  --page-text: var(--native-text);
+  --muted: var(--native-muted);
+  --rule: var(--native-rule);
+  --nav-surface: var(--native-surface);
+  --serif-accent: var(--native-focus);
+  color-scheme: inherit;
+  background: var(--canvas);
+}
+.serif-site[data-page] .work-article { background: var(--canvas); }
+.serif-site[data-page] .work-project-image { background: var(--native-surface); }
+.serif-site[data-page] .art-collection,
+.serif-site[data-work-project='art'] .work-project-page { --accent: var(--native-art-accent); }
+.serif-site[data-page] .project-case-study[data-layout='art'] { --rule: var(--native-rule); }
+.serif-site[data-page] .art-stage { background: var(--native-surface); }
+.serif-site[data-page] .art-neighbor { background: var(--native-neighbor); }
+.serif-site[data-page] :is(.art-enlarge-label, .image-enlarge-mark) { border-color: var(--rule); background: var(--native-canvas); color: var(--page-text); }
+.serif-site[data-page] .source-dialog-close { background: var(--native-button); color: var(--page-text); }
+.serif-site[data-page] .back-button:focus-visible { background: var(--native-surface); }
+:root[data-theme='dark'] .serif-site[data-page] :is(.image-viewer-zoom-controls, .image-viewer-close) { background: var(--native-button); }
+:root[data-theme='dark'] .serif-site[data-page] :is(.image-viewer-close:hover, .image-viewer-zoom:not([aria-disabled='true']):hover) { background: #46404f; }
+:root[data-theme='dark'] .serif-site[data-page] .project-image-viewer::backdrop { background: rgb(6 6 9 / .78); }
+.serif-site[data-page] .serif-navigation .theme-control { width: 100%; margin-top: 28px; }
+.serif-site[data-page] .serif-navigation .theme-control h2 { margin-bottom: 8px; color: var(--muted); font-size: 12px; }
+.serif-site[data-page] .serif-navigation .theme-switch { min-height: 44px; padding: 3px; border-radius: 6px; background: var(--canvas); }
+.serif-site[data-page] .serif-navigation .theme-switch::before { inset: 3px auto 3px 3px; width: calc(50% - 3px); border-radius: 3px; background: var(--native-button); }
+.serif-site[data-page] .serif-navigation .theme-option { gap: 0; padding: 8px 2px; font-size: 12px; }
+.serif-site[data-page] .serif-navigation .theme-option svg { display: none; }
+.serif-site[data-page] .serif-navigation .theme-switch .theme-option { color: var(--muted); }
+.serif-site[data-page] .serif-navigation .theme-switch[aria-checked='false'] .theme-option-light,
+.serif-site[data-page] .serif-navigation .theme-switch[aria-checked='true'] .theme-option-dark { color: var(--page-text); }
+.serif-site[data-page] .serif-navigation .theme-control-note { display: block; min-height: 20px; margin-top: 4px; font-size: 11px; line-height: 20px; }
+.serif-site[data-page] .serif-navigation [data-theme-status] { display: block; }
+.serif-site[data-page] .serif-navigation [data-theme-system] { padding: 8px 0; font-size: 12px; }
+@media (max-width: 879px) {
+  .serif-site[data-page] .serif-navigation-mobile { max-height: calc(100svh - 96px); overflow-y: auto; }
+}

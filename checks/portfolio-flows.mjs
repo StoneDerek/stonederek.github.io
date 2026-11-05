@@ -5,12 +5,13 @@ import { Window } from 'happy-dom';
 import { Script } from 'node:vm';
 import { mountPortfolio } from '../src/scripts/carousel.js';
 
-// Exercise the preserved Art gallery markup and the real legacy controller,
-// including its historical virtual addresses. Native serif pages and the new
-// Work controller have separate built-page/behavior checks. This is DOM
-// simulation: geometry, time and canvas metrics are not browser rendering.
+// Exercise a test-only legacy Portfolio markup snapshot with the real legacy
+// controller, including historical virtual addresses. Native Art/serif pages
+// have separate current built-page/behavior checks. This is DOM simulation:
+// geometry, time and canvas metrics are not browser rendering.
+const legacyMarkup = await readFile(new URL('./fixtures/legacy-portfolio.html', import.meta.url), 'utf8');
 async function scene(address = '/', { reduced = true, width = 390, tiles = false, onMount } = {}) {
-  const html = await readFile(new URL('../dist/art/index.html', import.meta.url), 'utf8');
+  const html = legacyMarkup;
   const window = new Window({ url: `https://stonederek.github.io${address}`, settings: {
     disableJavaScriptEvaluation: true, disableJavaScriptFileLoading: true, disableCSSFileLoading: true
   } });
@@ -106,7 +107,7 @@ async function scene(address = '/', { reduced = true, width = 390, tiles = false
   };
 }
 
-test('all direct panel and article URLs mount one persistent portfolio with matching state', async () => {
+test('legacy controller: all direct panel and article URLs mount one persistent portfolio with matching state', async () => {
   const projects = JSON.parse(await readFile(new URL('../src/data/projects.json', import.meta.url), 'utf8'));
   const addresses = [['/', 0, null], ['/about/#interests', 1, null], ['/projects/', 2, null],
     ['/projects/#links', projects.length + 2, null], ['/projects/#project=missing', 2, null],
@@ -136,7 +137,7 @@ test('all direct panel and article URLs mount one persistent portfolio with matc
   }
 });
 
-test('old project links open the same project and replace their previous URL without adding history', async () => {
+test('legacy controller: old project links open the same project and replace their previous URL without adding history', async () => {
   for (const [old, current, panel] of [
     ['signal-studies', 'acoustic-drone-detection', 2],
     ['academic-advising', 'rag-chatbot', 3],
@@ -156,7 +157,7 @@ test('old project links open the same project and replace their previous URL wit
   }
 });
 
-test('direct article entry resolves synchronously without a gallery flash or reveal animation', async () => {
+test('legacy controller: direct article entry resolves synchronously without a gallery flash or reveal animation', async () => {
   const projects = JSON.parse(await readFile(new URL('../src/data/projects.json', import.meta.url), 'utf8'));
   for (const project of projects) {
     const s = await scene(`/projects/#project=${project.slug}`, {
@@ -180,7 +181,7 @@ test('direct article entry resolves synchronously without a gallery flash or rev
   }
 });
 
-test('opening an article from the gallery still animates and returns to its own cover', async () => {
+test('legacy controller: opening an article from the gallery still animates and returns to its own cover', async () => {
   const s = await scene('/projects/', { reduced: false, tiles: true });
   try {
     const index = s.panels.findIndex(panel => panel.slug === 'art');
@@ -197,8 +198,8 @@ test('opening an article from the gallery still animates and returns to its own 
   } finally { await s.close(); }
 });
 
-test('the early entry guard works before body parsing and releases the fallback on load', async () => {
-  const html = await readFile(new URL('../dist/projects/index.html', import.meta.url), 'utf8');
+test('legacy controller: the early entry guard works before body parsing and releases the fallback on load', async () => {
+  const html = legacyMarkup;
   assert.ok(html.indexOf('data-portfolio-entry') < html.indexOf('<body'));
   const script = html.match(/<script\b[^>]*data-portfolio-entry[^>]*>([\s\S]*?)<\/script>/)[1];
   for (const [address, preview, pending] of [
@@ -220,7 +221,7 @@ test('the early entry guard works before body parsing and releases the fallback 
   }
 });
 
-test('the static favicon stays untouched across gallery, article and Links navigation', async () => {
+test('legacy controller: the static favicon stays untouched across gallery, article and Links navigation', async () => {
   const s = await scene();
   const icon = s.document.querySelector('link[rel="icon"]');
   const mutations = [];
@@ -244,7 +245,7 @@ test('the static favicon stays untouched across gallery, article and Links navig
   } finally { observer.disconnect(); await s.close(); }
 });
 
-test('a held drag and its settling animation update panel state only when selection changes', async () => {
+test('legacy controller: a held drag and its settling animation update panel state only when selection changes', async () => {
   const s = await scene('/projects/', { reduced: false });
   const mutations = [];
   const observer = new s.window.MutationObserver(records => mutations.push(...records));
@@ -266,7 +267,7 @@ test('a held drag and its settling animation update panel state only when select
   } finally { observer.disconnect(); await s.close(); }
 });
 
-test('resizing a settled gallery realigns the rail when thumbnail sizing changes', async () => {
+test('legacy controller: resizing a settled gallery realigns the rail when thumbnail sizing changes', async () => {
   const s = await scene('/projects/');
   try {
     assert.equal(s.find('.thumbnail-rail').scrollLeft, 176);
@@ -284,7 +285,7 @@ test('resizing a settled gallery realigns the rail when thumbnail sizing changes
   } finally { await s.close(); }
 });
 
-test('thumbnails, mobile controls and keyboard traverse all panels without remounting', async () => {
+test('legacy controller: thumbnails, mobile controls and keyboard traverse all panels without remounting', async () => {
   const s = await scene();
   try {
     const instance = s.root;
@@ -310,7 +311,7 @@ test('thumbnails, mobile controls and keyboard traverse all panels without remou
   } finally { await s.close(); }
 });
 
-test('About caption starts with navigation, keeps the project color, and exits on the same clock', async () => {
+test('legacy controller: About caption starts with navigation, keeps the project color, and exits on the same clock', async () => {
   const s = await scene('/about/', { reduced: false });
   try {
     s.click('[data-thumbnail="2"]');
@@ -337,7 +338,7 @@ test('About caption starts with navigation, keeps the project color, and exits o
   } finally { await s.close(); }
 });
 
-test('a held About drag cannot stall the caption entrance or exit', async () => {
+test('legacy controller: a held About drag cannot stall the caption entrance or exit', async () => {
   const s = await scene('/about/', { reduced: false });
   const position = () => {
     const track = s.find('[data-gallery-track]');
@@ -372,7 +373,7 @@ test('a held About drag cannot stall the caption entrance or exit', async () => 
   } finally { await s.close(); }
 });
 
-test('article opening, replacement, reselecting and returning preserve the intended content and focus', async () => {
+test('legacy controller: article opening, replacement, reselecting and returning preserve the intended content and focus', async () => {
   const s = await scene('/about/');
   try {
     s.click('[data-menu-project="2"]'); await s.flush();
@@ -392,7 +393,7 @@ test('article opening, replacement, reselecting and returning preserve the inten
   } finally { await s.close(); }
 });
 
-test('closing during an article opening keeps the URL on its revealed return cover', async () => {
+test('legacy controller: closing during an article opening keeps the URL on its revealed return cover', async () => {
   const s = await scene('/about/');
   try {
     s.click('[data-menu-project="4"]');
@@ -405,7 +406,7 @@ test('closing during an article opening keeps the URL on its revealed return cov
 });
 
 for (const interruption of ['resize', 'hidden']) {
-  test(`${interruption} during a held swipe settles the nearest panel and releases input`, async () => {
+  test(`legacy controller: ${interruption} during a held swipe settles the nearest panel and releases input`, async () => {
     const s = await scene('/', { reduced: false });
     try {
       s.pointer('pointerdown', 330);
@@ -427,7 +428,7 @@ for (const interruption of ['resize', 'hidden']) {
   });
 }
 
-test('one thumbnail-wheel gesture adds one history destination after settling', async () => {
+test('legacy controller: one thumbnail-wheel gesture adds one history destination after settling', async () => {
   const s = await scene();
   try {
     const before = s.window.history.length;
@@ -441,7 +442,7 @@ test('one thumbnail-wheel gesture adds one history destination after settling', 
   } finally { await s.close(); }
 });
 
-test('menu keyboard navigation, nested disclosure and outside dismissal retain correct focus', async () => {
+test('legacy controller: menu keyboard navigation, nested disclosure and outside dismissal retain correct focus', async () => {
   const s = await scene();
   try {
     s.key('ArrowDown', '[data-menu] > summary');
@@ -464,7 +465,7 @@ test('menu keyboard navigation, nested disclosure and outside dismissal retain c
   } finally { await s.close(); }
 });
 
-test('native touch swipes own horizontal movement while vertical intent and pinch cancel cleanly', async () => {
+test('legacy controller: native touch swipes own horizontal movement while vertical intent and pinch cancel cleanly', async () => {
   const s = await scene();
   try {
     const surface = s.find('[data-profile-scroll]');
@@ -492,7 +493,7 @@ test('native touch swipes own horizontal movement while vertical intent and pinc
   } finally { await s.close(); }
 });
 
-test('About anchors, skip links and reading positions survive leaving and returning', async () => {
+test('legacy controller: About anchors, skip links and reading positions survive leaving and returning', async () => {
   const s = await scene('/about/');
   try {
     s.click('a[href="#interests"]');
@@ -513,7 +514,7 @@ test('About anchors, skip links and reading positions survive leaving and return
   } finally { await s.close(); }
 });
 
-test('rapid article and section requests honor the latest destination', async () => {
+test('legacy controller: rapid article and section requests honor the latest destination', async () => {
   const s = await scene();
   try {
     s.click('[data-menu-project="2"]');
@@ -530,7 +531,7 @@ test('rapid article and section requests honor the latest destination', async ()
   } finally { await s.close(); }
 });
 
-test('Back and Forward restore articles and sections without creating history entries', async () => {
+test('legacy controller: Back and Forward restore articles and sections without creating history entries', async () => {
   const s = await scene();
   try {
     s.key('End');
@@ -557,7 +558,7 @@ test('Back and Forward restore articles and sections without creating history en
   } finally { await s.close(); }
 });
 
-test('offline navigation messages follow the same routes and ignore unrelated senders', async () => {
+test('legacy controller: offline navigation messages follow the same routes and ignore unrelated senders', async () => {
   const s = await scene();
   try {
     const address = `/projects/#project=${s.panels[4].slug}`;
@@ -570,7 +571,7 @@ test('offline navigation messages follow the same routes and ignore unrelated se
   } finally { await s.close(); }
 });
 
-test('direct-page preview navigation uses its local address bridge and restores Art from history', async () => {
+test('legacy controller: direct-page preview navigation uses its local address bridge and restores Art from history', async () => {
   const s = await scene();
   const addresses = [];
   try {
@@ -594,7 +595,7 @@ test('direct-page preview navigation uses its local address bridge and restores 
   } finally { await s.close(); }
 });
 
-test('Art opens as the final project with five full photos, section jumps and credits', async () => {
+test('legacy controller: Art opens as the final project with five full photos, section jumps and credits', async () => {
   const s = await scene('/projects/#project=art');
   try {
     const index = s.panels.length - 1;
@@ -670,7 +671,7 @@ test('Art opens as the final project with five full photos, section jumps and cr
   } finally { await s.close(); }
 });
 
-test('Art keeps the header accent on its title across gallery and article navigation', async () => {
+test('legacy controller: Art keeps the header accent on its title across gallery and article navigation', async () => {
   const s = await scene('/projects/#slide=art');
   try {
     const assertAccent = () => {
@@ -688,7 +689,7 @@ test('Art keeps the header accent on its title across gallery and article naviga
   } finally { await s.close(); }
 });
 
-test('enlarging a photo preserves the article, scroll position, focus and address', async () => {
+test('legacy controller: enlarging a photo preserves the article, scroll position, focus and address', async () => {
   const s = await scene('/projects/#project=art');
   try {
     const article = s.find('[data-project-view]');
@@ -723,7 +724,7 @@ test('enlarging a photo preserves the article, scroll position, focus and addres
   } finally { await s.close(); }
 });
 
-test('gradual zoom reaches decoded source resolution, pans without resetting and retains detail on resize', async () => {
+test('legacy controller: gradual zoom reaches decoded source resolution, pans without resetting and retains detail on resize', async () => {
   const s = await scene('/projects/#project=art');
   try {
     s.click('.case-study-section [data-image-open]');
@@ -791,7 +792,7 @@ test('gradual zoom reaches decoded source resolution, pans without resetting and
   } finally { await s.close(); }
 });
 
-test('wheel zoom stays under the cursor and touch pinch, pan and double tap stay inside the viewer', async () => {
+test('legacy controller: wheel zoom stays under the cursor and touch pinch, pan and double tap stay inside the viewer', async () => {
   const s = await scene('/projects/#project=art');
   try {
     s.click('.case-study-section [data-image-open]');
@@ -848,7 +849,7 @@ test('wheel zoom stays under the cursor and touch pinch, pan and double tap stay
   } finally { await s.close(); }
 });
 
-test('zoom transitions can be interrupted by input, closing and reduced motion', async () => {
+test('legacy controller: zoom transitions can be interrupted by input, closing and reduced motion', async () => {
   const s = await scene('/projects/#project=art', { reduced: false });
   try {
     s.click('.case-study-section [data-image-open]');
@@ -874,7 +875,7 @@ test('zoom transitions can be interrupted by input, closing and reduced motion',
   } finally { await s.close(); }
 });
 
-test('viewer motion can be interrupted and reduced motion finishes dismissal immediately', async () => {
+test('legacy controller: viewer motion can be interrupted and reduced motion finishes dismissal immediately', async () => {
   const s = await scene('/projects/#project=art', { reduced: false });
   try {
     const dialog = s.find('[data-image-viewer]');
@@ -910,7 +911,7 @@ test('viewer motion can be interrupted and reduced motion finishes dismissal imm
   } finally { await s.close(); }
 });
 
-test('the image viewer survives rapid reopen and closes cleanly before article replacement', async () => {
+test('legacy controller: the image viewer survives rapid reopen and closes cleanly before article replacement', async () => {
   const s = await scene('/projects/#project=art');
   try {
     const dialog = s.find('[data-image-viewer]');
@@ -931,7 +932,7 @@ test('the image viewer survives rapid reopen and closes cleanly before article r
   } finally { await s.close(); }
 });
 
-test('replacing Art clears its layout, photos and label, and restores dated project metadata', async () => {
+test('legacy controller: replacing Art clears its layout, photos and label, and restores dated project metadata', async () => {
   const s = await scene('/projects/#project=art');
   try {
     s.click('[data-menu-project="2"]'); await s.flush();
@@ -952,13 +953,13 @@ test('replacing Art clears its layout, photos and label, and restores dated proj
   } finally { await s.close(); }
 });
 
-test('the retained Art gallery has valid local assets, links and accessibility references', async () => {
+test('legacy controller: the legacy Portfolio fixture retains component assets, links and accessibility references', async () => {
   for (const entry of ['art/']) {
     const window = new Window({ url: `https://stonederek.github.io/${entry}`, settings: {
       disableJavaScriptEvaluation: true, disableJavaScriptFileLoading: true, disableCSSFileLoading: true
     } });
     try {
-      window.document.write(await readFile(new URL(`../dist/${entry}index.html`, import.meta.url), 'utf8'));
+      window.document.write(legacyMarkup);
       if (entry === 'art/') {
         assert.equal(window.document.querySelector('.menu-name').textContent, 'stonederek.github.io');
         const title = window.document.querySelector('#home-title');
@@ -991,11 +992,11 @@ test('the retained Art gallery has valid local assets, links and accessibility r
   }
 });
 
-test('image warming reaches the next cover before entry without promoting all distant covers', async () => {
+test('legacy controller: image warming reaches the next cover before entry without promoting all distant covers', async () => {
   const s = await scene();
   try {
-    // This test drives a historical Home virtual address using the retained
-    // Art component. Reset its Art-specific SSR warming to test the controller
+    // This test drives a historical Home virtual address using the fixture.
+    // Reset its Art-specific SSR warming to test the controller
     // from a controlled cold project-cover state.
     for (const image of s.root.querySelectorAll('[data-slide][data-panel-kind="project"] img')) image.loading = 'lazy';
     assert.equal(s.find('[data-slide="2"] img').loading, 'lazy');

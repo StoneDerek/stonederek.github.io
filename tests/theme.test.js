@@ -23,7 +23,7 @@ test('the inline startup resolves system and saved preferences before painting',
   }
 });
 
-test('deferred appearance stays light despite saved, system, or preview dark preferences', () => {
+test('explicitly disabled appearance stays light despite saved, system, or preview dark preferences', () => {
   for (const blocked of [false, true]) {
     const s = bootstrap({ saved: 'dark', dark: true, preview: 'dark', previewSystem: true, blocked, enabled: false });
     assert.equal(s.document.documentElement.dataset.theme, 'light');
@@ -60,27 +60,31 @@ test('offline system following uses the outer preference rather than the iframe 
   } finally { s.restore(); }
 });
 
-function scene({ blocked = false } = {}) {
+function scene({ blocked = false, controlCount = 1 } = {}) {
   const names = ['document', 'window', 'CustomEvent'];
   const previous = new Map(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   const document = new EventTarget(), window = new EventTarget(), media = new EventTarget();
   const saved = new Map(); media.matches = false;
-  const toggle = { setAttribute(name, value) { this[name] = value; } }, status = {}, reset = {};
-  const control = { hidden: true, querySelector: name => name === '[data-theme-switch]' ? toggle : name === '[data-theme-status]' ? status : reset };
+  const variants = Array.from({ length: controlCount }, () => {
+    const toggle = { setAttribute(name, value) { this[name] = value; } }, status = {}, reset = {};
+    const control = { hidden: true, querySelector: name => name === '[data-theme-switch]' ? toggle : name === '[data-theme-status]' ? status : reset };
+    return { toggle, status, reset, control };
+  });
+  const { toggle, status, reset, control } = variants[0];
   const meta = {};
   document.documentElement = { dataset: {} };
   document.querySelector = selector => selector.includes('meta') ? meta : null;
-  document.querySelectorAll = () => [control];
+  document.querySelectorAll = () => variants.map(item => item.control);
   window.matchMedia = () => media;
   window.__PORTFOLIO_THEME_STATE__ = { choice: 'system', resolved: 'light' };
   window.localStorage = { setItem(key, value) { if (blocked) throw new Error('blocked'); saved.set(key, value); },
     removeItem(key) { if (blocked) throw new Error('blocked'); saved.delete(key); } };
   const message = []; window.__PORTFOLIO_PREVIEW_SET_THEME__ = state => message.push(state);
   Object.assign(globalThis, { document, window, CustomEvent: class extends Event { constructor(name, options) { super(name); this.detail = options.detail; } } });
-  mountTheme();
-  return { document, window, media, saved, control, toggle, status, reset, message,
+  const theme = mountTheme();
+  return { document, window, media, saved, control, toggle, status, reset, message, theme, variants,
     click(selector) { const event = new Event('click'); Object.defineProperty(event, 'target', { value: { closest: name => name === selector } }); document.dispatchEvent(event); },
-    restore() { for (const [name, descriptor] of previous) { if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name]; } }
+    restore() { theme.destroy(); for (const [name, descriptor] of previous) { if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name]; } }
   };
 }
 
@@ -122,4 +126,44 @@ test('changes in another tab update controls without writing the preference back
     assert.equal(s.document.documentElement.dataset.themePreference, 'system');
     assert.equal(s.document.documentElement.dataset.theme, 'light');
   } finally { s.restore(); }
+});
+
+test('desktop and mobile controls reflect the same saved and system preference', () => {
+  const s = scene({ controlCount: 2 });
+  try {
+    s.click('[data-theme-switch]');
+    for (const item of s.variants) {
+      assert.equal(item.control.hidden, false);
+      assert.equal(item.toggle['aria-checked'], 'true');
+      assert.equal(item.status.textContent, 'Saved preference');
+      assert.equal(item.reset.hidden, false);
+    }
+    s.click('[data-theme-system]');
+    s.media.matches = true;
+    s.media.dispatchEvent(new Event('change'));
+    for (const item of s.variants) {
+      assert.equal(item.toggle['aria-checked'], 'true');
+      assert.equal(item.status.textContent, 'Following system');
+      assert.equal(item.reset.hidden, true);
+    }
+  } finally { s.restore(); }
+});
+
+test('unmounting removes theme listeners so a remounted page toggles only once', () => {
+  const s = scene();
+  let replacement;
+  try {
+    s.click('[data-theme-switch]');
+    assert.equal(s.document.documentElement.dataset.theme, 'dark');
+    s.theme.destroy();
+    s.theme.destroy();
+    s.click('[data-theme-switch]');
+    const event = new Event('storage'); event.key = themeStorageKey; event.newValue = 'light';
+    s.window.dispatchEvent(event);
+    assert.equal(s.document.documentElement.dataset.theme, 'dark', 'disposed listeners cannot change the retained preference');
+    replacement = mountTheme();
+    s.click('[data-theme-switch]');
+    assert.equal(s.document.documentElement.dataset.theme, 'light', 'one click toggles exactly once after a route swap');
+    assert.equal(s.saved.get(themeStorageKey), 'light');
+  } finally { replacement?.destroy(); s.restore(); }
 });

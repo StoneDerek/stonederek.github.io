@@ -57,14 +57,16 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
 .serif-site .serif-email { max-width: 100%; overflow-wrap: anywhere; }
 .serif-site .serif-footer-links { display: flex; flex-wrap: wrap; gap: 4px 24px; }
 
-.serif-site .work-project-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 56px 32px; margin-top: 44px; }
+.serif-site .work-project-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 36px; margin-top: 0; }
 .serif-site .work-project { min-width: 0; margin: 0; }
 .serif-site .work-project-open { display: block; min-width: 0; text-decoration: none; }
-.serif-site .work-project-image { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: cover; background: #f0edf3; }
-.serif-site .work-project-number { display: block; margin-top: 16px; color: var(--muted); font-size: 12px; line-height: 16px; font-weight: 400; }
-.serif-site .work-project-title { margin: 8px 0 0; font-size: 26px; line-height: 31px; font-weight: 400; letter-spacing: -.02em; }
-.serif-site .work-project-method { margin: 4px 0 0; color: var(--muted); font-size: 16px; line-height: 24px; }
+.serif-site .work-project-image { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; background: #f0edf3; }
+.serif-site .work-project-title { margin: 14px 0 0; font-size: 18px; line-height: 23px; font-weight: 400; letter-spacing: 0; }
+.serif-site .work-project-method { margin: 1px 0 0; color: var(--page-text); font-size: 16px; line-height: 22px; }
 .serif-site .work-project-open:hover .work-project-title { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.serif-site[data-page='work'] .work-coming-soon { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; min-width: 0; min-height: 180px; aspect-ratio: 4 / 3; padding: 24px; color: var(--muted); }
+.serif-site[data-page='work'] .work-coming-cat { margin: 0; padding: 0; font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace; font-size: 20px; font-weight: 400; line-height: 1.2; white-space: pre; }
+.serif-site[data-page='work'] .work-coming-soon p { margin: 0; font-size: 16px; line-height: 24px; }
 
 /* Work articles keep the existing content and image viewer in document flow. */
 .serif-site .work-article { position: static; inset: auto; z-index: auto; width: auto; height: auto; overflow: visible; scrollbar-gutter: auto; background: #fff; color: var(--page-text); overscroll-behavior: auto; }
@@ -115,6 +117,13 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
 .serif-site .about-story h2 { font-weight: 400; letter-spacing: -.025em; }
 .serif-site .about-story p { line-height: 1.65; }
 
+@media (min-width: 880px) {
+  .serif-site[data-page='work'] { grid-template-columns: minmax(0, 1fr) 112px; column-gap: clamp(64px, 8vw, 144px); width: 100%; margin-inline: 0; padding-inline: max(28px, env(safe-area-inset-left)) max(28px, env(safe-area-inset-right)); }
+  .serif-site[data-page='work'] :is(.serif-main, .serif-footer) { width: min(100%, 1108px); }
+  .serif-site[data-page='work']:not([data-work-view='article']) .serif-main { margin-top: clamp(112px, 12vw, 220px); }
+  .serif-site[data-page='work'] .serif-navigation-desktop { width: 112px; justify-self: end; }
+}
+
 @media (max-width: 879px) {
   .serif-site { grid-template-columns: minmax(0, 1fr); padding: max(28px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); }
   .serif-site .serif-navigation-desktop { display: none; }
@@ -133,8 +142,8 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
   .serif-site .serif-page-title { font-size: 34px; line-height: 38px; }
   .serif-site .serif-page-intro { max-width: 34ch; margin-top: 14px; font-size: 17px; line-height: 26px; }
   .serif-site .serif-footer { margin-top: 48px; }
-  .serif-site .work-project-grid { grid-template-columns: minmax(0, 1fr); row-gap: 40px; margin-top: 32px; }
-  .serif-site .work-project-title { font-size: 24px; line-height: 29px; }
+  .serif-site .work-project-grid { grid-template-columns: minmax(0, 1fr); row-gap: 32px; margin-top: 0; }
+  .serif-site .work-project-title { font-size: 18px; line-height: 23px; }
   .serif-site .work-article .project-toolbar { gap: 8px 16px; }
   .serif-site .work-article .project-view-number { margin-left: auto; }
   .serif-site .work-article .project-view-meta { order: 3; flex-basis: 100%; }

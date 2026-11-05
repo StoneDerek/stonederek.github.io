@@ -3,8 +3,8 @@ import { resolve } from 'node:path';
 import { Script } from 'node:vm';
 import { build } from 'esbuild';
 import sharp from 'sharp';
-// Keep a useful native Home document before scripts run. Other native pages
-// and the retained Art gallery are mounted locally by the address bridge.
+// Keep a useful native Home document before scripts run. Other native pages,
+// the inline Art gallery and the legacy Resume redirect remain self-contained.
 const routes = {
   home: 'index.html', about: 'about/index.html', projects: 'projects/index.html',
   art: 'art/index.html', resume: 'resume/index.html'
@@ -58,9 +58,10 @@ for (const [route, file] of Object.entries(routes)) {
     await embedImage(path, publicPath);
   }
   for (const [path, token] of embedded) html = html.replaceAll(`="${path}"`, `="${token}"`);
-  for (const data of [...html.matchAll(/<script\b[^>]*\bid="(?:portfolio-data|work-data)"[^>]*>([\s\S]*?)<\/script>/g)]) {
-    const projects = JSON.parse(data[1]);
-    const base = html.match(/\bdata-asset-base="([^"]*)"/)?.[1] || '/';
+  for (const data of [...html.matchAll(/<script\b[^>]*\bid="(?:portfolio-data|work-data|art-data)"[^>]*>([\s\S]*?)<\/script>/g)]) {
+    const parsed = JSON.parse(data[1]);
+    const projects = Array.isArray(parsed) ? parsed : [parsed];
+    const base = html.match(/\bdata-asset-base="([^"]*)"/)?.[1] || html.match(/\bdata-base="([^"]*)"/)?.[1] || '/';
     for (const project of projects) {
       const media = [...(project.articleMedia || []), ...(project.caseStudy?.sections || []).flatMap(section => section.media || [])];
       for (const item of media) {
@@ -69,7 +70,7 @@ for (const [route, file] of Object.entries(routes)) {
         item.src = await embedImage(`${base}${publicPath}`, publicPath);
       }
     }
-    html = html.replace(data[0], () => data[0].replace(data[1], () => JSON.stringify(projects).replace(/</g, '\\u003c')));
+    html = html.replace(data[0], () => data[0].replace(data[1], () => JSON.stringify(parsed).replace(/</g, '\\u003c')));
   }
   for (const match of [...html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"[^>]*>/g)]) {
     const relative = match[1].match(/\/_astro\/.+$/)?.[0].slice(1);
@@ -178,6 +179,13 @@ function initializePreview(payload) {
     const route = routeFor(address) || 'home';
     currentAddress = address;
     window.__PORTFOLIO_PREVIEW_ADDRESS__ = address;
+    if (route === 'resume' && resumePDF) {
+      // The public compatibility route redirects straight to the PDF. Preserve
+      // that behavior locally instead of mounting its meta-refresh document.
+      connectLinks();
+      location.replace(resumeAddress || new URL(`${base}resume.pdf`, origin).href);
+      return;
+    }
     window.dispatchEvent(new Event('portfolio:preview-unmount'));
     const next = new DOMParser().parseFromString(expand(pages[route]), 'text/html');
     for (const node of [document.documentElement, document.body]) {

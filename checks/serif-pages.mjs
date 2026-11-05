@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, access } from 'node:fs/promises';
 import { Window } from 'happy-dom';
+const originalArt = JSON.parse(await readFile(new URL('../src/data/projects.json', import.meta.url), 'utf8')).find(project => project.slug === 'art');
 
 // Read real built pages. These checks cover content, destinations and semantic
 // structure; they do not establish browser geometry or physical-device feel.
@@ -16,7 +17,7 @@ async function page(entry, run) {
 }
 
 test('native serif pages provide matching desktop/mobile destinations and useful landmarks', async () => {
-  for (const [entry, active] of [['', 'Home'], ['projects/', 'Work'], ['about/', 'About'], ['resume/', 'Resume']]) {
+  for (const [entry, active] of [['', 'Home'], ['projects/', 'Work'], ['about/', 'About'], ['art/', 'Art']]) {
     await page(entry, async doc => {
       assert.ok(doc.querySelector('.serif-site'));
       assert.equal(doc.querySelectorAll('main').length, 1);
@@ -28,12 +29,30 @@ test('native serif pages provide matching desktop/mobile destinations and useful
       assert.deepEqual(destinations(navs[0]), destinations(navs[1]));
       assert.deepEqual(destinations(navs[0]).map(([label]) => label), ['Home', 'Work', 'About', 'Art', 'Resume', 'LinkedIn']);
       for (const nav of navs) assert.equal(nav.querySelector('[aria-current="page"]').textContent, active);
+      for (const link of doc.querySelectorAll('[data-resume-link]')) {
+        assert.equal(new URL(link.href).pathname, '/resume.pdf', 'Resume opens the PDF directly');
+      }
       assert.ok(doc.querySelector('details[data-serif-menu] > summary'));
       const skip = doc.querySelector('.serif-skip-link');
       assert.ok(doc.getElementById(skip.getAttribute('href').slice(1)));
-      assert.equal(doc.querySelector('.serif-identity').textContent, 'Derek Stone');
+      const brand = doc.querySelector('.serif-brand');
+      assert.equal(brand.querySelector('.serif-identity').textContent, 'Derek Stone');
+      assert.equal(brand.querySelector('.serif-context')?.textContent || '', active === 'Home' ? '' : `/${active}`);
+      const updated = doc.querySelector('.serif-footer time[data-publication-date]');
+      assert.ok(updated);
+      assert.ok(Number.isFinite(new Date(updated.dateTime).getTime()));
+      assert.equal(updated.getAttribute('tabindex'), '0');
+      assert.match(doc.getElementById(updated.getAttribute('aria-describedby')).textContent, /^Last updated /);
       assert.equal(doc.querySelector('.serif-footer a[href*="#links"]'), null, 'mirror puzzle remains a hidden discovery in Art');
-      assert.equal(doc.querySelector('meta[name="color-scheme"]').content, 'only light');
+      assert.equal(doc.querySelector('meta[name="color-scheme"]').content, 'light dark');
+      assert.equal(doc.documentElement.hasAttribute('data-appearance-enabled'), true);
+      const appearance = [...doc.querySelectorAll('nav[aria-label="Main navigation"] [data-theme-control]')];
+      assert.equal(appearance.length, 2);
+      for (const control of appearance) {
+        assert.equal(control.querySelector('[data-theme-switch]').getAttribute('role'), 'switch');
+        assert.ok(doc.getElementById(control.getAttribute('aria-labelledby')));
+      }
+      assert.equal(doc.querySelector('main [data-theme-control]'), null, 'appearance belongs to shared navigation');
     });
   }
 });
@@ -61,12 +80,17 @@ test('Work contains exactly the three current projects with the RAG hierarchy an
     assert.equal(data.length, 4);
     assert.equal(data.filter(item => item.slug === 'art').length, 1, 'legacy Art article links retain their original content');
     assert.ok(data[1].legacySlugs.includes('soft-machines'));
+    const coming = doc.querySelector('.work-coming-soon');
+    assert.match(coming?.textContent, /More coming soon/);
+    assert.ok(coming.querySelector('pre').textContent.trim());
+    assert.equal(coming.querySelector('a, button, [tabindex]'), null, 'the forthcoming item does not promise an article');
   });
 });
 
 test('Home and About preserve the supplied introduction, photo and established anchors', async () => {
   await page('', doc => {
     assert.equal(doc.querySelector('#home-title').textContent, 'Derek Stone');
+    assert.ok(doc.querySelector('#home-title').classList.contains('native-profile-title'));
     assert.equal(doc.querySelector('.introduction-lead').textContent, 'Hi, I’m Derek.');
     assert.match(doc.querySelector('.introduction-prose').textContent, /Electrical Engineering student/);
     assert.ok(doc.querySelector('.introduction-prose a[href="https://www.rose-hulman.edu/"]'));
@@ -74,23 +98,66 @@ test('Home and About preserve the supplied introduction, photo and established a
     assert.equal(image.getAttribute('src'), '/art/home/climbing.webp');
     assert.equal(image.width / image.height, 1536 / 2048);
     assert.equal(image.loading, 'eager');
-    assert.ok(doc.querySelector('[data-home-entry]'));
+    assert.equal(doc.querySelector('[data-home-entry], .has-entry-motion, main script'), null, 'native Home displays its content without an entrance sequence');
+    const explore = [...doc.querySelectorAll('main a[href="/projects/"]')];
+    assert.equal(explore.length, 1);
+    assert.equal(explore[0].getAttribute('role'), null);
   });
   await page('about/', doc => {
+    assert.ok(doc.querySelector('#about-title').classList.contains('native-profile-title'));
+    assert.equal(doc.querySelector('#about-title').getAttribute('aria-label'), 'About');
     assert.ok(doc.getElementById('interests'));
     assert.ok(doc.querySelector('.about-contents a[href="#interests"]'));
   });
 });
 
-test('the Art entry retains the original gallery, five photographs, viewer and mirror puzzle', async () => {
+test('Art is an inline gallery of only five original artworks with its overview and separate hidden puzzle', async () => {
   await page('art/', doc => {
-    const root = doc.querySelector('#portfolio');
-    const panels = JSON.parse(doc.querySelector('#portfolio-data').textContent);
-    assert.equal(panels[Number(root.dataset.initialPanel)].slug, 'art');
-    const art = panels.find(item => item.slug === 'art');
+    const root = doc.querySelector('[data-art-root]');
+    assert.ok(root);
+    assert.equal(doc.querySelector('#portfolio, [data-gallery-track], [data-work-project]'), null);
+    const stage = root.querySelector('[data-art-stage]');
+    const details = root.querySelector('[data-art-details]');
+    assert.ok(stage && details);
+    assert.ok(root.closest('main'), 'the gallery belongs to the normal page content');
+    assert.equal(stage.contains(details), false, 'artwork prose sits below the framed gallery');
+    const items = [...root.querySelectorAll('[data-art-item]')];
+    const choices = [...root.querySelectorAll('[data-art-select]')];
+    assert.equal(items.length, 5);
+    assert.deepEqual(choices.map(choice => choice.dataset.artSelect), ['0', '1', '2', '3', '4']);
+    assert.ok(choices.every(choice => choice.tagName === 'BUTTON'));
+    const paths = ['stellers-jay', 'broken-line-chicken', 'ink-chicken', 'bird-stamp', 'watercolors'];
+    for (const [index, item] of items.entries()) {
+      assert.ok(item.querySelector(`img[src="/art/collection/${paths[index]}.webp"]`));
+      assert.equal(item.hidden, index !== 0);
+    }
+    assert.equal(choices.filter(choice => choice.getAttribute('aria-current') === 'true').length, 1);
+    assert.equal(root.dataset.artIndex, '0');
+    const art = JSON.parse(root.querySelector('#art-data').textContent);
+    assert.equal(art.slug, 'art');
     assert.equal(art.caseStudy.sections.flatMap(section => section.media || []).length, 5);
-    assert.ok(root.querySelector('dialog[data-image-viewer]'));
-    assert.ok(root.querySelector('[data-gallery-end] [data-laser-experiment]'));
+    assert.equal(art.description, originalArt.description);
+    assert.equal(art.note, originalArt.note);
+    assert.deepEqual(art.caseStudy.sections.map(section => section.title), ['01', '02', '03', '04', '05']);
+    assert.deepEqual(art.caseStudy.sections.map(section => section.paragraphs), originalArt.caseStudy.sections.map(section => section.paragraphs));
+    assert.deepEqual(art.caseStudy.footnotes.filter(note => note.number > 0), originalArt.caseStudy.footnotes.filter(note => note.number > 0));
+    const puzzle = doc.querySelector('[data-art-puzzle]');
+    assert.ok(puzzle?.querySelector('[data-laser-experiment]'));
+    assert.equal(puzzle.hidden, true);
+    assert.equal(stage.contains(puzzle), false, 'the hidden puzzle is not an artwork slide');
+  });
+});
+
+test('the compatibility Resume route redirects immediately to the same directly linked PDF', async () => {
+  let destination;
+  await page('', doc => { destination = doc.querySelector('[data-resume-link]').getAttribute('href'); });
+  await page('resume/', async doc => {
+    assert.equal(doc.querySelector('.serif-site'), null, 'a PDF link does not display an intermediate shell');
+    const refresh = [...doc.querySelectorAll('meta[http-equiv]')].find(meta => meta.httpEquiv.toLowerCase() === 'refresh');
+    assert.ok(refresh);
+    assert.equal(refresh.content.replace(/^0;\s*url=/i, ''), destination);
+    assert.ok([...doc.querySelectorAll('a[href]')].some(link => link.getAttribute('href') === destination));
+    await access(new URL('../dist/resume.pdf', import.meta.url));
   });
 });
 

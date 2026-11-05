@@ -7,11 +7,12 @@
     "year": "2026",
     "caption": "Recognizing drones from their acoustic signatures.",
     "description": "An exploration of detecting drones from sound by converting recordings into spectrograms and using a convolutional neural network to recognize acoustic patterns.",
-    "note": "Project details, training data, and measured performance will be added as the work develops. The cover is a computed spectrogram of synthetic harmonic audio, not a drone recording or model result.",
-    "image": "art/acoustic-drone-detection.webp",
-    "thumbnail": "thumbnails/acoustic-drone-detection.webp",
-    "imageAlt": "A computed time-frequency spectrogram of synthetic harmonic audio, with fine burgundy harmonic bands on a dark background.",
+    "note": "Project details, training data, and measured performance will be added as the work develops. The cover shows a spectrogram crop from a supplied screenshot sample.",
+    "image": "art/project-screenshots/acoustic-drone-detection-spectrogram.webp",
+    "thumbnail": "thumbnails/project-screenshots/acoustic-drone-detection-spectrogram.webp",
+    "imageAlt": "A crop of the supplied acoustic-classification screenshot, showing the original spectrogram in purple, blue, green, and yellow.",
     "position": "50% 50%",
+    "fit": "cover",
     "palette": {
       "accent": "#1aff78",
       "ink": "#18221b"
@@ -86,8 +87,8 @@
     "galleryTitle": "Acoustic Drone Detection",
     "galleryMethod": "with CNN Spectrogram Analysis",
     "eyebrow": "Project preview",
-    "imageWidth": 1920,
-    "imageHeight": 1200
+    "imageWidth": 288,
+    "imageHeight": 216
   },
   {
     "slug": "rag-chatbot",
@@ -97,11 +98,12 @@
     "year": "2026",
     "caption": "Academic questions, grounded in source documents.",
     "description": "A retrieval-augmented chatbot for academic-advising questions, using relevant catalog, curriculum, and policy documents to ground its responses.",
-    "note": "The intended focus is clear answers with traceable sources. Supported documents, implementation details, and evaluation will be added as the project develops. The cover diagrams the planned document-to-answer workflow.",
-    "image": "art/academic-advising-rag.webp",
-    "thumbnail": "thumbnails/academic-advising-rag.webp",
-    "imageAlt": "A blue-gray schematic connecting course catalogs, degree requirements, and academic policies to retrieved passages and an answer with citations.",
+    "note": "The intended focus is clear answers with traceable sources. Supported documents, implementation details, and evaluation will be added as the project develops. The cover shows a supplied screenshot sample of an advising response.",
+    "image": "art/project-screenshots/rag-advising-response.webp",
+    "thumbnail": "thumbnails/project-screenshots/rag-advising-response.webp",
+    "imageAlt": "A supplied chatbot response summarizing the UC Davis Electrical Engineering program with source links, centered on the original dark background.",
     "position": "50% 50%",
+    "fit": "cover",
     "palette": {
       "accent": "#b52810",
       "ink": "#ffffff"
@@ -109,8 +111,8 @@
     "galleryTitle": "RAG Chatbot",
     "galleryMethod": "for Academic Advising",
     "eyebrow": "Project preview",
-    "imageWidth": 1920,
-    "imageHeight": 1200
+    "imageWidth": 996,
+    "imageHeight": 747
   },
   {
     "slug": "2d-lightning-simulation",
@@ -120,11 +122,12 @@
     "year": "2026",
     "caption": "Exploring how local probabilities grow branching discharges.",
     "description": "A two-dimensional lightning simulation that explores branching discharge paths through a probabilistic potential model.",
-    "note": "The project will document the potential model, growth rules, and the patterns they produce. The cover is a separate illustrative lattice-growth calculation, not output from the project implementation.",
-    "image": "art/lightning-potential-model.webp",
-    "thumbnail": "thumbnails/lightning-potential-model.webp",
-    "imageAlt": "An illustrative potential-weighted lattice-growth calculation: muted olive branching paths between fixed electrodes on a dark field.",
+    "note": "The project will document the potential model, growth rules, and the patterns they produce. The cover shows a cropped canvas from a supplied simulation screenshot sample.",
+    "image": "art/project-screenshots/lightning-simulation-canvas.webp",
+    "thumbnail": "thumbnails/project-screenshots/lightning-simulation-canvas.webp",
+    "imageAlt": "A crop of the supplied lightning simulation, showing a white branching path across a dotted field toward brown terrain.",
     "position": "50% 50%",
+    "fit": "cover",
     "palette": {
       "accent": "#efc4ff",
       "ink": "#211629"
@@ -132,8 +135,8 @@
     "galleryTitle": "2D Lightning Simulation",
     "galleryMethod": "with a Probabilistic Potential Model",
     "eyebrow": "Project preview",
-    "imageWidth": 1920,
-    "imageHeight": 1200
+    "imageWidth": 792,
+    "imageHeight": 594
   },
   {
     "slug": "art",

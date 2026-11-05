@@ -1,6 +1,5 @@
 export const themeStorageKey = 'derek-stone-theme';
-// Appearance modes are deferred while the light site and its content take shape.
-export const appearanceEnabled = false;
+export const appearanceEnabled = true;
 
 // This function also runs inline in <head>, before the first page can paint.
 // Keep it self-contained so the static and offline pages use the same startup.
@@ -31,6 +30,9 @@ export function mountTheme({ enabled = true } = {}) {
     return { refresh: () => initializeTheme(themeStorageKey, false) };
   }
   let state = window.__PORTFOLIO_THEME_STATE__ || initializeTheme(themeStorageKey);
+  const controller = new AbortController();
+  const listen = (target, type, handler) => target?.addEventListener?.(type, handler, { signal: controller.signal });
+  let disposed = false;
   let media;
   try { media = window.matchMedia?.('(prefers-color-scheme: dark)'); } catch {}
   const resolve = choice => choice === 'system'
@@ -48,6 +50,7 @@ export function mountTheme({ enabled = true } = {}) {
     });
   }
   function apply(choice = state.choice, remember = false) {
+    if (disposed) return;
     const previous = state.resolved;
     state = { choice, resolved: resolve(choice) };
     window.__PORTFOLIO_THEME_STATE__ = state;
@@ -61,20 +64,20 @@ export function mountTheme({ enabled = true } = {}) {
     window.__PORTFOLIO_PREVIEW_SET_THEME__?.(state);
     if (previous !== state.resolved) document.dispatchEvent(new CustomEvent('portfolio:theme-change', { detail: state }));
   }
-  document.addEventListener('click', event => {
+  listen(document, 'click', event => {
     if (event.target.closest('[data-theme-switch]')) apply(state.resolved === 'dark' ? 'light' : 'dark', true);
     else if (event.target.closest('[data-theme-system]')) apply('system', true);
   });
-  media?.addEventListener('change', () => { if (state.choice === 'system') apply(); });
-  document.addEventListener('portfolio:preview-system-change', () => { if (state.choice === 'system') apply(); });
-  window.addEventListener('storage', event => {
+  listen(media, 'change', () => { if (state.choice === 'system') apply(); });
+  listen(document, 'portfolio:preview-system-change', () => { if (state.choice === 'system') apply(); });
+  listen(window, 'storage', event => {
     if (event.key === themeStorageKey || event.key === null) {
       apply(['light', 'dark'].includes(event.newValue) ? event.newValue : 'system');
     }
   });
-  document.addEventListener('astro:before-swap', event => chrome(event.newDocument));
-  document.addEventListener('astro:page-load', () => apply());
-  window.addEventListener('pageshow', () => apply());
+  listen(document, 'astro:before-swap', event => chrome(event.newDocument));
+  listen(document, 'astro:page-load', () => apply());
+  listen(window, 'pageshow', () => apply());
   apply();
-  return { refresh: () => apply() };
+  return { refresh: () => apply(), destroy() { if (disposed) return; disposed = true; controller.abort(); } };
 }

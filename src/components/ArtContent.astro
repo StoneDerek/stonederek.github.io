@@ -1,0 +1,62 @@
+---
+import projects from '../data/projects.json';
+import ArtImageViewer from './ArtImageViewer.astro';
+import ArtPuzzle from './ArtPuzzle.astro';
+import '../styles/art.css';
+const art = projects.find(project => project.slug === 'art');
+const works = art.caseStudy.sections;
+const base = import.meta.env.BASE_URL;
+const source = src => `${base}${src}`;
+const serialized = JSON.stringify(art).replace(/</g, '\\u003c');
+---
+<div class="art-collection" data-art-root data-base={base} data-art-index="0">
+  <header class="art-heading">
+    <h1 class="serif-page-title" data-detail-title tabindex="-1">Art</h1>
+    <p class="art-caption">{art.caption}</p>
+  </header>
+  <div data-art-collection>
+    <section class="art-gallery" role="region" aria-roledescription="carousel" aria-label="Artworks">
+      <p id="art-gallery-instructions" class="sr-only">Use the arrow keys or thumbnails to choose an artwork. Select the main image to enlarge it.</p>
+      <div class="art-stage" data-art-stage tabindex="0" aria-label="Artwork gallery" aria-describedby="art-gallery-instructions">
+        <button type="button" class="art-neighbor art-neighbor-previous" data-art-step="-1" data-art-peek="previous" aria-label="Previous artwork" hidden>
+          <img src={source(works[0].media[0].src)} alt="" aria-hidden="true" width="2048" height="1536" draggable="false" />
+        </button>
+        <div class="art-current">
+          {works.map((work, index) => (
+            <figure class="art-slide" data-art-item={index} id={`artwork-${work.title}`} hidden={index !== 0} role="group" aria-roledescription="slide" aria-label={`Artwork ${work.title} of ${works.length}`}>
+              <button type="button" class="art-image-open" data-image-open aria-label={`Enlarge artwork ${work.title}`} aria-haspopup="dialog" aria-controls="project-image-viewer">
+                <img src={source(work.media[0].src)} alt={work.media[0].alt} width={work.media[0].width} height={work.media[0].height} loading={index === 0 ? 'eager' : 'lazy'} fetchpriority={index === 0 ? 'high' : 'auto'} decoding="async" draggable="false" />
+                <span class="art-enlarge-label" aria-hidden="true">Enlarge ↗</span>
+              </button>
+            </figure>
+          ))}
+        </div>
+        <button type="button" class="art-neighbor art-neighbor-next" data-art-step="1" data-art-peek="next" aria-label="Next artwork">
+          <img src={source(works[1].media[0].src)} alt="" aria-hidden="true" width="2048" height="1536" loading="lazy" draggable="false" />
+        </button>
+      </div>
+      <div class="art-controls">
+        <button type="button" class="art-arrow" data-art-step="-1" aria-label="Previous artwork" disabled>←</button>
+        <div class="art-thumbnails" role="group" aria-label="Choose an artwork">
+          {works.map((work, index) => (
+            <button type="button" class="art-thumbnail" data-art-select={index} aria-label={`Show artwork ${work.title}`} aria-current={index === 0 ? 'true' : undefined} aria-controls={`artwork-${work.title}`}>
+              <img src={source(work.media[0].src)} alt="" width={work.media[0].width} height={work.media[0].height} loading="lazy" decoding="async" draggable="false" />
+              <span>{work.title}</span>
+            </button>
+          ))}
+        </div>
+        <button type="button" class="art-arrow" data-art-step="1" aria-label="Next artwork">→</button>
+      </div>
+      <p class="art-count" data-art-count role="status" aria-live="polite" aria-atomic="true">01 / 05</p>
+    </section>
+    <div class="art-details project-case-study" data-art-details data-layout="art"></div>
+    <details class="art-collection-note">
+      <summary>About this collection</summary>
+      <p>{art.description}</p><p>{art.note}</p>
+    </details>
+  </div>
+  <ArtPuzzle />
+  <ArtImageViewer />
+  <script type="application/json" id="art-data" set:html={serialized}></script>
+</div>
+<noscript><style>.serif-site .art-stage{height:auto}.serif-site [data-art-item][hidden]{display:block!important}.serif-site .art-current{width:100%}.serif-site .art-slide{margin-bottom:24px}.serif-site :is(.art-neighbor,.art-controls,.art-count,.art-enlarge-label){display:none}</style></noscript>
