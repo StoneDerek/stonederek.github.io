@@ -1,6 +1,6 @@
 .serif-site .art-collection { --accent: #c90062; --art-thumb-width: 80px; --art-reading-font: Georgia, 'Times New Roman', serif; min-width: 0; }
 /* The gallery uses the page itself as its surface, without an enclosure. */
-.serif-site .art-heading { width: min(100%, 44rem); margin-inline: auto; }
+.serif-site .art-heading { margin-left: max(0px, calc(var(--art-title-inset, 15%) - 12px)); }
 .serif-site .art-gallery { margin-top: 24px; }
 .serif-site[data-page='art'] .art-gallery .art-stage {
   --art-slide-width: min(70%, 880px);
@@ -43,7 +43,7 @@
 .serif-site .art-details[data-layout='art'] .project-footnotes { grid-area: 2 / 1; width: 100%; max-width: none; margin-top: 32px; padding: 0; border: 0; font-family: var(--secondary-font); }
 .serif-site .art-details[data-layout='art'] :is(.project-footnote p, .project-footnote p a) { font-size: 13px; line-height: 1.5; }
 .serif-site .art-details[data-layout='art'] .project-footnote + .project-footnote { margin-top: 16px; }
-.serif-site .art-collection-note { width: auto; max-width: 44rem; margin: 16px 0 0 max(0px, calc(var(--art-title-inset, 15%) - 12px)); padding: 0; border: 0; font-size: 16px; }
+.serif-site .art-collection-note { width: min(100%, 44rem); margin: 16px auto 0; padding: 0; border: 0; font-size: 16px; }
 .serif-site .art-collection-note summary { padding: 0; font-family: var(--secondary-font); font-size: 13px; line-height: 1.35; cursor: pointer; }
 .serif-site .art-collection-note p { max-width: 65ch; line-height: 1.65; }
 .serif-site .art-puzzle { position: relative; margin-top: 32px; }
@@ -56,7 +56,7 @@ body:has([data-art-root] dialog[open]) { overflow: hidden; }
 }
 @media (max-width: 759px) {
   .serif-site .art-gallery { margin-top: 20px; }
-  .serif-site .art-collection-note { margin-left: max(0px, calc(var(--art-title-inset, 5%) - 12px)); }
+  .serif-site .art-heading { margin-left: max(0px, calc(var(--art-title-inset, 5%) - 12px)); }
   .serif-site[data-page='art'] .art-gallery .art-stage { --art-slide-width: 90%; height: clamp(220px, 42svh, 360px); }
   .serif-site .art-slide { padding-inline: 8px; }
   .serif-site .art-filmstrip { height: 70px; margin-top: 18px; }
