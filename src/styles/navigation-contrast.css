@@ -1,18 +1,33 @@
 /* Contrast zones affect glyphs only; the page and photographs stay unchanged. */
 @media (min-width: 880px) {
-  .serif-navigation-desktop .serif-nav-link[data-nav-image-overlap] {
-    background-image: var(--nav-image-layers);
-    background-position: var(--nav-image-positions);
-    background-size: var(--nav-image-sizes);
+  .serif-site .serif-navigation-desktop .serif-nav-link[data-nav-image-overlap] {
+    position: relative;
+    background-image: var(--nav-image-paint);
+    background-position: 0 0;
+    background-size: 100% 100%;
     background-repeat: no-repeat;
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    text-decoration: none;
+  }
+  /* The underline samples the same image-edge colors as the letters. */
+  .serif-site .serif-navigation-desktop .serif-nav-link[data-nav-image-overlap]:is([aria-current='page'], :hover, :focus-visible)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: var(--nav-image-paint);
+    background-position: 0 0;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-clip: border-box;
+    -webkit-background-clip: border-box;
+    clip-path: inset(calc(100% - 3px) 0 2px);
+    pointer-events: none;
   }
   /* Keep adaptive ink over imagery; hover/focus still exposes the chosen accent. */
-  .serif-navigation-desktop .serif-nav-link[data-nav-image-overlap]:is(:hover, :focus-visible) {
-    text-decoration: underline;
-    text-decoration-color: var(--interaction-accent, var(--serif-accent));
-    text-underline-offset: 4px;
+  .serif-site .serif-navigation-desktop .serif-nav-link[data-nav-image-overlap]:is(:hover, :focus-visible)::after {
+    background-image: none;
+    background-color: var(--interaction-accent, var(--serif-accent));
   }
 }

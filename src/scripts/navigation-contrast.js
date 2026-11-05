@@ -6,6 +6,14 @@ const channel = value => {
 };
 const luminance = ([red, green, blue]) => .2126 * channel(red) + .7152 * channel(green) + .0722 * channel(blue);
 const contrast = (first, second) => (Math.max(first, second) + .05) / (Math.min(first, second) + .05);
+const svgAttribute = value => String(value).replace(/[&"<>]/g, character => ({ '&': '&amp;', '"': '&quot;', '<': '&lt;', '>': '&gt;' })[character]);
+
+function inkPaint(rect, zones, pageInk) {
+  // Flatten the colors before clipping, so each glyph edge is painted only once.
+  const rectangles = [...zones].reverse().map(zone => `<rect x="${zone.x}" y="${zone.y}" width="${zone.width}" height="${zone.height}" fill="${zone.ink}"/>`).join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${rect.width}" height="${rect.height}" viewBox="0 0 ${rect.width} ${rect.height}" preserveAspectRatio="none"><rect width="100%" height="100%" fill="${svgAttribute(pageInk)}"/>${rectangles}</svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
 
 export function intersectRectangles(first, second) {
   const left = Math.max(first.left, second.left), top = Math.max(first.top, second.top);
@@ -51,6 +59,7 @@ export function mountNavigationContrast(nav) {
   const main = doc.querySelector('main');
   if (!view || !main || !view.MutationObserver) return () => {};
   const links = [...nav.querySelectorAll('a[href]')];
+  const inkSource = nav.closest('.serif-site') || nav;
   const controller = new view.AbortController();
   const desktop = view.matchMedia('(min-width: 880px)');
   const inks = new WeakMap();
@@ -61,7 +70,7 @@ export function mountNavigationContrast(nav) {
   const clear = link => {
     if (!rendered.has(link)) return;
     link.removeAttribute('data-nav-image-overlap');
-    for (const property of ['--nav-image-layers', '--nav-image-positions', '--nav-image-sizes']) link.style.removeProperty(property);
+    link.style.removeProperty('--nav-image-paint');
     rendered.delete(link);
   };
 
@@ -124,6 +133,8 @@ export function mountNavigationContrast(nav) {
     if (disposed || doc.hidden) return;
     if (!desktop.matches || nav.getBoundingClientRect().width === 0) { links.forEach(clear); return; }
     const images = readImages();
+    const pageStyle = view.getComputedStyle(inkSource);
+    const pageInk = pageStyle.getPropertyValue('--page-text').trim() || pageStyle.color || darkInk;
     const updates = links.map(link => {
       const rect = link.getBoundingClientRect();
       const zones = [];
@@ -134,22 +145,15 @@ export function mountNavigationContrast(nav) {
         if (!ink) continue;
         zones.unshift({ ink, x: overlap.left - rect.left, y: overlap.top - rect.top, width: overlap.width, height: overlap.height });
       }
-      return { link, zones };
+      return { link, rect, zones };
     });
-    for (const { link, zones } of updates) {
+    for (const { link, rect, zones } of updates) {
       if (!zones.length) { clear(link); continue; }
-      const value = {
-        layers: [...zones.map(zone => `linear-gradient(${zone.ink}, ${zone.ink})`), 'linear-gradient(var(--page-text), var(--page-text))'].join(', '),
-        positions: [...zones.map(zone => `${zone.x}px ${zone.y}px`), '0 0'].join(', '),
-        sizes: [...zones.map(zone => `${zone.width}px ${zone.height}px`), '100% 100%'].join(', ')
-      };
-      const signature = JSON.stringify(value);
-      if (rendered.get(link) === signature) continue;
+      const paint = inkPaint(rect, zones, pageInk);
+      if (rendered.get(link) === paint) continue;
       link.dataset.navImageOverlap = '';
-      link.style.setProperty('--nav-image-layers', value.layers);
-      link.style.setProperty('--nav-image-positions', value.positions);
-      link.style.setProperty('--nav-image-sizes', value.sizes);
-      rendered.set(link, signature);
+      link.style.setProperty('--nav-image-paint', paint);
+      rendered.set(link, paint);
     }
     if (main.querySelector('[data-art-root]:is(.is-moving, .is-dragging, .is-lifting)')) schedule();
   }

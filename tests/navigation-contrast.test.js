@@ -30,7 +30,7 @@ test('the whole image chooses one pure black or white ink', () => {
 test('navigation lines share image ink across source regions and scrolling, and recompute only for a new source', async () => {
   const window = new Window({ settings: { disableJavaScriptEvaluation: true, disableJavaScriptFileLoading: true, disableCSSFileLoading: true } });
   const { document } = window;
-  document.body.innerHTML = '<div class="serif-site" style="background:#17171b"><nav class="serif-navigation-desktop"><a href="/resume.pdf">Resume</a><a href="https://example.com">LinkedIn</a></nav><main><div data-art-root><div class="art-stage" style="overflow:hidden"><img src="https://portfolio.example/photo.webp" width="200" height="400"></div></div></main></div>';
+  document.body.innerHTML = '<div class="serif-site" style="--page-text:#eceaf2;background:#17171b"><nav class="serif-navigation-desktop"><a href="/resume.pdf">Resume</a><a href="https://example.com">LinkedIn</a></nav><main><div data-art-root><div class="art-stage" style="overflow:hidden"><img src="https://portfolio.example/photo.webp" width="200" height="400"></div></div></main></div>';
   const nav = document.querySelector('nav'), links = [...nav.querySelectorAll('a')], image = document.querySelector('img'), stage = document.querySelector('.art-stage');
   const frames = new Map(); let id = 0, imageLeft = 145, imageTop = 0, samples = 0;
   window.requestAnimationFrame = callback => { frames.set(++id, callback); return id; };
@@ -52,6 +52,13 @@ test('navigation lines share image ink across source regions and scrolling, and 
     callbacks.forEach(callback => callback(0));
     await Promise.resolve();
   };
+  const paint = link => {
+    const value = link.style.getPropertyValue('--nav-image-paint');
+    const match = /^url\("data:image\/svg\+xml,([^\"]+)"\)$/.exec(value);
+    assert.ok(match, 'one flattened image supplies the entire glyph and underline paint');
+    return new window.DOMParser().parseFromString(decodeURIComponent(match[1]), 'image/svg+xml');
+  };
+  const fills = link => [...paint(link).querySelectorAll('rect')].map(rect => rect.getAttribute('fill'));
   const release = mountNavigationContrast(nav);
   try {
     document.dispatchEvent(new window.Event('scroll'));
@@ -60,27 +67,41 @@ test('navigation lines share image ink across source regions and scrolling, and 
     await flush();
     for (const link of links) {
       assert.ok(link.hasAttribute('data-nav-image-overlap'));
-      assert.match(link.style.getPropertyValue('--nav-image-layers'), /linear-gradient\(#000000, #000000\)/);
-      assert.equal(link.style.getPropertyValue('--nav-image-positions'), '65px 0px, 0 0');
-      assert.equal(link.style.getPropertyValue('--nav-image-sizes'), '35px 24px, 100% 100%');
+      const image = paint(link), zone = image.querySelectorAll('rect')[1];
+      assert.equal(image.documentElement.getAttribute('viewBox'), '0 0 100 24');
+      assert.deepEqual(fills(link), ['#eceaf2', '#000000']);
+      assert.equal(zone.getAttribute('x'), '65');
+      assert.equal(zone.getAttribute('y'), '0');
+      assert.equal(zone.getAttribute('width'), '35');
+      assert.equal(zone.getAttribute('height'), '24');
     }
     assert.equal(samples, 1, 'different lines share the image-wide cached choice');
+    imageTop = 172;
+    document.dispatchEvent(new window.Event('scroll')); await flush();
+    const edge = paint(links[0]).querySelectorAll('rect')[1];
+    assert.equal(edge.getAttribute('y'), '12', 'a photo edge can cross a line without recoloring its off-image half');
+    assert.equal(edge.getAttribute('height'), '12', 'underline and letters share the same vertical photo boundary');
     imageTop = -100;
     document.dispatchEvent(new window.Event('scroll')); await flush();
-    for (const link of links) assert.match(link.style.getPropertyValue('--nav-image-layers'), /linear-gradient\(#000000, #000000\)/);
+    for (const link of links) assert.deepEqual(fills(link), ['#eceaf2', '#000000']);
     assert.equal(samples, 1, 'scrolling from a dark region to a light region does not resample the image');
+    document.querySelector('.serif-site').style.setProperty('--page-text', '#211b2b');
+    document.dispatchEvent(new window.Event('portfolio:theme-change')); await flush();
+    for (const link of links) assert.deepEqual(fills(link), ['#211b2b', '#000000']);
+    assert.equal(samples, 1, 'theme changes repaint only the off-image ink');
     pixels = new Uint8ClampedArray(96 * 96 * 4);
     for (let index = 3; index < pixels.length; index += 4) pixels[index] = 255;
     image.src = 'https://portfolio.example/dark-photo.webp';
     image.dispatchEvent(new window.Event('load'));
     await flush();
-    for (const link of links) assert.match(link.style.getPropertyValue('--nav-image-layers'), /linear-gradient\(#ffffff, #ffffff\)/);
+    for (const link of links) assert.deepEqual(fills(link), ['#211b2b', '#ffffff']);
     assert.equal(samples, 2, 'a replacement source receives a new image-wide choice');
     await flush();
     assert.equal(frames.size, 0, 'idle navigation has no continuing frame loop');
     imageLeft = 400;
     document.dispatchEvent(new window.Event('scroll')); await flush();
     assert.ok(links.every(link => !link.hasAttribute('data-nav-image-overlap')));
+    assert.ok(links.every(link => !link.style.getPropertyValue('--nav-image-paint')));
     release();
     window.dispatchEvent(new window.Event('resize'));
     document.dispatchEvent(new window.Event('scroll'));
