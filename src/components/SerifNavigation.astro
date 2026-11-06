@@ -10,8 +10,8 @@ const links = [
   { label: 'Work', page: 'work', href: `${base}projects/` },
   { label: 'About', page: 'about', href: `${base}about/` },
   { label: 'Art', page: 'art', href: `${base}art/` },
-  { label: 'Resume', page: 'resume', href: resumeURL(base), professional: true },
-  { label: 'LinkedIn', href: site.linkedin, external: true },
+  { label: 'Resume', page: 'resume', href: resumeURL(base), professional: true, newTab: true },
+  { label: 'LinkedIn', href: site.linkedin, newTab: true },
 ];
 ---
 <nav class:list={['serif-navigation', `serif-navigation-${mode}`]} aria-label="Main navigation">
@@ -24,9 +24,9 @@ const links = [
           aria-current={link.page === page ? 'page' : undefined}
           data-work-index={link.page === 'work' ? '' : undefined}
           data-resume-link={link.page === 'resume' ? '' : undefined}
-          target={link.external ? '_blank' : undefined}
-          rel={link.external ? 'noopener noreferrer' : undefined}
-          aria-label={link.external ? `${link.label} (opens in a new tab)` : undefined}
+          target={link.newTab ? '_blank' : undefined}
+          rel={link.newTab ? 'noopener noreferrer' : undefined}
+          aria-label={link.newTab ? `${link.label} (opens in a new tab)` : undefined}
         >{link.label}</a>
       </li>
     ))}

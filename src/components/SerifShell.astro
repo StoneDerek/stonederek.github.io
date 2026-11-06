@@ -50,7 +50,7 @@ const description = page === 'work' ? `Projects, experiments, and work in progre
   <footer class="serif-footer">
     <a class="serif-email" href={`mailto:${site.email}`}>{site.email}</a>
     <div class="serif-footer-links">
-      <a href={resumeURL(base)} data-resume-link>Resume</a>
+      <a href={resumeURL(base)} data-resume-link target="_blank" rel="noopener noreferrer" aria-label="Resume (opens in a new tab)">Resume</a>
       <a href={site.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn (opens in a new tab)">LinkedIn</a>
       {appearanceEnabled && <ThemeControl compact={true} />}
     </div>
