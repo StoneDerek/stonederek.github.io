@@ -12,7 +12,7 @@ html:has(.serif-site) { scrollbar-gutter: stable; }
 }
 .serif-site .serif-brand { position: relative; width: max-content; margin-left: calc(50% - 10vw); pointer-events: auto; }
 .serif-site .serif-identity { display: flex; align-items: center; min-height: 44px; }
-.serif-site .serif-name-underscore { font-size: .7em; }
+.serif-site .serif-name-underscore { font-size: inherit; }
 .serif-site .serif-context {
   position: absolute;
   top: 0;
