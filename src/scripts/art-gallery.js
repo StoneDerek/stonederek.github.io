@@ -30,11 +30,13 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
   const listen = (target, event, handler, options) => target.addEventListener(event, handler,
     { ...options, signal: controller.signal });
   const caseStudy = mountProjectCaseStudy(details, { base, reducedMotion });
-  caseStudy.render({ ...project, caseStudy: {
-    ...project.caseStudy,
-    sections: project.caseStudy.sections.map(section => ({ ...section, media: [] })),
-    footnotes: project.caseStudy.footnotes.filter(note => note.number !== 0)
-  } });
+  if (!details.querySelector('.case-study-body')) {
+    caseStudy.render({ ...project, caseStudy: {
+      ...project.caseStudy,
+      sections: project.caseStudy.sections.map(section => ({ ...section, media: [] })),
+      footnotes: project.caseStudy.footnotes.filter(note => note.number !== 0)
+    } });
+  }
   details.querySelector('.case-study-contents')?.remove();
   const chapters = [...details.querySelectorAll('.case-study-section')];
   chapters.forEach((chapter, i) => {
@@ -66,6 +68,7 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
   let suppressClickUntil = 0;
   let resolvedAddress = null;
   let disposed = false;
+  let mounting = true;
   let laser = null;
 
   function writeAddress(index) {
@@ -180,6 +183,9 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
 
   function alignSelectionFrame() {
     if (!selectionFrame || selected < 0 || drag || Math.abs(position - Math.round(position)) > .001) return;
+    // CSS already centers the selected thumbnail and frame together. Preserve
+    // that first paint instead of nudging both to new pixels during startup.
+    if (mounting) return;
     const scrollLeft = rail.scrollLeft;
     thumbnailGroup.style.paddingInline = `${railCenterPadding}px`;
     thumbnailGroup.style.paddingTop = '0px';
@@ -204,9 +210,9 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
   }
 
   function measure() {
-    stageWidth = stage.clientWidth || stage.getBoundingClientRect().width || 1;
+    stageWidth = stage.getBoundingClientRect().width || stage.clientWidth || 1;
     slideWidth = items[0].getBoundingClientRect().width || items[0].offsetWidth || stageWidth;
-    const stageHeight = stage.clientHeight || stage.getBoundingClientRect().height || 1;
+    const stageHeight = stage.getBoundingClientRect().height || stage.clientHeight || 1;
     items.forEach(item => {
       const button = item.querySelector('[data-image-open]');
       const image = button.querySelector('img');
@@ -232,7 +238,7 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
     const offset = choices[1] ? choices[1].offsetLeft - choices[0].offsetLeft : 0;
     const columnGap = parseFloat(view.getComputedStyle(thumbnailGroup).columnGap) || 0;
     stride = offset > 0 ? offset : second && second.left > first.left ? second.left - first.left : width + columnGap;
-    railCenterPadding = Math.max(0, ((rail.clientWidth || rail.getBoundingClientRect().width) - width) / 2);
+    railCenterPadding = Math.max(0, ((rail.getBoundingClientRect().width || rail.clientWidth) - width) / 2);
     rail.style.setProperty('--art-rail-padding', `${railCenterPadding}px`);
     thumbnailGroup.style.paddingInline = `${railCenterPadding}px`;
     presentCards(lift);
@@ -499,6 +505,7 @@ export function mountArtGallery(root = document.querySelector('[data-art-root]')
   }
   measure();
   followAddress();
+  mounting = false;
   return () => {
     if (disposed) return;
     disposed = true;

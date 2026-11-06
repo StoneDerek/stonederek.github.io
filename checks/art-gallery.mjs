@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { Window } from 'happy-dom';
 import { mountArtGallery } from '../src/scripts/art-gallery.js';
+import { prepareArtEntry } from '../src/scripts/art-startup.js';
 
 const html = await readFile(new URL('../dist/art/index.html', import.meta.url), 'utf8');
 
@@ -72,7 +73,14 @@ async function scene(address = '/art/#artwork=03', { reduced = true } = {}) {
   const originals = new Map(Object.keys(globals).map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   for (const [key, value] of Object.entries(globals)) Object.defineProperty(globalThis, key,
     { configurable: true, writable: true, value });
+  prepareArtEntry(root);
+  const requested = Number(new URLSearchParams(window.location.hash.slice(1)).get('artwork'));
+  const initialIndex = Number.isInteger(requested) && requested >= 1 && requested <= 5 ? requested - 1 : 0;
+  assert.equal(Number(root.dataset.artIndex), initialIndex, 'the initial script selects the fragment before the app mounts');
+  assert.equal(root.querySelector('[data-art-title]').textContent, `Untitled #${initialIndex + 1}`);
+  assert.equal(Number(root.querySelector('[data-art-select][aria-current="true"]').dataset.artSelect), initialIndex);
   let cleanup;
+  const initialChapters = [...root.querySelectorAll('[data-art-details] .case-study-section')];
   const runTimers = () => {
     for (let round = 0; round < 32; round++) {
       const due = [...timers].filter(([, timer]) => timer.at <= clock);
@@ -146,7 +154,13 @@ async function scene(address = '/art/#artwork=03', { reduced = true } = {}) {
     }
     await window.happyDOM.close();
   };
-  try { cleanup = mountArtGallery(root); await settle(); }
+  try {
+    cleanup = mountArtGallery(root); await settle();
+    const mountedChapters = [...root.querySelectorAll('[data-art-details] .case-study-section')];
+    assert.equal(initialChapters.length, 5, 'the built page supplies all artwork descriptions');
+    initialChapters.forEach((chapter, index) => assert.equal(mountedChapters[index], chapter,
+      'startup reuses the server-rendered prose instead of replacing it'));
+  }
   catch (error) { await close(); throw error; }
   return { window, document, root, stage, rail, track, find, click, pointer, touch, key, frame, flush, settle, translation, assertArtwork, close,
     get address() { return window.location.pathname + window.location.hash; },
@@ -193,6 +207,7 @@ test('a held Art drag visibly follows fractional movement, then springs to its r
       assert.ok(Math.abs(width / height - Number(photo.getAttribute('width')) / Number(photo.getAttribute('height'))) < .001);
     }
     const outline = s.find('[data-art-selection-frame]');
+    s.window.dispatchEvent(new s.window.Event('resize')); await s.settle();
     const selectedThumb = s.find('[data-art-select="2"]').getBoundingClientRect();
     assert.equal(parseFloat(outline.style.left), selectedThumb.left - 2);
     assert.equal(parseFloat(outline.style.top), selectedThumb.top - 2);

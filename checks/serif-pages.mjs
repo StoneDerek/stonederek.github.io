@@ -141,6 +141,17 @@ test('Art contains only five original photographs, image thumbnails and its sele
     assert.equal(root.querySelector('.art-caption, [data-art-step], [data-art-count]'), null);
     assert.ok(root.closest('main'), 'the gallery belongs to the normal page content');
     assert.equal(stage.contains(details), false, 'original artwork prose stays below the gallery');
+    const chapters = [...details.querySelectorAll('.case-study-section')];
+    assert.equal(chapters.length, 5, 'every artwork description is present in the initial HTML');
+    assert.deepEqual(chapters.map(chapter => chapter.hidden), [false, true, true, true, true]);
+    assert.deepEqual(chapters.map(chapter => chapter.inert), [false, true, true, true, true]);
+    assert.match(chapters[0].textContent, /acrylic painting of a Steller’s jay/);
+    assert.ok(chapters[0].querySelector('strong'));
+    assert.ok(chapters[0].querySelector('em'));
+    assert.ok(chapters[0].querySelector('[role="doc-noteref"]'));
+    assert.deepEqual([...details.querySelectorAll('.project-footnote')].map(note => note.id),
+      ['project-note-art-1', 'project-note-art-2', 'project-note-art-3']);
+    assert.equal(details.querySelector('img, .case-study-contents'), null);
     const items = [...root.querySelectorAll('[data-art-item]')];
     const choices = [...root.querySelectorAll('[data-art-select]')];
     assert.equal(items.length, 5);
@@ -155,6 +166,7 @@ test('Art contains only five original photographs, image thumbnails and its sele
     }
     assert.equal(choices.filter(choice => choice.getAttribute('aria-current') === 'true').length, 1);
     assert.equal(root.dataset.artIndex, '0');
+    assert.ok(doc.querySelector('script[data-art-entry]'), 'fragment selection is initialized before the deferred app');
     const art = JSON.parse(root.querySelector('#art-data').textContent);
     assert.equal(art.slug, 'art');
     assert.equal(art.caseStudy.sections.flatMap(section => section.media || []).length, 5);

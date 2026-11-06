@@ -1,5 +1,7 @@
 ---
 import projects from '../data/projects.json';
+import { renderArtProse } from '../data/art-prose.js';
+import { prepareArtEntry } from '../scripts/art-startup.js';
 import ArtImageViewer from './ArtImageViewer.astro';
 import ArtPuzzle from './ArtPuzzle.astro';
 import '../styles/art.css';
@@ -9,7 +11,7 @@ const base = import.meta.env.BASE_URL;
 const source = src => `${base}${src}`;
 const serialized = JSON.stringify(art).replace(/</g, '\\u003c');
 ---
-<div class="art-collection" data-art-root data-base={base} data-art-index="0">
+<div class="art-collection" data-art-root data-base={base} data-art-index="0" style={`--art-initial-aspect:${works[0].media[0].width / works[0].media[0].height}`}>
   <header class="art-heading">
     <h1 class="serif-page-title" data-art-title data-detail-title tabindex="-1">Untitled #1</h1>
   </header>
@@ -45,10 +47,11 @@ const serialized = JSON.stringify(art).replace(/</g, '\\u003c');
       </div>
       <p class="sr-only" data-art-announcement role="status" aria-live="polite" aria-atomic="true">Untitled #1</p>
     </section>
-    <div class="art-details project-case-study" data-art-details data-layout="art"></div>
+    <div class="art-details project-case-study" data-art-details data-layout="art" set:html={renderArtProse(art)}></div>
   </div>
   <ArtPuzzle />
   <ArtImageViewer />
   <script type="application/json" id="art-data" set:html={serialized}></script>
 </div>
+<script is:inline data-art-entry set:html={`(${prepareArtEntry.toString()})(document.currentScript.previousElementSibling);`} />
 <noscript><style>.serif-site .art-stage{height:auto}.serif-site .art-track{display:block;transform:none}.serif-site .art-slide{width:100%;height:auto;margin-bottom:24px}.serif-site .art-image-open img{height:auto}.serif-site .art-filmstrip{display:none}</style></noscript>
