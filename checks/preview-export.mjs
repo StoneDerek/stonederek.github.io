@@ -344,6 +344,10 @@ test('compiled apps preserve theme preferences, individual Art selection/history
     assert.equal(window.document.querySelector('[data-work-grid]').hidden, true);
     assert.equal(window.document.querySelector('[data-work-article]').hidden, false);
     assert.equal(window.document.querySelector('[data-detail-title]').textContent, 'RAG Chatbot for Academic Advising');
+    const projectArticle = window.document.querySelector('[data-work-article]');
+    assert.equal(projectArticle.querySelectorAll('p').length, 1);
+    assert.match(projectArticle.querySelector('p').textContent, /^Lorem ipsum dolor sit amet,/);
+    assert.equal(projectArticle.querySelector('img, dialog, .case-study-section'), null);
     assert.ok(window.history.state.portfolioWork.gridId, 'rewritten card click retains the real controller\'s grid origin');
     const articleAddress = window.location.href;
     const articleHistory = JSON.stringify(window.history.state);
@@ -385,6 +389,8 @@ test('compiled apps preserve theme preferences, individual Art selection/history
     window.__PORTFOLIO_PREVIEW_SET_ADDRESS__({ address: '/about/', replace: false, state: null });
     await flush();
     assertTheme('light', 'light');
+    assert.equal(window.document.querySelectorAll('main p').length, 1);
+    assert.match(window.document.querySelector('main p').textContent, /^Lorem ipsum dolor sit amet,/);
   } finally {
     window.dispatchEvent(new window.Event('portfolio:preview-unmount'));
     await window.happyDOM.close();

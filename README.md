@@ -1,6 +1,6 @@
 # Derek Stone portfolio
 
-An Astro portfolio with a serif masthead anchored by its left edge, native content pages, a two-column Work grid, and a continuous gallery containing only Derek’s five artworks. Engineering projects use temporary crops of the supplied screenshots; their rich articles and direct-link aliases remain available.
+An Astro portfolio with a serif masthead anchored by its left edge, native content pages, a two-column Work grid, and a continuous gallery containing only Derek’s five artworks. Engineering projects use temporary crops of the supplied screenshots. Their detail views and About each contain one lorem ipsum paragraph.
 
 ## Navigation model
 
@@ -8,10 +8,10 @@ An Astro portfolio with a serif masthead anchored by its left edge, native conte
 | --- | --- |
 | `/` | Home introduction and supplied climbing photograph |
 | `/projects/` | Three-project Work grid |
-| `/projects/#project=<slug>` | Rich project article in the serif layout |
+| `/projects/#project=<slug>` | One-paragraph project placeholder in the serif layout |
 | `/projects/#slide=<slug>` | Compatible entry to the corresponding project article |
-| `/about/` | Existing About content in the shared layout |
-| `/about/#interests` | Native About section anchor |
+| `/about/` | One-paragraph About placeholder in the shared layout |
+| `/about/#interests` | Compatibility anchor for the About paragraph |
 | `/art/` | Unframed gallery of five individual artworks |
 | `/art/#artwork=01` through `05` | Selected artwork with its description and related notes |
 | `/art/#links` | Existing mirror puzzle and credits |
@@ -20,9 +20,9 @@ An Astro portfolio with a serif masthead anchored by its left edge, native conte
 
 Work shows Acoustic Drone Detection, RAG Chatbot, and 2D Lightning Simulation in that order. Each card uses Untitled #N on its first line and combines its existing subject and method on the second, both at 16px. More coming soon uses the secondary font. Art is not a Work card. Existing project slugs and their legacy aliases resolve to the same article content.
 
-Opening an article records the Work scroll position and triggering card. Closing or using browser Back restores that grid entry, including keyboard focus. A directly opened article closes to Work without sending the reader to a previous external page. Back and Forward restore reading positions. Image zoom, case-study sections, and footnotes reuse the existing renderers.
+Opening an article records the Work scroll position and triggering card. Closing or using browser Back restores that grid entry, including keyboard focus. A directly opened article closes to Work without sending the reader to a previous external page. Back and Forward restore reading positions. Each detail view contains one lorem ipsum paragraph and a Back to Work control. The project title stays available to screen readers and in the browser tab.
 
-`SerifShell.astro` provides document metadata, masthead, navigation, main content, and footer. Desktop navigation occupies its own right column; smaller widths use a native menu, and the project grid becomes one column below 760px. `WorkContent.astro` supplies the grid, article hooks, image viewer, and project data. `work-page.js` owns article/history state, while `work-location.js` resolves current and legacy addresses. Home and About reuse their supplied content. Their repeated large headings are visually hidden, Explore projects is a plain link, and native Home has no entrance animation. The name uses a fixed left-edge anchor; category suffixes extend to its right. Footer links and the existing update timestamp are grouped on the left without a divider.
+`SerifShell.astro` provides document metadata, masthead, navigation, main content, and footer. Desktop navigation occupies its own right column; smaller widths use a native menu, and the project grid becomes one column below 760px. `WorkContent.astro` supplies the grid, placeholder detail view, and routing metadata. `work-page.js` owns article/history state, while `work-location.js` resolves current and legacy addresses. Home keeps its supplied introduction; About and Work details share `PlaceholderParagraph.astro`. Their repeated large headings are visually hidden, Explore projects is a plain link, and native Home has no entrance animation. The name uses a fixed left-edge anchor; category suffixes extend to its right. Footer links and the existing update timestamp are grouped on the left without a divider.
 
 The masthead displays plain **Derek_Stone**, with a smaller underscore and conditional /Work, /About and /Art suffixes. `interactions.css` supplies shared accent hover and keyboard-focus feedback. Floating navigation uses one pure black or white ink choice per whole image, shared across overlapping lines; image-edge clipping and accent underline/focus feedback remain. The compact secondary-type footer follows content, reaches the bottom of short pages and uses one viewport gutter across page layouts; viewport measurements exclude the scrollbar strip. Content-to-footer gaps are 96px on desktop and 64px on phones.
 
@@ -46,7 +46,7 @@ The hidden Links panel retains the local ASCII mirror puzzle, trophy, profession
 
 ## Legacy gallery content and appearance
 
-Home prose lives in `src/components/HomeContent.astro`; it contains Derek’s supplied introduction, preserving the italic research areas, bold interests, and Rose-Hulman link. The climbing photograph at `public/art/home/climbing.webp` retains the supplied 1536 × 2048 framing. It sits beside the introduction on desktop and below it on phones, loads eagerly on Home, and stays lazy on direct About or project entry. About stays in `src/components/AboutContent.astro` and retains its placeholder copy. The first three projects preview acoustic drone detection with CNN spectrogram analysis, an academic-advising RAG chatbot, and 2D lightning simulation with a probabilistic potential model. Their current 4:3 covers use exact crops of the supplied spectrogram, chatbot response, and lightning simulation screenshots. Source filenames, crop coordinates, and hashes are in `docs/project-cover-sources.md`; original uploads are not public assets. The previous generated technical illustrations remain available as historical assets. The drone project uses the six-section case-study layout. Art contains Derek’s own work and edited copy from his supplied draft.
+Home prose lives in `src/components/HomeContent.astro`; it contains Derek’s supplied introduction, preserving the italic research areas, bold interests, and Rose-Hulman link. The climbing photograph at `public/art/home/climbing.webp` retains the supplied 1536 × 2048 framing. It sits beside the introduction on desktop and below it on phones, loads eagerly on Home, and stays lazy on direct About or project entry. About stays in `src/components/AboutContent.astro` and displays only the shared placeholder paragraph. The first three projects preview acoustic drone detection with CNN spectrogram analysis, an academic-advising RAG chatbot, and 2D lightning simulation with a probabilistic potential model. Their current 4:3 covers use exact crops of the supplied spectrogram, chatbot response, and lightning simulation screenshots. Source filenames, crop coordinates, and hashes are in `docs/project-cover-sources.md`; original uploads are not public assets. The previous generated technical illustrations remain available as historical assets. The former engineering case-study data remains in the legacy gallery data, but native Work details no longer render it. Art contains Derek’s own work and edited copy from his supplied draft.
 
 The legacy-only Home entrance reveals the introduction over 800ms and the photograph over 900ms with a 140ms stagger. The photograph waits for decoding and layer preparation, then slides 16px while fading in. Rendering hints are released when it finishes. Returning Home through the gallery does not replay the entrance; reduced motion, hiding the page, and leaving the document finish it immediately. The navigation stays outside this animation.
 
@@ -56,7 +56,7 @@ Between About (panel 1) and the first project (panel 2), the centered caption us
 
 The thumbnail gap and SVG frame are aligned at layout and settling, including fractional display scales; drag frames do not measure layout. Home and About use a clean lower edge without a blur or fade above the bottom controls. Credit links and descriptions share the same 13px type size. A plain footer action switches light/dark and remembers the choice. The initial appearance follows the system preference until a choice is saved. The early theme initializer applies a remembered choice before painting. Dark surfaces and readable type use scoped theme variables; project screenshots and artwork photographs are never filtered or recolored.
 
-Edit `src/data/projects.json`. Each item contains:
+Edit `src/data/projects.json` for project cards and retained legacy gallery data. Native Work details display `PlaceholderParagraph.astro` and embed only project titles, slugs, and aliases; they do not render the descriptions, notes, media, or case studies below. Each data item contains:
 
 | Field | Purpose |
 | --- | --- |

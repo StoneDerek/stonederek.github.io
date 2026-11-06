@@ -78,11 +78,17 @@ test('Work contains exactly the three current projects with the RAG hierarchy an
     assert.equal(doc.querySelector('[data-work-grid]').hidden, false);
     assert.equal(doc.querySelector('[data-work-article]').hidden, true);
     assert.ok(doc.querySelector('[data-work-close]'));
-    assert.ok(doc.querySelector('dialog[data-image-viewer] [data-image-zoom]'));
+    const article = doc.querySelector('[data-work-article]');
+    assert.equal(article.querySelectorAll('p').length, 1);
+    assert.match(article.querySelector('p').textContent, /^Lorem ipsum dolor sit amet,/);
+    assert.ok(article.querySelector('[data-detail-title]').classList.contains('sr-only'));
+    assert.equal(article.querySelector('img, dialog, .project-view-meta, .project-view-number, .project-story, .project-case-study'), null);
+    assert.equal(doc.querySelector('[data-image-viewer]'), null);
     assert.ok(doc.querySelector('[data-work-heading][tabindex="-1"]'));
     const data = JSON.parse(doc.querySelector('#work-data').textContent);
     assert.equal(data.length, 4);
-    assert.equal(data.filter(item => item.slug === 'art').length, 1, 'legacy Art article links retain their original content');
+    assert.equal(data.filter(item => item.slug === 'art').length, 1, 'legacy Art project links remain recognized');
+    assert.ok(data.every(item => Object.keys(item).every(key => ['slug', 'legacySlugs', 'title'].includes(key))), 'Work embeds routing metadata without the former article content');
     assert.ok(data[1].legacySlugs.includes('soft-machines'));
     const coming = doc.querySelector('.work-coming-soon');
     assert.match(coming?.textContent, /More coming soon/);
@@ -91,7 +97,7 @@ test('Work contains exactly the three current projects with the RAG hierarchy an
   });
 });
 
-test('Home and About preserve the supplied introduction, photo and established anchors', async () => {
+test('Home preserves its introduction and photo while About contains only one placeholder paragraph', async () => {
   await page('', doc => {
     assert.equal(doc.querySelector('#home-title').textContent, 'Derek Stone');
     assert.ok(doc.querySelector('#home-title').classList.contains('native-profile-title'));
@@ -111,15 +117,12 @@ test('Home and About preserve the supplied introduction, photo and established a
     assert.ok(doc.querySelector('#about-title').classList.contains('native-profile-title'));
     assert.equal(doc.querySelector('#about-title').getAttribute('aria-label'), 'About');
     assert.ok(doc.getElementById('interests'));
-    assert.equal(doc.querySelector('.about-contents, .about-heading .profile-eyebrow, .about-section-number'), null);
-    assert.ok([...doc.querySelectorAll('.about-story h2')].every(heading => heading.classList.contains('sr-only')));
-    const legacy = new Window({ settings: { disableJavaScriptEvaluation: true, disableJavaScriptFileLoading: true, disableCSSFileLoading: true } });
-    try {
-      legacy.document.write(await readFile(new URL('./fixtures/legacy-portfolio.html', import.meta.url), 'utf8'));
-      const paragraphs = source => [...source.querySelectorAll('.about-story p')].map(p => p.textContent.trim());
-      assert.deepEqual(paragraphs(doc), paragraphs(legacy.document), 'the simpler layout preserves every existing body paragraph');
-      assert.equal(doc.querySelector('.about-heading > p:last-child').textContent.trim(), legacy.document.querySelector('.about-heading > p:last-child').textContent.trim());
-    } finally { await legacy.happyDOM.close(); }
+    assert.equal(doc.querySelectorAll('main p').length, 1);
+    assert.match(doc.querySelector('main p').textContent, /^Lorem ipsum dolor sit amet,/);
+    assert.equal(doc.querySelector('main img, main a, .about-heading, .about-contents, .about-story section, .about-story h2'), null);
+    await page('projects/', work => {
+      assert.equal(doc.querySelector('main p').textContent, work.querySelector('[data-work-article] p').textContent);
+    });
   });
 });
 

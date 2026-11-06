@@ -29,16 +29,23 @@
 .serif-site .serif-footer-links { flex-direction: row; align-items: baseline; gap: 0 12px; margin-top: 12px; }
 .serif-site[data-page] .serif-footer .theme-text-toggle { min-height: 0; line-height: inherit; }
 .serif-site .serif-publication { grid-column: 1; justify-self: start; width: fit-content; margin-top: 0; color: var(--muted); font-size: inherit; line-height: inherit; }
-.serif-site .serif-publication .publication-tooltip { left: 0; right: auto; text-align: left; }
+.serif-site .serif-publication .publication-tooltip {
+  left: 0;
+  right: auto;
+  width: max-content;
+  max-width: calc(var(--layout-viewport-width, 100vw) - var(--footer-left-gutter) - var(--footer-right-gutter));
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--canvas);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
 
-/* About follows one prose column without the former contents sidebar. */
+/* About uses the shared placeholder in one prose column. */
 .serif-site[data-page='about'] .serif-main { width: min(100%, 44rem); margin-inline: auto; }
-.serif-site[data-page='about'] .about-heading { margin: 0 0 20px; padding: 0; border: 0; }
-.serif-site[data-page='about'] .about-heading > p:last-child { max-width: none; margin: 0; font-size: 18px; line-height: 1.65; letter-spacing: 0; }
-.serif-site[data-page='about'] .about-layout { display: block; margin: 0; padding: 0; border: 0; }
-.serif-site[data-page='about'] .about-story > section,
-.serif-site[data-page='about'] .about-story > section + section { margin: 0; padding: 0; border: 0; }
-.serif-site[data-page='about'] .about-story p { margin: 0 0 20px; }
+.serif-site[data-page='about'] .about-story p { margin: 0; }
 
 .serif-site[data-page='home'] .introduction-lead { font-size: 17px; line-height: 1.65; font-weight: 400; }
 .serif-site[data-page='home'] .profile-actions { gap: 32px; }

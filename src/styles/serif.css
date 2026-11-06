@@ -70,29 +70,15 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
 .serif-site[data-page='work'] .work-coming-cat { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: 400; font-variant-ligatures: none; letter-spacing: 0; line-height: 1.1; text-align: left; white-space: pre; }
 .serif-site[data-page='work'] .work-coming-soon p { margin: 0; font-family: var(--secondary-font); font-size: 16px; line-height: 24px; }
 
-/* Work articles keep the existing content and image viewer in document flow. */
+/* Project details use one placeholder paragraph in the normal page flow. */
 .serif-site .work-article { position: static; inset: auto; z-index: auto; width: auto; height: auto; overflow: visible; scrollbar-gutter: auto; background: #fff; color: var(--page-text); overscroll-behavior: auto; }
 .serif-site .work-project-page { min-height: 0; padding-top: 0; background: transparent; }
-.serif-site .work-article .project-toolbar { flex-wrap: wrap; justify-content: flex-start; gap: 8px 24px; width: 100%; max-width: none; min-height: 44px; margin: 0; padding: 0; background: transparent; }
-.serif-site .work-article .back-button { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; margin-right: auto; padding: 8px 0; border-radius: 0; background: transparent; color: inherit; font-size: 16px; line-height: 24px; text-decoration: none; }
+.serif-site .work-article .project-toolbar { justify-content: flex-start; width: 100%; max-width: none; min-height: 44px; margin: 0; padding: 0; background: transparent; }
+.serif-site .work-article .back-button { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 0; border-radius: 0; background: transparent; color: inherit; font-size: 16px; line-height: 24px; text-decoration: none; }
 .serif-site .work-article .back-button:hover { text-decoration: underline; text-underline-offset: 4px; }
-.serif-site .work-article :is(.project-view-meta, .project-view-number) { color: var(--muted); font-size: 13px; line-height: 20px; }
-.serif-site .work-article .project-story { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 40px; width: 100%; max-width: none; margin: 0; padding: 44px 0 48px; }
-.serif-site .work-article .dialog-eyebrow { margin: 0 0 16px; color: var(--muted); font-size: 13px; line-height: 20px; text-transform: none; letter-spacing: 0; }
-.serif-site .work-article .project-story h1 { margin: 0; font-size: clamp(34px, 3.8vw, 56px); line-height: 1.08; font-weight: 400; letter-spacing: -.03em; overflow-wrap: break-word; }
-.serif-site .work-article .detail-description { margin: 0 0 24px; font-size: 20px; line-height: 1.55; letter-spacing: 0; }
-.serif-site .work-article .detail-note { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.65; opacity: 1; }
-.serif-site .work-article :is(.project-media, .project-case-study) { width: 100%; max-width: none; margin-inline: 0; padding-bottom: 0; }
-.serif-site .work-article .project-media:not([hidden]) { margin-bottom: 48px; }
-.serif-site .work-article .case-study-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 48px; }
-.serif-site .work-article .case-study-layout { grid-template-columns: minmax(160px, .6fr) minmax(0, 1.4fr); gap: 40px; }
-.serif-site .work-article .case-study-contents { top: 36px; }
-.serif-site .work-article .case-study-section h2 { font-weight: 400; letter-spacing: -.025em; scroll-margin-top: 32px; }
-.serif-site .work-article :is(.case-study-section p, .project-footnote p) { line-height: 1.65; }
-.serif-site .work-article :is(.case-study-contents button, .case-study-facts dd, .case-study-facts dt) { font-family: inherit; }
-.serif-site .work-article .project-footnote { scroll-margin-top: 32px; }
-.serif-site .work-article :is(.case-study-section, .project-footnotes) a { color: inherit; }
-.serif-site .work-article .project-case-study[data-layout='art'] :is(.case-study-section, .project-footnotes) a { color: var(--accent); }
+.serif-site .work-project-prose { margin-top: 32px; }
+.serif-site .placeholder-prose { max-width: 65ch; margin: 0; font-size: 18px; line-height: 1.65; }
+
 .serif-site .serif-resume-link { display: inline-flex; align-items: center; min-height: 44px; text-underline-offset: 4px; }
 
 /* Reuse the supplied profile content without the former gallery frame. */
@@ -134,7 +120,6 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
   .serif-site .work-project-grid { column-gap: 28px; }
   .serif-site .home-introduction { gap: 32px; }
   .serif-site .introduction-copy h1 { font-size: 48px; }
-  .serif-site .work-article .project-story { gap: 32px; }
 }
 
 @media (max-width: 759px) {
@@ -147,16 +132,6 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
   .serif-site .work-project-grid { grid-template-columns: minmax(0, 1fr); row-gap: 32px; margin-top: 0; }
   .serif-site .work-project-title { font-size: 16px; line-height: 22px; }
   .serif-site .work-article .project-toolbar { gap: 8px 16px; }
-  .serif-site .work-article .project-view-number { margin-left: auto; }
-  .serif-site .work-article .project-view-meta { order: 3; flex-basis: 100%; }
-  .serif-site .work-article .project-story { grid-template-columns: minmax(0, 1fr); gap: 28px; padding: 32px 0 36px; }
-  .serif-site .work-article .project-story h1 { font-size: 34px; }
-  .serif-site .work-article .detail-description { font-size: 19px; }
-  .serif-site .work-article .case-study-layout { display: block; }
-  .serif-site .work-article .case-study-contents { position: static; max-width: none; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--rule); }
-  .serif-site .work-article .case-study-choices { display: flex; flex-wrap: wrap; gap: 4px 24px; }
-  .serif-site .work-article .case-study-choices button { width: auto; }
-  .serif-site .work-article .case-study-facts { gap: 24px; }
   .serif-site .home-introduction { grid-template-columns: minmax(0, 1fr); gap: 36px; }
   .serif-site .introduction-copy h1 { max-width: 100%; font-size: 44px; }
   .serif-site .introduction-prose { max-width: 42ch; font-size: 17px; }

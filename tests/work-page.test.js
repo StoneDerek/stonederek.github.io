@@ -6,8 +6,8 @@ import HistoryItemList from 'happy-dom/lib/history/HistoryItemList.js';
 import { mountWorkPage } from '../src/scripts/work-page.js';
 
 const projects = JSON.parse(await readFile(new URL('../src/data/projects.json', import.meta.url), 'utf8'));
-const source = await readFile(new URL('../src/components/WorkContent.astro', import.meta.url), 'utf8');
-const viewer = source.match(/<dialog id="project-image-viewer"[\s\S]*?<\/dialog>/)[0];
+const placeholder = await readFile(new URL('../src/components/PlaceholderParagraph.astro', import.meta.url), 'utf8');
+const workData = projects.map(({ slug, legacySlugs, title }) => ({ slug, legacySlugs, title }));
 
 // HappyDOM 21 truncates Forward entries in replaceState. Match browser
 // semantics so scrolling a restored grid can update its history snapshot.
@@ -19,7 +19,7 @@ HistoryItemList.prototype.replace = function(item) {
 };
 
 // Focus and history are real DOM behavior here. Only browser layout/scrolling
-// and animation frames are supplied; the article renderer and viewer are real.
+// and animation frames are supplied; the Work controller is real.
 async function scene(address = '/projects/', { base = '/', previous = null, preview = false } = {}) {
   const window = new Window({ url: `https://portfolio.example${preview ? '/portfolio-preview.html' : previous || address}`, settings: {
     disableJavaScriptEvaluation: true, disableJavaScriptFileLoading: true, disableCSSFileLoading: true
@@ -35,11 +35,9 @@ async function scene(address = '/projects/', { base = '/', previous = null, prev
         ${projects.filter(project => project.slug !== 'art').map(project => `<a data-work-project="${project.slug}" href="${grid}#project=${project.slug}">${project.title}</a>`).join('')}
       </section>
       <section data-work-article data-project-view hidden><a data-work-close href="${grid}">Back to Work</a>
-        <span data-detail-category></span><span data-detail-period><span data-detail-year></span></span><span data-detail-number></span>
-        <p data-detail-eyebrow></p><h1 data-detail-title tabindex="-1"></h1><p data-detail-description></p><p data-detail-note></p>
-        <div data-detail-media data-asset-base="${base}" hidden></div><div data-detail-case-study hidden></div>
-      </section>${viewer}
-      <script id="work-data" type="application/json">${JSON.stringify(projects).replace(/</g, '\\u003c')}</script>
+        <h1 class="sr-only" data-detail-title tabindex="-1"></h1>${placeholder}
+      </section>
+      <script id="work-data" type="application/json">${JSON.stringify(workData).replace(/</g, '\\u003c')}</script>
     </main></body></html>`);
   window.matchMedia = () => Object.assign(new window.EventTarget(), { matches: true });
   let scroll = { x: 0, y: 0 };
@@ -125,20 +123,29 @@ async function scene(address = '/projects/', { base = '/', previous = null, prev
   };
 }
 
-test('Work starts as a real three-project grid and opens canonical rich articles', async () => {
+test('Work opens each project with only one placeholder paragraph and preserves its route and title', async () => {
   const s = await scene('/portfolio/projects/', { base: '/portfolio/' });
   try {
     assert.equal(s.find('[data-work-grid]').hidden, false);
     assert.equal(s.find('[data-work-article]').hidden, true);
     assert.equal(s.document.documentElement.hasAttribute('data-portfolio-entry-pending'), false);
     assert.equal(s.root.querySelectorAll('[data-work-project]').length, 3);
-    s.click('[data-work-project="acoustic-drone-detection"]'); await s.flush();
-    assert.equal(s.address, '/portfolio/projects/#project=acoustic-drone-detection');
-    assert.equal(s.find('[data-detail-title]').textContent, projects[0].title);
-    assert.equal(s.root.querySelectorAll('.case-study-section').length, 6);
-    assert.equal(s.document.activeElement, s.find('[data-detail-title]'));
-    assert.equal(s.find('[data-detail-number]').textContent, '01 / 03');
-    assert.equal(s.root.style.getPropertyValue('--accent'), projects[0].palette.accent);
+    for (const project of projects.filter(project => project.slug !== 'art')) {
+      s.click(`[data-work-project="${project.slug}"]`); await s.flush();
+      assert.equal(s.address, `/portfolio/projects/#project=${project.slug}`);
+      assert.equal(s.find('[data-work-grid]').hidden, true);
+      const article = s.find('[data-work-article]');
+      assert.equal(article.hidden, false);
+      assert.equal(article.querySelectorAll('p').length, 1);
+      assert.match(article.querySelector('p').textContent, /^Lorem ipsum dolor sit amet,/);
+      assert.equal(article.querySelector('img, dialog, .case-study-section, [data-detail-description], [data-detail-note]'), null);
+      assert.equal(s.find('[data-detail-title]').textContent, project.title);
+      assert.equal(s.document.title, `Derek Stone - ${project.title}`);
+      assert.equal(s.document.activeElement, s.find('[data-detail-title]'));
+      await s.history('back');
+      assert.equal(s.address, '/portfolio/projects/');
+      assert.equal(s.document.activeElement, s.find(`[data-work-project="${project.slug}"]`));
+    }
   } finally { await s.close(); }
 });
 
@@ -182,29 +189,15 @@ test('direct legacy article entry closes to Work without leaving for the previou
   } finally { await s.close(); }
 });
 
-test('Art compatibility keeps rich prose, sections, source dialogs, and the existing image viewer', async () => {
+test('legacy Art project entry uses the placeholder and Escape returns to Work', async () => {
   const s = await scene('/projects/#project=art');
   try {
     assert.equal(s.find('[data-detail-title]').textContent, 'Art');
     assert.equal(s.document.documentElement.hasAttribute('data-portfolio-entry-pending'), false);
-    assert.equal(s.root.style.getPropertyValue('--accent'), projects.find(project => project.slug === 'art').palette.accent);
-    assert.equal(s.find('[data-detail-case-study]').dataset.layout, 'art');
-    assert.equal(s.root.querySelectorAll('.case-study-section').length, 5);
-    assert.equal(s.root.querySelectorAll('.project-footnote').length, 4);
-    assert.ok(s.root.querySelector('strong'));
-    assert.ok(s.root.querySelector('em'));
-    const opener = s.find('[data-image-open]');
-    s.click('[data-image-open]');
-    assert.equal(s.find('[data-image-viewer]').open, true);
-    assert.equal(s.find('[data-image-full]').alt, opener.querySelector('img').alt);
-    s.find('[data-image-viewer]').dispatchEvent(new s.window.Event('cancel', { cancelable: true }));
-    assert.equal(s.find('[data-image-viewer]').open, false);
-    assert.equal(s.document.activeElement, opener);
-    s.click('[data-source-open]');
-    assert.equal(s.find('[data-source-dialog]').open, true);
-    s.document.dispatchEvent(new s.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
-    assert.equal(s.find('[data-work-article]').hidden, false);
-    s.click('[data-source-close]');
+    const article = s.find('[data-work-article]');
+    assert.equal(article.querySelectorAll('p').length, 1);
+    assert.match(article.querySelector('p').textContent, /^Lorem ipsum dolor sit amet,/);
+    assert.equal(article.querySelector('img, dialog, .case-study-section, .project-footnote'), null);
     s.document.dispatchEvent(new s.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
     await s.flush();
     assert.equal(s.address, '/projects/');

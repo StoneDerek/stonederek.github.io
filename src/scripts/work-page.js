@@ -1,5 +1,3 @@
-import { mountProjectCaseStudy, renderProjectMedia } from './project-case-study.js';
-import { mountProjectImageViewer } from './project-image-viewer.js';
 import { resolveWorkLocation, workAddress, workLinksAddress } from './work-location.js';
 
 const stateKey = 'portfolioWork';
@@ -18,17 +16,8 @@ export function mountWorkPage(root = document.querySelector('[data-work-root]'))
   const article = root.querySelector('[data-work-article]');
   const heading = root.querySelector('[data-work-heading]') || grid.querySelector('h1');
   const title = article.querySelector('[data-detail-title]');
-  const media = article.querySelector('[data-detail-media]');
   const gridTitle = doc.title;
   const owner = root.dataset.owner || gridTitle.replace(/\s[-—–|]\sWork$/, '');
-  const originalPalette = new Map(['--accent', '--ink'].map(property => [property, {
-    value: root.style.getPropertyValue(property), priority: root.style.getPropertyPriority(property)
-  }]));
-  const reducedMotion = view.matchMedia('(prefers-reduced-motion: reduce)');
-  const caseStudy = mountProjectCaseStudy(article.querySelector('[data-detail-case-study]'), {
-    base: media.dataset.assetBase || base, reducedMotion
-  });
-  const imageViewer = mountProjectImageViewer(root, article, { reducedMotion });
   const controller = new view.AbortController();
   const listen = (target, type, handler, options) => target.addEventListener(type, handler,
     { ...options, signal: controller.signal });
@@ -102,40 +91,8 @@ export function mountWorkPage(root = document.querySelector('[data-work-root]'))
     });
   }
 
-  function closeOverlays() {
-    imageViewer.close({ restoreFocus: false, immediate: true });
-    caseStudy.closeSources();
-  }
-
-  function restorePalette() {
-    for (const [property, original] of originalPalette) {
-      if (original.value) root.style.setProperty(property, original.value, original.priority);
-      else root.style.removeProperty(property);
-    }
-  }
-
   function fillArticle(project) {
-    restorePalette();
-    for (const [property, key] of [['--accent', 'accent'], ['--ink', 'ink']]) {
-      if (project.palette?.[key]) root.style.setProperty(property, project.palette[key]);
-    }
-    const text = (selector, value) => {
-      const node = article.querySelector(selector);
-      if (node) node.textContent = value || '';
-    };
-    text('[data-detail-title]', project.title);
-    text('[data-detail-category]', project.category);
-    text('[data-detail-year]', project.year);
-    const period = article.querySelector('[data-detail-period]');
-    if (period) period.hidden = !project.year;
-    text('[data-detail-eyebrow]', project.eyebrow);
-    text('[data-detail-description]', project.description);
-    text('[data-detail-note]', project.note);
-    const work = projects.filter(item => item.slug !== 'art');
-    const index = work.findIndex(item => item.slug === project.slug);
-    text('[data-detail-number]', index < 0 ? 'Art' : `${String(index + 1).padStart(2, '0')} / ${String(work.length).padStart(2, '0')}`);
-    renderProjectMedia(media, project.articleMedia, { base: media.dataset.assetBase || base });
-    caseStudy.render(project);
+    title.textContent = project.title;
     article.scrollTop = 0;
   }
 
@@ -143,7 +100,6 @@ export function mountWorkPage(root = document.querySelector('[data-work-root]'))
     const key = `${state.id}:${state.view}:${state.slug || ''}`;
     if (rendered === key) return;
     const wasArticle = !article.hidden;
-    closeOverlays();
     closing = false;
     if (state.view === 'article') {
       fillArticle(projects.find(project => project.slug === state.slug));
@@ -153,7 +109,6 @@ export function mountWorkPage(root = document.querySelector('[data-work-root]'))
       article.inert = false;
       doc.title = `${owner} - ${title.textContent}`;
     } else {
-      restorePalette();
       article.hidden = true;
       article.inert = true;
       grid.hidden = false;
@@ -170,7 +125,6 @@ export function mountWorkPage(root = document.querySelector('[data-work-root]'))
     const route = resolveWorkLocation(address, projects, { base });
     if (!route) return;
     if (route.view === 'legacy-links') {
-      closeOverlays();
       if (!redirecting) {
         redirecting = true;
         // A cross-page preview redirect must wait until app.js has received
@@ -216,7 +170,6 @@ export function mountWorkPage(root = document.querySelector('[data-work-root]'))
   function closeArticle() {
     if (disposed || closing || current?.view !== 'article') return;
     cancelRestore();
-    closeOverlays();
     savePosition();
     if (current.gridId) {
       // Only entries opened from this Work grid may go Back. Direct entries
@@ -296,9 +249,6 @@ export function mountWorkPage(root = document.querySelector('[data-work-root]'))
     cancelRestore();
     view.cancelAnimationFrame(saveFrame);
     controller.abort();
-    imageViewer.destroy();
-    caseStudy.destroy();
-    restorePalette();
     view.history.scrollRestoration = previousScrollRestoration;
   };
   cleanup.entryDone = Promise.resolve();
