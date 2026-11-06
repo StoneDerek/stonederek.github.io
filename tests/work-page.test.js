@@ -34,7 +34,7 @@ async function scene(address = '/projects/', { base = '/', previous = null, prev
       <section data-work-grid><h1 data-work-heading tabindex="-1">Work</h1>
         ${projects.filter(project => project.slug !== 'art').map(project => `<a data-work-project="${project.slug}" href="${grid}#project=${project.slug}">${project.title}</a>`).join('')}
       </section>
-      <section data-work-article data-project-view hidden><a data-work-close href="${grid}">Back to Work</a>
+      <section data-work-article data-project-view hidden><a data-work-close href="${grid}" aria-label="Back to Work">Back</a>
         <h1 class="sr-only" data-detail-title tabindex="-1"></h1>${placeholder}
       </section>
       <script id="work-data" type="application/json">${JSON.stringify(workData).replace(/</g, '\\u003c')}</script>

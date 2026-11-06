@@ -11,25 +11,37 @@ export function publicationLabel(iso, now = new Date(), timeZone) {
   return { label: days === 0 ? 'Updated today' : days < 30 ? `Updated ${days}d ago` : `Updated ${calendar.format(date)}`, full: `Last updated ${full}` };
 }
 
-export function mountPublicationLabel() {
-  const time = document.querySelector('[data-publication-date]');
+export function mountPublicationLabel(time = document.querySelector('[data-publication-date]')) {
   if (!time) return () => {};
-  const controller = new AbortController();
+  const doc = time.ownerDocument;
+  const view = doc.defaultView;
+  const controller = new view.AbortController();
+  let hovered = time.matches(':hover');
+  let focused = doc.activeElement === time;
+  let value;
   let timer;
-  function update() {
-    clearTimeout(timer);
-    const value = publicationLabel(time.dateTime);
+  const render = () => {
     if (!value) return;
-    time.textContent = value.label;
-    const tooltip = document.getElementById(time.getAttribute('aria-describedby'));
-    if (tooltip) tooltip.textContent = value.full;
-    if (!document.hidden) {
+    time.textContent = hovered || focused ? value.full : value.label;
+    time.setAttribute('aria-label', value.full);
+  };
+  function update() {
+    view.clearTimeout(timer);
+    value = publicationLabel(time.dateTime);
+    if (!value) return;
+    render();
+    if (!doc.hidden) {
       const next = new Date(); next.setHours(24, 0, 0, 100);
-      timer = setTimeout(update, Math.max(100, next - Date.now()));
+      timer = view.setTimeout(update, Math.max(100, next - Date.now()));
     }
   }
-  document.addEventListener('visibilitychange', update, { signal: controller.signal });
-  window.addEventListener('pageshow', update, { signal: controller.signal });
+  const listen = (target, event, handler) => target.addEventListener(event, handler, { signal: controller.signal });
+  listen(time, 'pointerenter', () => { hovered = true; render(); });
+  listen(time, 'pointerleave', () => { hovered = false; render(); });
+  listen(time, 'focus', () => { focused = true; render(); });
+  listen(time, 'blur', () => { focused = false; render(); });
+  listen(doc, 'visibilitychange', update);
+  listen(view, 'pageshow', update);
   update();
-  return () => { controller.abort(); clearTimeout(timer); };
+  return () => { controller.abort(); view.clearTimeout(timer); };
 }

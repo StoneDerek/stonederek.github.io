@@ -40,7 +40,7 @@ const cat = ['  ╱|、', '(˚ˎ 。7', ' |、˜〵', 'じしˍ,)ノ'].join('\n'
 <section id="work-project-article" class="project-view work-article" data-work-article data-project-view aria-labelledby="work-detail-title" hidden>
   <article class="project-page work-project-page">
     <header class="project-toolbar">
-      <a class="back-button" href={`${base}projects/`} data-work-close><svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m7 3-5 5 5 5M2 8h12" /></svg> Back to Work</a>
+      <a class="back-button" href={`${base}projects/`} data-work-close aria-label="Back to Work"><svg class="control-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m7 3-5 5 5 5M2 8h12" /></svg> Back</a>
     </header>
     <h1 id="work-detail-title" class="sr-only" data-detail-title tabindex="-1">{first.title}</h1>
     <div class="work-project-prose"><PlaceholderParagraph /></div>

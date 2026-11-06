@@ -45,7 +45,8 @@ test('native serif pages provide matching desktop/mobile destinations and useful
       assert.ok(updated);
       assert.ok(Number.isFinite(new Date(updated.dateTime).getTime()));
       assert.equal(updated.getAttribute('tabindex'), '0');
-      assert.match(doc.getElementById(updated.getAttribute('aria-describedby')).textContent, /^Last updated /);
+      assert.equal(updated.getAttribute('aria-describedby'), null);
+      assert.equal(doc.querySelector('.publication-tooltip, [role="tooltip"]'), null);
       assert.equal(doc.querySelector('.serif-footer a[href*="#links"]'), null, 'mirror puzzle remains a hidden discovery in Art');
       assert.equal(doc.querySelector('meta[name="color-scheme"]').content, 'light dark');
       assert.equal(doc.documentElement.hasAttribute('data-appearance-enabled'), true);

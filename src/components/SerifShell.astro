@@ -54,7 +54,7 @@ const description = page === 'work' ? `Projects, experiments, and work in progre
       <a href={site.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn (opens in a new tab)">LinkedIn</a>
       {appearanceEnabled && <ThemeControl compact={true} />}
     </div>
-    <span class="publication serif-publication"><time class="menu-published" data-publication-date datetime={published.iso} tabindex="0" aria-describedby="publication-tooltip">Updated {published.label}</time><span class="publication-tooltip" id="publication-tooltip" role="tooltip">Last updated {published.label}</span></span>
+    <span class="publication serif-publication"><time class="menu-published" data-publication-date datetime={published.iso} tabindex="0">Updated {published.label}</time></span>
   </footer>
 </div>
 </Layout>

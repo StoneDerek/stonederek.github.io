@@ -74,7 +74,8 @@ body:has([data-work-root] dialog[open]) { overflow: hidden; }
 .serif-site .work-article { position: static; inset: auto; z-index: auto; width: auto; height: auto; overflow: visible; scrollbar-gutter: auto; background: #fff; color: var(--page-text); overscroll-behavior: auto; }
 .serif-site .work-project-page { min-height: 0; padding-top: 0; background: transparent; }
 .serif-site .work-article .project-toolbar { justify-content: flex-start; width: 100%; max-width: none; min-height: 44px; margin: 0; padding: 0; background: transparent; }
-.serif-site .work-article .back-button { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 0; border-radius: 0; background: transparent; color: inherit; font-size: 16px; line-height: 24px; text-decoration: none; }
+.serif-site .work-article .back-button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 0; border-radius: 0; background: transparent; color: inherit; font-family: var(--secondary-font); font-size: 14px; font-weight: 400; line-height: 20px; text-decoration: none; }
+.serif-site .work-article .back-button .control-arrow { width: 14px; height: 14px; }
 .serif-site .work-article .back-button:hover { text-decoration: underline; text-underline-offset: 4px; }
 .serif-site .work-project-prose { margin-top: 32px; }
 .serif-site .placeholder-prose { max-width: 65ch; margin: 0; font-size: 18px; line-height: 1.65; }
