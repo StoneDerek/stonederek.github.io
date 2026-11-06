@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, access } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { Window } from 'happy-dom';
+import sharp from 'sharp';
 const originalArt = JSON.parse(await readFile(new URL('../src/data/projects.json', import.meta.url), 'utf8')).find(project => project.slug === 'art');
 
 // Read real built pages. These checks cover content, destinations and semantic
@@ -193,6 +195,39 @@ test('the compatibility Resume route redirects immediately to the same directly 
     assert.ok([...doc.querySelectorAll('a[href]')].some(link => link.getAttribute('href') === destination));
     await access(new URL('../dist/resume.pdf', import.meta.url));
   });
+});
+
+test('sharing metadata references the current full-size preview without requiring JavaScript', async () => {
+  const image = await readFile(new URL('../public/social-preview.png', import.meta.url));
+  const version = createHash('sha256').update(image).digest('hex').slice(0, 12);
+  const dimensions = await sharp(image).metadata();
+  const site = JSON.parse(await readFile(new URL('../src/data/site.json', import.meta.url), 'utf8'));
+  assert.equal(dimensions.format, 'png');
+  assert.equal(dimensions.width, 1200);
+  assert.equal(dimensions.height, 630);
+  for (const entry of ['', 'about/', 'projects/', 'art/']) {
+    await page(entry, async doc => {
+      const og = name => doc.querySelector(`meta[property="og:${name}"]`).content;
+      const twitter = name => doc.querySelector(`meta[name="twitter:${name}"]`).content;
+      const preview = new URL(og('image'));
+      assert.equal(preview.protocol, 'https:');
+      assert.equal(preview.origin, new URL(doc.querySelector('link[rel="canonical"]').href).origin);
+      assert.equal(preview.pathname, '/social-preview.png');
+      assert.equal(preview.searchParams.get('v'), version, 'the image URL changes with its contents');
+      assert.equal(twitter('image'), preview.href);
+      assert.equal(Number(og('image:width')), dimensions.width);
+      assert.equal(Number(og('image:height')), dimensions.height);
+      assert.equal(og('image:alt'), twitter('image:alt'));
+      assert.match(og('image:alt'), /Derek_Stone/);
+      assert.equal(twitter('card'), 'summary_large_image');
+      assert.equal(og('title'), twitter('title'));
+      assert.equal(og('description'), twitter('description'));
+      if (!entry) {
+        assert.equal(og('title'), site.sharingTitle);
+        assert.equal(og('description'), site.description);
+      }
+    });
+  }
 });
 
 test('all built native destinations, IDs, local assets and accessibility references resolve', async () => {

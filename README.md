@@ -100,7 +100,7 @@ The mirror puzzle remains separate and hidden at `/art/#links`; it is not an art
 
 ## Sharing previews
 
-Home, About, Projects, and Résumé include page-specific descriptions, canonical URLs, Open Graph tags, and large-image card metadata. Their shared 1200 × 630 image is `public/social-preview.png`; the editable vector source is `src/assets/social-preview.svg`. After editing the vector, export its full canvas to that PNG. Keep the image dimensions and alternative text in `src/layouts/Layout.astro` in sync if the artwork changes.
+Home, About, Projects, and Art include descriptions, canonical URLs, Open Graph tags, and large-image card metadata. The homepage shares as **Derek_Stone** with “A personal website for Derek Stone.” Edit `sharingTitle` and `description` in `src/data/site.json` to change that copy. The shared 1200 × 630 graphic uses the centered serif wordmark on the site’s dark background. Its editable source is `src/assets/social-preview.svg`; run `npm run build:social-preview` to export `public/social-preview.png`. The image URL includes a content hash so refreshed cards request the updated artwork. Image dimensions and alternative text are declared in `src/data/social-preview.js`.
 
 Canonical and image URLs use the configured production origin and base path, including custom domains and project-repository hosting. Project links use URL fragments, so sharing services receive the Projects page's preview rather than an individual article's title or artwork. Existing browser-tab titles still follow navigation within the gallery. Actual sharing-service cards cannot be checked until this revision is deployed.
 

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "astro dev --host 0.0.0.0",
     "build": "astro build",
+    "build:social-preview": "node scripts/build-social-preview.mjs",
     "test": "node --test",
     "test:flows": "npm run build && node --test checks/portfolio-flows.mjs checks/serif-pages.mjs checks/art-gallery.mjs",
     "bench:transition": "node scripts/benchmark-transition.mjs",

@@ -20,7 +20,7 @@ const context = page === 'home' ? '' : labels[page] || '';
 const title = `${site.name} - ${labels[page] || 'Portfolio'}`;
 const description = page === 'work' ? `Projects, experiments, and work in progress by ${site.name}.` : page === 'about' ? `About ${site.name}.` : page === 'art' ? `A personal collection of artworks by ${site.name}.` : page === 'resume' ? `The latest resume for ${site.name}.` : site.description;
 ---
-<Layout title={title} description={description}>
+<Layout title={title} description={description} sharingTitle={page === 'home' ? site.sharingTitle : title}>
 <div
   id={page === 'work' ? 'work-portfolio' : undefined}
   class="serif-site"
